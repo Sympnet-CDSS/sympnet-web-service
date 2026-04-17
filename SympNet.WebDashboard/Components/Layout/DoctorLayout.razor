@@ -87,12 +87,13 @@
             <div class="doctor-nav-item @(IsActive("/doctor/dashboard") ? "active" : "")" @onclick="GoToDashboard">
                 <i class="fas fa-chart-line"></i><span>Tableau de bord</span>
             </div>
+            <div class="doctor-nav-label">Consultations</div>
+            <div class="doctor-nav-item @(IsActive("/doctor/consultations") ? "active" : "")" @onclick="GoToConsultations">
+                <i class="fas fa-folder-open"></i><span>Mes consultations</span>
+            </div>
             <div class="doctor-nav-label">Gestion</div>
             <div class="doctor-nav-item @(IsActive("/doctor/patients") ? "active" : "")" @onclick="GoToPatients">
                 <i class="fas fa-users"></i><span>Mes patients</span>
-            </div>
-            <div class="doctor-nav-item @(IsActive("/doctor/consultations") ? "active" : "")" @onclick="GoToConsultations">
-                <i class="fas fa-stethoscope"></i><span>Consultations</span>
             </div>
             <div class="doctor-nav-label">Compte</div>
             <div class="doctor-nav-item @(IsActive("/doctor/profile") ? "active" : "")" @onclick="GoToProfile">
@@ -137,7 +138,6 @@
             {
                 Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                 
-                // Charger le profil médecin
                 try
                 {
                     var profile = await Http.GetFromJsonAsync<DoctorProfileDto>("http://localhost:5000/api/doctorprofile");
@@ -161,8 +161,8 @@
     private bool IsActive(string path) => Navigation.Uri.Contains(path, StringComparison.OrdinalIgnoreCase);
 
     private void GoToDashboard() => Navigation.NavigateTo("/doctor/dashboard");
-    private void GoToPatients() => Navigation.NavigateTo("/doctor/patients");
     private void GoToConsultations() => Navigation.NavigateTo("/doctor/consultations");
+    private void GoToPatients() => Navigation.NavigateTo("/doctor/patients");
     private void GoToProfile() => Navigation.NavigateTo("/doctor/profile");
 
     private async Task Logout()

@@ -62,8 +62,24 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xDb3VudGVyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/AIDiagnosis.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcQUlEaWFnbm9zaXMucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/ConsultationDetail.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcQ29uc3VsdGF0aW9uRGV0YWlsLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Consultations.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcQ29uc3VsdGF0aW9ucy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Dashboard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcRGFzaGJvYXJkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Patients.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcUGF0aWVudHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Profile.razor]
