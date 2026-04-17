@@ -1,0 +1,312 @@
+@page "/admin/profile"
+@layout AdminLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>SympNet — Mon Profil</PageTitle>
+
+<style>
+    .profile-container { max-width: 1000px; margin: 0 auto; }
+    .profile-card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
+    
+    .profile-header { background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); padding: 40px; position: relative; }
+    .avatar-wrapper { position: relative; cursor: pointer; display: inline-block; }
+    .profile-avatar { width: 100px; height: 100px; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 800; color: white; border: 3px solid rgba(255,255,255,0.3); transition: all 0.3s ease; object-fit: cover; }
+    .avatar-wrapper:hover .profile-avatar { opacity: 0.8; transform: scale(1.02); }
+    .avatar-overlay { position: absolute; bottom: 0; right: 0; background: white; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; color: #0D9488; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 2px solid white; }
+    .profile-info { margin-top: 20px; }
+    .profile-info h2 { font-size: 24px; font-weight: 700; color: white; margin-bottom: 4px; }
+    .profile-info p { font-size: 14px; color: rgba(255,255,255,0.8); }
+    
+    .profile-body { padding: 32px 40px; }
+    .form-section { background: #F9FAFB; border-radius: 16px; padding: 24px; margin-bottom: 24px; border: 1px solid rgba(13,148,136,0.1); }
+    .form-section-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #1F2937; }
+    .form-section-title i { color: #0D9488; font-size: 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6B7280; margin-bottom: 6px; }
+    .form-group input { width: 100%; padding: 12px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 14px; transition: all 0.2s; }
+    .form-group input:focus { outline: none; border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+    .full-width { grid-column: span 2; }
+    .btn-save { background: linear-gradient(135deg, #0D9488, #14B8A6); color: white; padding: 12px 28px; border: none; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; width: 100%; }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13,148,136,0.3); }
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .alert-success { background: #D1FAE5; color: #065F46; padding: 14px 18px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid #10B981; display: flex; align-items: center; gap: 10px; }
+    .alert-error { background: #FEE2E2; color: #991B1B; padding: 14px 18px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid #EF4444; display: flex; align-items: center; gap: 10px; }
+    .file-input-hidden { display: none; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; margin-right: 8px; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    
+    @@media (max-width: 768px) { .form-grid { grid-template-columns: 1fr; } .full-width { grid-column: span 1; } .profile-body { padding: 24px; } }
+</style>
+
+<div class="profile-container">
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="avatar-wrapper" @onclick="TriggerFileUpload">
+                @if (!string.IsNullOrEmpty(profileImage))
+                {
+                    <img src="@profileImage" class="profile-avatar" style="object-fit: cover;" />
+                }
+                else
+                {
+                    <div class="profile-avatar">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                }
+                <div class="avatar-overlay">
+                    <i class="fas fa-camera" style="font-size: 14px;"></i>
+                </div>
+            </div>
+            <div class="profile-info">
+                <h2>Administrateur</h2>
+                <p>@email</p>
+            </div>
+        </div>
+
+        <div class="profile-body">
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert-success"><i class="fas fa-check-circle"></i><span>@successMessage</span></div>
+            }
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert-error"><i class="fas fa-exclamation-triangle"></i><span>@errorMessage</span></div>
+            }
+
+            <div class="form-section">
+                <div class="form-section-title"><i class="fas fa-envelope"></i>Informations du compte</div>
+                <div class="form-group">
+                    <label>Adresse email</label>
+                    <input type="email" @bind="email" @bind:event="oninput" placeholder="admin@exemple.com" />
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title"><i class="fas fa-lock"></i>Sécurité</div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Mot de passe actuel</label>
+                        <input type="password" @bind="currentPassword" placeholder="••••••••" />
+                    </div>
+                    <div class="form-group">
+                        <label>Nouveau mot de passe</label>
+                        <input type="password" @bind="newPassword" placeholder="••••••••" />
+                    </div>
+                    <div class="form-group full-width">
+                        <label>Confirmer le nouveau mot de passe</label>
+                        <input type="password" @bind="confirmPassword" placeholder="••••••••" />
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-save" @onclick="SaveProfile" disabled="@isSaving">
+                @if (isSaving)
+                {
+                    <span class="spinner"></span><span>Enregistrement...</span>
+                }
+                else
+                {
+                    <span><i class="fas fa-save"></i> Enregistrer les modifications</span>
+                }
+            </button>
+        </div>
+    </div>
+
+    <InputFile id="avatarFileInput" class="file-input-hidden" OnChange="HandleImageUpload" accept="image/*" />
+</div>
+
+@code {
+    private string email = "";
+    private string currentPassword = "";
+    private string newPassword = "";
+    private string confirmPassword = "";
+    private string profileImage = "";
+    private bool isSaving = false;
+    private string successMessage = "";
+    private string errorMessage = "";
+    private ElementReference fileInput;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                
+                var apiUrl = "http://localhost:5000/api/profile";
+                var profile = await Http.GetFromJsonAsync<ProfileDto>(apiUrl);
+                if (profile != null)
+                {
+                    email = profile.Email;
+                    if (!string.IsNullOrEmpty(profile.PhotoUrl))
+                        profileImage = profile.PhotoUrl;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur chargement profil: {ex.Message}");
+        }
+    }
+
+    private async Task TriggerFileUpload()
+    {
+        await JS.InvokeVoidAsync("eval", "document.getElementById('avatarFileInput').click()");
+    }
+
+    private async Task HandleImageUpload(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.File;
+            if (file == null) return;
+            
+            if (file.Size > 2 * 1024 * 1024)
+            {
+                errorMessage = "Fichier trop volumineux (max 2MB)";
+                await ClearMessages();
+                return;
+            }
+
+            // Lire le fichier
+            var buffer = new byte[file.Size];
+            await using var stream = file.OpenReadStream(maxAllowedSize: 2 * 1024 * 1024);
+            var bytesRead = await stream.ReadAsync(buffer);
+            
+            var base64 = Convert.ToBase64String(buffer);
+            var extension = Path.GetExtension(file.Name).ToLower();
+            var mimeType = extension switch
+            {
+                ".png" => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".gif" => "image/gif",
+                _ => "image/jpeg"
+            };
+            
+            var photoBase64 = $"data:{mimeType};base64,{base64}";
+            profileImage = photoBase64;
+            
+            // Envoyer au serveur
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            var response = await Http.PutAsJsonAsync("http://localhost:5000/api/profile/photo", new { PhotoBase64 = photoBase64 });
+            
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Photo de profil mise à jour !";
+                StateHasChanged();
+                await ClearMessages();
+            }
+            else
+            {
+                errorMessage = "Erreur lors de l'enregistrement de la photo";
+                StateHasChanged();
+                await ClearMessages();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur: {ex.Message}";
+            StateHasChanged();
+            await ClearMessages();
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        if (!string.IsNullOrEmpty(newPassword) && newPassword != confirmPassword)
+        {
+            errorMessage = "Les mots de passe ne correspondent pas";
+            await ClearMessages();
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(newPassword) && newPassword.Length < 6)
+        {
+            errorMessage = "Le mot de passe doit contenir au moins 6 caractères";
+            await ClearMessages();
+            return;
+        }
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Mettre à jour l'email
+            var emailResponse = await Http.PutAsJsonAsync("http://localhost:5000/api/profile/email", new { Email = email });
+            
+            if (!emailResponse.IsSuccessStatusCode)
+            {
+                var error = await emailResponse.Content.ReadAsStringAsync();
+                errorMessage = "Erreur lors de la mise à jour de l'email";
+                await ClearMessages();
+                return;
+            }
+
+            // Changer le mot de passe si fourni
+            if (!string.IsNullOrEmpty(newPassword))
+            {
+                var passwordResponse = await Http.PutAsJsonAsync("http://localhost:5000/api/profile/password", new 
+                { 
+                    CurrentPassword = currentPassword,
+                    NewPassword = newPassword 
+                });
+
+                if (!passwordResponse.IsSuccessStatusCode)
+                {
+                    errorMessage = "Mot de passe actuel incorrect";
+                    await ClearMessages();
+                    return;
+                }
+                
+                currentPassword = "";
+                newPassword = "";
+                confirmPassword = "";
+            }
+
+            successMessage = "Profil mis à jour avec succès !";
+            await ClearMessages();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur: {ex.Message}";
+            await ClearMessages();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearMessages()
+    {
+        await Task.Delay(4000);
+        successMessage = "";
+        errorMessage = "";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public class ProfileDto
+    {
+        public int Id { get; set; }
+        public string Email { get; set; } = "";
+        public string FullName { get; set; } = "";
+        public string? PhotoUrl { get; set; }
+        public bool IsActive { get; set; }
+    }
+}

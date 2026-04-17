@@ -1,0 +1,201 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject SympNet.WebDashboard.Services.ApiService ApiService
+
+<PageTitle>SympNet — Admin</PageTitle>
+
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
+
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Instrument Sans', sans-serif; background: #F9FAFB; min-height: 100vh; color: #1F2937; }
+    .admin-app { display: flex; min-height: 100vh; }
+    .admin-sidebar {
+        position: fixed; left: 0; top: 0; width: 280px; height: 100vh;
+        background: #FFFFFF; border-right: 1px solid rgba(13,148,136,0.1);
+        display: flex; flex-direction: column; z-index: 100;
+    }
+    .admin-sidebar-header { padding: 28px 24px; border-bottom: 1px solid rgba(13,148,136,0.1); }
+    .admin-logo { display: flex; align-items: center; gap: 12px; }
+    .admin-logo-icon {
+        width: 40px; height: 40px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        border-radius: 12px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; color: white;
+    }
+    .admin-logo-text h2 {
+        font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;
+        background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+    .admin-logo-text p { font-size: 11px; color: #6B7280; margin-top: 2px; }
+    .admin-sidebar-nav { flex: 1; padding: 24px 16px; overflow-y: auto; }
+    .admin-nav-label {
+        font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+        color: #9CA3AF; padding: 0 12px; margin-bottom: 12px;
+    }
+    .admin-nav-item {
+        display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 4px 0;
+        border-radius: 12px; color: #6B7280; text-decoration: none;
+        font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+    .admin-nav-item i { width: 20px; font-size: 16px; }
+    .admin-nav-item:hover { background: rgba(13,148,136,0.05); color: #0D9488; }
+    .admin-nav-item.active {
+        background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        color: white;
+    }
+    .admin-sidebar-footer { padding: 20px 16px; border-top: 1px solid rgba(13,148,136,0.1); }
+    .admin-user-info {
+        display: flex; align-items: center; gap: 12px; padding: 12px;
+        border-radius: 12px; background: rgba(13,148,136,0.05); margin-bottom: 12px;
+        cursor: pointer;
+    }
+    .admin-user-avatar {
+        width: 44px; height: 44px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        border-radius: 12px; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 16px; color: white;
+    }
+    .admin-user-details h4 { font-size: 14px; font-weight: 600; margin: 0; color: #1F2937; }
+    .admin-user-details p { font-size: 11px; color: #6B7280; margin: 2px 0 0; }
+    .admin-logout-btn {
+        width: 100%; padding: 10px; background: none; border: 1px solid rgba(239,68,68,0.2);
+        border-radius: 12px; color: #EF4444; font-size: 13px; font-weight: 500;
+        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+        transition: all 0.2s;
+    }
+    .admin-logout-btn:hover { background: rgba(239,68,68,0.1); border-color: #EF4444; }
+    .admin-main-content { margin-left: 280px; min-height: 100vh; background: #F9FAFB; padding: 24px 32px; width: calc(100% - 280px); }
+    
+    @@media (max-width: 768px) {
+        .admin-sidebar { transform: translateX(-100%); }
+        .admin-main-content { margin-left: 0; width: 100%; padding: 16px; }
+    }
+</style>
+
+<div class="admin-app">
+    <aside class="admin-sidebar">
+        <div class="admin-sidebar-header">
+            <div class="admin-logo">
+                <div class="admin-logo-icon"><i class="fas fa-brain"></i></div>
+                <div class="admin-logo-text"><h2>SympNet</h2><p>Admin Panel</p></div>
+            </div>
+        </div>
+        <div class="admin-sidebar-nav">
+            <div class="admin-nav-label">Vue Générale</div>
+            <div class="admin-nav-item @(IsActive("/admin/dashboard") ? "active" : "")" @onclick="GoToDashboard">
+                <i class="fas fa-chart-line"></i><span>Tableau de bord</span>
+            </div>
+            <div class="admin-nav-label">Gestion</div>
+            <div class="admin-nav-item @(IsActive("/admin/doctors") ? "active" : "")" @onclick="GoToDoctors">
+                <i class="fas fa-user-md"></i><span>Médecins</span>
+            </div>
+            <div class="admin-nav-item @(IsActive("/admin/patients") ? "active" : "")" @onclick="GoToPatients">
+                <i class="fas fa-users"></i><span>Patients</span>
+            </div>
+            <div class="admin-nav-label">Compte</div>
+            <div class="admin-nav-item @(IsActive("/admin/profile") ? "active" : "")" @onclick="GoToProfile">
+                <i class="fas fa-user-circle"></i><span>Mon Profil</span>
+            </div>
+        </div>
+        <div class="admin-sidebar-footer">
+            <div class="admin-user-info" @onclick="GoToProfile">
+                <div class="admin-user-avatar">@adminInitial</div>
+                <div class="admin-user-details">
+                    <h4>@adminName</h4>
+                    <p>Administrateur</p>
+                </div>
+            </div>
+            <button class="admin-logout-btn" @onclick="Logout">
+                <i class="fas fa-sign-out-alt"></i> Déconnexion
+            </button>
+        </div>
+    </aside>
+    <div class="admin-main-content">@Body</div>
+</div>
+
+@code {
+    private string adminName = "Admin";
+    private string adminInitial = "A";
+
+   protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender)
+    {
+        try
+        {
+            var userEmail = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_email");
+            
+            if (!string.IsNullOrEmpty(userEmail))
+            {
+                adminName = userEmail.Split('@')[0];
+                adminInitial = adminName.Length > 0 ? adminName[0].ToString().ToUpper() : "A";
+            }
+            
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur: {ex.Message}");
+        }
+    }
+}
+
+    private bool IsActive(string path)
+    {
+        return Navigation.Uri.Contains(path, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private void GoToDashboard()
+    {
+        Navigation.NavigateTo("/admin/dashboard");
+    }
+
+    private void GoToDoctors()
+    {
+        Navigation.NavigateTo("/admin/doctors");
+    }
+
+    private void GoToPatients()
+    {
+        Navigation.NavigateTo("/admin/patients");
+    }
+
+    private void GoToProfile()
+    {
+        Navigation.NavigateTo("/admin/profile");
+    }
+
+    private async Task Logout()
+    {
+        try
+        {
+            // Supprimer le token du localStorage
+            await JS.InvokeVoidAsync("localStorage.removeItem", "sympnet_token");
+            await JS.InvokeVoidAsync("localStorage.removeItem", "sympnet_email");
+            
+            // Supprimer le cookie via l'API
+            await ApiService.LogoutAsync();
+            
+            // Nettoyer les headers HTTP
+            Http.DefaultRequestHeaders.Authorization = null;
+            
+            // Rediriger vers la page de login
+            Navigation.NavigateTo("/login", true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur lors de la déconnexion: {ex.Message}");
+            // Forcer la redirection même en cas d'erreur
+            Navigation.NavigateTo("/login", true);
+        }
+    }
+}

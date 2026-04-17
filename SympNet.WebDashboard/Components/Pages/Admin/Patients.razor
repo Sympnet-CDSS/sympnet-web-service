@@ -1,0 +1,355 @@
+@page "/admin/patients"
+@layout AdminLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageTitle>SympNet — Gestion des Patients</PageTitle>
+
+<style>
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; color: #1F2937; margin: 0; }
+    .page-header h1 i { color: #0D9488; margin-right: 12px; }
+    
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+    .stat-card { background: white; border-radius: 20px; padding: 20px 24px; border: 1px solid rgba(13,148,136,0.1); }
+    .stat-number { font-size: 32px; font-weight: 800; color: #0D9488; }
+    .stat-label { font-size: 13px; color: #6B7280; margin-top: 4px; }
+    
+    .search-bar { background: white; border-radius: 16px; padding: 16px 20px; margin-bottom: 24px; border: 1px solid rgba(13,148,136,0.1); display: flex; align-items: center; gap: 12px; }
+    .search-bar i { color: #9CA3AF; font-size: 18px; }
+    .search-bar input { flex: 1; border: none; outline: none; font-size: 14px; padding: 8px 0; }
+    
+    /* Tableau design */
+    .patients-table-container { background: white; border-radius: 20px; border: 1px solid rgba(13,148,136,0.1); overflow: hidden; }
+    .patients-table { width: 100%; border-collapse: collapse; }
+    .patients-table th { text-align: left; padding: 16px 20px; background: #F9FAFB; font-size: 13px; font-weight: 600; color: #6B7280; border-bottom: 1px solid #E5E7EB; }
+    .patients-table td { padding: 16px 20px; font-size: 14px; color: #1F2937; border-bottom: 1px solid #F3F4F6; }
+    .patients-table tr:hover { background: #F9FAFB; }
+    .patients-table tr:last-child td { border-bottom: none; }
+    
+    .patient-avatar { width: 40px; height: 40px; background: linear-gradient(135deg, #0D9488, #14B8A6); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: white; }
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+    .status-active { background: #D1FAE5; color: #10B981; }
+    .status-inactive { background: #FEE2E2; color: #EF4444; }
+    
+    .action-btn { padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 500; cursor: pointer; border: none; transition: all 0.2s; margin: 0 4px; }
+    .action-btn.activate { background: #10B981; color: white; }
+    .action-btn.deactivate { background: #F59E0B; color: white; }
+    .action-btn:hover { transform: translateY(-1px); filter: brightness(1.05); }
+    
+    .empty-state { text-align: center; padding: 60px 20px; background: white; border-radius: 20px; border: 1px solid rgba(13,148,136,0.1); }
+    .empty-state i { font-size: 64px; color: #D1D5DB; margin-bottom: 16px; }
+    .loading-spinner { text-align: center; padding: 60px; }
+    .spinner { width: 48px; height: 48px; border: 3px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite; }
+    
+    /* Modal de confirmation design */
+    .confirm-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 2000; animation: fadeIn 0.2s ease; }
+    .confirm-modal { background: white; border-radius: 24px; width: 420px; max-width: 90%; overflow: hidden; animation: slideIn 0.3s ease; }
+    .confirm-modal-header { padding: 24px 28px 0 28px; text-align: center; }
+    .confirm-modal-icon { width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .confirm-modal-icon.warning { background: #FEF3C7; color: #F59E0B; }
+    .confirm-modal-icon.danger { background: #FEE2E2; color: #EF4444; }
+    .confirm-modal-icon.info { background: #E0F2FE; color: #0D9488; }
+    .confirm-modal-icon i { font-size: 32px; }
+    .confirm-modal h3 { font-size: 20px; font-weight: 700; color: #1F2937; margin: 0 0 8px; }
+    .confirm-modal p { font-size: 14px; color: #6B7280; margin: 0 0 8px; line-height: 1.5; }
+    .confirm-modal-body { padding: 16px 28px; text-align: center; }
+    .confirm-modal-footer { padding: 20px 28px 28px; display: flex; gap: 12px; justify-content: center; }
+    .confirm-btn-cancel { background: #F3F4F6; color: #6B7280; border: none; padding: 10px 24px; border-radius: 12px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .confirm-btn-cancel:hover { background: #E5E7EB; }
+    .confirm-btn-confirm { border: none; padding: 10px 28px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: white; }
+    .confirm-btn-confirm.warning { background: #F59E0B; }
+    .confirm-btn-confirm.warning:hover { background: #D97706; }
+    .confirm-btn-confirm.danger { background: #EF4444; }
+    .confirm-btn-confirm.danger:hover { background: #DC2626; }
+    .confirm-btn-confirm.info { background: #0D9488; }
+    .confirm-btn-confirm.info:hover { background: #0F766E; }
+    
+    .toast { position: fixed; bottom: 24px; right: 24px; background: white; border-radius: 12px; padding: 14px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1100; border-left: 4px solid; animation: slideInRight 0.3s ease; }
+    .toast.success { border-left-color: #10B981; }
+    .toast.error { border-left-color: #EF4444; }
+    .toast.info { border-left-color: #0D9488; }
+    .toast i { font-size: 18px; }
+    
+    @@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @@keyframes slideIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @@keyframes slideInRight { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    
+    @@media (max-width: 768px) { .patients-table th, .patients-table td { padding: 12px; } .hide-mobile { display: none; } }
+</style>
+
+<div>
+    <div class="page-header">
+        <h1><i class="fas fa-users"></i> Gestion des Patients</h1>
+    </div>
+    
+    <div class="stats-row">
+        <div class="stat-card"><div class="stat-number">@patients.Count</div><div class="stat-label">Total patients</div></div>
+        <div class="stat-card"><div class="stat-number">@patients.Count(p => p.IsActive)</div><div class="stat-label">Patients actifs</div></div>
+        <div class="stat-card"><div class="stat-number">@patients.Count(p => !p.IsActive)</div><div class="stat-label">Patients inactifs</div></div>
+    </div>
+    
+    <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Rechercher un patient..." @bind="searchTerm" @bind:event="oninput" />
+    </div>
+    
+    @if (isLoading)
+    {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+    }
+    else if (filteredPatients.Count == 0)
+    {
+        <div class="empty-state">
+            <i class="fas fa-user-slash"></i>
+            <h3>Aucun patient trouvé</h3>
+            <p style="color: #6B7280;">@(string.IsNullOrEmpty(searchTerm) ? "Aucun patient inscrit pour le moment" : "Aucun résultat pour votre recherche")</p>
+        </div>
+    }
+    else
+    {
+        <div class="patients-table-container">
+            <table class="patients-table">
+                <thead>
+                    <tr>
+                        <th>Patient</th>
+                        <th>Email</th>
+                        <th class="hide-mobile">Téléphone</th>
+                        <th class="hide-mobile">Âge</th>
+                        <th class="hide-mobile">Consultations</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in filteredPatients)
+                    {
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="patient-avatar">@(p.FirstName?.Length > 0 ? p.FirstName[0].ToString().ToUpper() : "P")</div>
+                                    <div><strong>@p.FirstName @p.LastName</strong></div>
+                                </div>
+                            </td>
+                            <td style="color: #6B7280;">@p.Email</td>
+                            <td class="hide-mobile">@(string.IsNullOrEmpty(p.PhoneNumber) ? "—" : p.PhoneNumber)</td>
+                            <td class="hide-mobile">@(DateTime.Now.Year - p.DateOfBirth.Year) ans</td>
+                            <td class="hide-mobile">@p.ConsultationCount</td>
+                            <td>
+                                <span class="status-badge @(p.IsActive ? "status-active" : "status-inactive")">
+                                    @(p.IsActive ? "Actif" : "Inactif")
+                                </span>
+                            </td>
+                            <td>
+    @if (p.IsActive)
+    {
+        <button class="action-btn deactivate" @onclick="() => OpenConfirmModalForDeactivate(p.Id, p.FirstName, p.LastName)">Désactiver</button>
+    }
+    else
+    {
+        <button class="action-btn activate" @onclick="() => OpenConfirmModalForActivate(p.Id, p.FirstName, p.LastName)">Activer</button>
+    }
+</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<!-- Modal de confirmation design -->
+@if (confirmModalVisible)
+{
+    <div class="confirm-modal-overlay" @onclick="CloseConfirmModal">
+        <div class="confirm-modal" @onclick:stopPropagation>
+            <div class="confirm-modal-header">
+                <div class="confirm-modal-icon @confirmModalIconType">
+                    <i class="fas @confirmModalIcon"></i>
+                </div>
+                <h3>@confirmModalTitle</h3>
+            </div>
+            <div class="confirm-modal-body">
+                <p>@confirmModalMessage</p>
+            </div>
+            <div class="confirm-modal-footer">
+                <button class="confirm-btn-cancel" @onclick="CloseConfirmModal">Annuler</button>
+                <button class="confirm-btn-confirm @confirmModalIconType" @onclick="ExecuteConfirmedAction">@confirmModalConfirmText</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Toast notifications -->
+@if (!string.IsNullOrEmpty(toastMessage))
+{
+    <div class="toast @toastType">
+        <i class="fas @toastIcon"></i>
+        <span>@toastMessage</span>
+    </div>
+}
+
+@code {
+    private List<PatientDto> patients = new();
+    private string searchTerm = "";
+    private bool isLoading = true;
+    private string toastMessage = "";
+    private string toastType = "success";
+    private string toastIcon = "fa-check-circle";
+    
+    // Variables pour la modale de confirmation
+    private bool confirmModalVisible = false;
+    private string confirmModalTitle = "";
+    private string confirmModalMessage = "";
+    private string confirmModalIcon = "";
+    private string confirmModalIconType = "";
+    private string confirmModalConfirmText = "";
+    private string pendingAction = "";
+    private int pendingPatientId = 0;
+    private string pendingPatientName = "";
+
+    private List<PatientDto> filteredPatients => patients
+        .Where(p => string.IsNullOrEmpty(searchTerm) ||
+                   (p.FirstName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                   (p.LastName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                   p.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await LoadPatients();
+    }
+
+    private async Task LoadPatients()
+    {
+        isLoading = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var apiUrl = "http://localhost:5000/api/patients";
+                patients = await Http.GetFromJsonAsync<List<PatientDto>>(apiUrl) ?? new();
+            }
+        }
+        catch (Exception) { ShowToast("Erreur de chargement", "error"); }
+        finally { isLoading = false; StateHasChanged(); }
+    }
+
+    private void OpenConfirmModalForActivate(int id, string firstName, string lastName)
+    {
+        OpenConfirmModal("activate", id, firstName, lastName);
+    }
+
+    private void OpenConfirmModalForDeactivate(int id, string firstName, string lastName)
+    {
+        OpenConfirmModal("deactivate", id, firstName, lastName);
+    }
+
+    private void OpenConfirmModal(string action, int id, string firstName, string lastName)
+    {
+        string name = $"{firstName} {lastName}".Trim();
+        if (string.IsNullOrWhiteSpace(name)) name = "ce patient";
+        
+        pendingAction = action;
+        pendingPatientId = id;
+        pendingPatientName = name;
+        
+        switch (action)
+        {
+            case "activate":
+                confirmModalTitle = "Activation du patient";
+                confirmModalMessage = $"Souhaitez-vous activer {name} ?";
+                confirmModalIcon = "fa-check-circle";
+                confirmModalIconType = "info";
+                confirmModalConfirmText = "Activer";
+                break;
+            case "deactivate":
+                confirmModalTitle = "Désactivation du patient";
+                confirmModalMessage = $"Souhaitez-vous désactiver {name} ?";
+                confirmModalIcon = "fa-pause-circle";
+                confirmModalIconType = "warning";
+                confirmModalConfirmText = "Désactiver";
+                break;
+        }
+        
+        confirmModalVisible = true;
+        StateHasChanged();
+    }
+
+    private void CloseConfirmModal()
+    {
+        confirmModalVisible = false;
+        pendingAction = "";
+        pendingPatientId = 0;
+        pendingPatientName = "";
+        StateHasChanged();
+    }
+
+    private async Task ExecuteConfirmedAction()
+    {
+        confirmModalVisible = false;
+        
+        switch (pendingAction)
+        {
+            case "activate":
+                await ActivatePatient(pendingPatientId);
+                break;
+            case "deactivate":
+                await DeactivatePatient(pendingPatientId);
+                break;
+        }
+        
+        pendingAction = "";
+        pendingPatientId = 0;
+        pendingPatientName = "";
+    }
+
+    private async Task ActivatePatient(int id)
+    {
+        try
+        {
+            var apiUrl = $"http://localhost:5000/api/patients/{id}/activate";
+            await Http.PutAsJsonAsync(apiUrl, new { });
+            ShowToast("Patient activé avec succès", "success");
+            await LoadPatients();
+        }
+        catch (Exception) { ShowToast("Erreur lors de l'activation", "error"); }
+    }
+
+    private async Task DeactivatePatient(int id)
+    {
+        try
+        {
+            var apiUrl = $"http://localhost:5000/api/patients/{id}/deactivate";
+            await Http.PutAsJsonAsync(apiUrl, new { });
+            ShowToast("Patient désactivé", "info");
+            await LoadPatients();
+        }
+        catch (Exception) { ShowToast("Erreur lors de la désactivation", "error"); }
+    }
+
+    private void ShowToast(string message, string type = "success")
+    {
+        toastMessage = message;
+        toastType = type;
+        toastIcon = type == "success" ? "fa-check-circle" : type == "error" ? "fa-exclamation-circle" : "fa-info-circle";
+        StateHasChanged();
+        Task.Delay(4000).ContinueWith(_ => { toastMessage = ""; InvokeAsync(StateHasChanged); });
+    }
+
+    public class PatientDto
+    {
+        public int Id { get; set; }
+        public string Email { get; set; } = "";
+        public bool IsActive { get; set; }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string PhoneNumber { get; set; } = "";
+        public DateTime DateOfBirth { get; set; }
+        public string Gender { get; set; } = "";
+        public int ConsultationCount { get; set; }
+    }
+}
