@@ -1,0 +1,19 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace SympNet.WebApi.Models;
+
+public class Patient
+{
+    [Key]
+    public int Id { get; set; }
+    
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string PhoneNumber { get; set; } = string.Empty;
+    public DateTime DateOfBirth { get; set; }
+    public string Gender { get; set; } = string.Empty;
+    public int ConsultationCount { get; set; } = 0;
+    
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+}

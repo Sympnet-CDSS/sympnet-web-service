@@ -1,0 +1,13 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\SympNet.WebApi",
+    "\\SympNet.WebApi\\Controllers",
+    "\\SympNet.WebApi\\Data",
+    "\\SympNet.WebApi\\Dtos",
+    "\\SympNet.WebApi\\Models",
+    "\\SympNet.WebApi\\Services"
+  ],
+  "SelectedNode": "\\SympNet.WebApi\\Data",
+  "PreviewInSolutionExplorer": false
+}

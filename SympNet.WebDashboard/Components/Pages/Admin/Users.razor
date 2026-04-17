@@ -1,0 +1,93 @@
+@page "/admin/users"
+@layout AdminLayout
+@using SympNet.WebDashboard.Services
+@inject ApiService Api
+
+<h1 style="margin-bottom: 16px;">👥 Gestion des utilisateurs</h1>
+
+<div style="margin-bottom: 24px;">
+    <button class="btn-primary" @onclick="ShowCreateModal">+ Nouvel utilisateur</button>
+</div>
+
+@if (users == null)
+{
+    <div>Chargement...</div>
+}
+else
+{
+    <table style="width: 100%; background: white; border-radius: 16px; border-collapse: collapse; overflow: hidden;">
+        <thead><tr style="background: #F4FAFA;"><th style="padding: 16px;">Email</th><th>Nom</th><th>Rôle</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+            @foreach (var user in users)
+            {
+                <tr style="border-bottom: 1px solid #DFF0EF;">
+                    <td style="padding: 16px;">@user.Email</td>
+                    <td style="padding: 16px;">@user.FullName</td>
+                    <td style="padding: 16px;">@user.Role</td>
+                    <td style="padding: 16px;">
+                        <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; background: @(user.IsActive ? "#F0FDF4" : "#FEF2F2"); color: @(user.IsActive ? "#22C55E" : "#EF4444");">
+                            @(user.IsActive ? "Actif" : "Inactif")
+                        </span>
+                    </td>
+                    <td style="padding: 16px;">
+                        <button class="action-btn" @onclick="() => ToggleActive(user)">🔄</button>
+                        <button class="action-btn delete" @onclick="() => DeleteUser(user)">🗑️</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@if (showModal)
+{
+    <div class="modal">
+        <div class="modal-content">
+            <h2>Créer un utilisateur</h2>
+            <input type="email" @bind="newEmail" placeholder="Email" />
+            <input type="password" @bind="newPassword" placeholder="Mot de passe" />
+            <select @bind="newRole"><option value="Patient">Patient</option><option value="Doctor">Médecin</option></select>
+            <input type="text" @bind="newFullName" placeholder="Nom complet" />
+            <div class="modal-actions">
+                <button class="btn-secondary" @onclick="CloseModal">Annuler</button>
+                <button class="btn-primary" @onclick="CreateUser">Créer</button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .btn-primary { background: linear-gradient(135deg, #0D6E6A, #3ABFB8); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; }
+    .btn-secondary { background: #F4FAFA; border: 1px solid #DFF0EF; padding: 10px 20px; border-radius: 10px; cursor: pointer; }
+    .action-btn { background: none; border: none; cursor: pointer; padding: 6px; font-size: 16px; border-radius: 8px; }
+    .action-btn:hover { background: #F4FAFA; }
+    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: white; border-radius: 20px; padding: 28px; width: 400px; }
+    .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 12px 0; border: 1.5px solid #DFF0EF; border-radius: 10px; }
+    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; }
+</style>
+
+@code {
+    private List<UserDto>? users;
+    private bool showModal = false;
+    private string newEmail = "";
+    private string newPassword = "";
+    private string newRole = "Patient";
+    private string newFullName = "";
+
+    protected override async Task OnInitializedAsync() => await LoadUsers();
+    private async Task LoadUsers() { users = await Api.GetAllUsersAsync(); StateHasChanged(); }
+    private void ShowCreateModal() => showModal = true;
+    private void CloseModal() => showModal = false;
+
+    private async Task CreateUser()
+    {
+        if (string.IsNullOrEmpty(newEmail) || string.IsNullOrEmpty(newPassword)) return;
+        await Api.CreateUserAsync(new CreateUserRequest { Email = newEmail, Password = newPassword, Role = newRole, FullName = newFullName });
+        CloseModal(); await LoadUsers();
+        newEmail = newPassword = newFullName = ""; newRole = "Patient";
+    }
+
+    private async Task ToggleActive(UserDto user) { await Api.ToggleUserActiveAsync(user.Id); await LoadUsers(); }
+    private async Task DeleteUser(UserDto user) { if (await Api.DeleteUserAsync(user.Id)) await LoadUsers(); }
+}

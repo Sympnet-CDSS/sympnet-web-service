@@ -1,0 +1,211 @@
+@page "/doctor/profile"
+@layout DoctorLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@using Microsoft.AspNetCore.Components.Forms
+
+<PageTitle>SympNet — Mon Profil Médecin</PageTitle>
+
+<style>
+    .profile-container { max-width: 800px; margin: 0 auto; }
+    .profile-card { background: white; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); }
+    .profile-header { background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); padding: 40px; text-align: center; }
+    .profile-avatar { width: 100px; height: 100px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 40px; font-weight: 800; color: white; margin: 0 auto 16px; }
+    .profile-header h2 { font-size: 24px; font-weight: 700; color: white; margin-bottom: 4px; }
+    .profile-header p { font-size: 14px; color: rgba(255,255,255,0.8); }
+    .profile-body { padding: 32px 40px; }
+    .form-section { margin-bottom: 24px; }
+    .form-section-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #1F2937; }
+    .form-section-title i { color: #0D9488; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #374151; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 14px; }
+    .form-group input:focus { outline: none; border-color: #0D9488; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .btn-save { background: linear-gradient(135deg, #0D9488, #14B8A6); color: white; padding: 12px 28px; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; width: 100%; }
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+    .alert-success { background: #D1FAE5; color: #065F46; padding: 14px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid #10B981; }
+    .alert-error { background: #FEE2E2; color: #991B1B; padding: 14px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid #EF4444; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; display: inline-block; margin-right: 8px; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="profile-container">
+    <div class="profile-card">
+        <div class="profile-header">
+            <div class="profile-avatar"><i class="fas fa-user-md"></i></div>
+            <h2>Dr. @firstName @lastName</h2>
+            <p>@speciality</p>
+        </div>
+
+        <div class="profile-body">
+            @if (!string.IsNullOrEmpty(successMessage))
+            {
+                <div class="alert-success"><i class="fas fa-check-circle"></i> @successMessage</div>
+            }
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert-error"><i class="fas fa-exclamation-triangle"></i> @errorMessage</div>
+            }
+
+            <div class="form-section">
+                <div class="form-section-title"><i class="fas fa-user"></i> Informations personnelles</div>
+                <div class="form-row">
+                    <div class="form-group"><label>Prénom</label><input type="text" @bind="firstName" /></div>
+                    <div class="form-group"><label>Nom</label><input type="text" @bind="lastName" /></div>
+                </div>
+                <div class="form-group"><label>Email</label><input type="email" @bind="email" /></div>
+                <div class="form-group"><label>Spécialité</label><input type="text" @bind="speciality" /></div>
+                <div class="form-group"><label>RPPS / License</label><input type="text" @bind="licenseNumber" /></div>
+                <div class="form-group"><label>Adresse cabinet</label><textarea rows="2" @bind="address"></textarea></div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title"><i class="fas fa-lock"></i> Sécurité</div>
+                <div class="form-group"><label>Mot de passe actuel</label><input type="password" @bind="currentPassword" placeholder="••••••••" /></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Nouveau mot de passe</label><input type="password" @bind="newPassword" placeholder="••••••••" /></div>
+                    <div class="form-group"><label>Confirmer</label><input type="password" @bind="confirmPassword" placeholder="••••••••" /></div>
+                </div>
+            </div>
+
+            <button class="btn-save" @onclick="SaveProfile" disabled="@isSaving">
+                @if (isSaving) { <span class="spinner"></span><span>Enregistrement...</span> }
+                else { <span><i class="fas fa-save"></i> Enregistrer les modifications</span> }
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string email = "";
+    private string firstName = "";
+    private string lastName = "";
+    private string speciality = "";
+    private string licenseNumber = "";
+    private string address = "";
+    private string currentPassword = "";
+    private string newPassword = "";
+    private string confirmPassword = "";
+    private bool isSaving = false;
+    private string successMessage = "";
+    private string errorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var profile = await Http.GetFromJsonAsync<DoctorProfileResponse>("http://localhost:5000/api/doctorprofile");
+                if (profile != null)
+                {
+                    email = profile.Email;
+                    firstName = profile.FirstName;
+                    lastName = profile.LastName;
+                    speciality = profile.Speciality;
+                    licenseNumber = profile.LicenseNumber;
+                    address = profile.Address ?? "";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur: {ex.Message}");
+        }
+    }
+
+    private async Task SaveProfile()
+    {
+        if (!string.IsNullOrEmpty(newPassword) && newPassword != confirmPassword)
+        {
+            errorMessage = "Les mots de passe ne correspondent pas";
+            await ClearMessages();
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // Mettre à jour le profil
+            var updateResponse = await Http.PutAsJsonAsync("http://localhost:5000/api/doctorprofile", new
+            {
+                Email = email,
+                FirstName = firstName,
+                LastName = lastName,
+                Speciality = speciality,
+                LicenseNumber = licenseNumber,
+                Address = address
+            });
+
+            if (!updateResponse.IsSuccessStatusCode)
+            {
+                errorMessage = "Erreur lors de la mise à jour du profil";
+                await ClearMessages();
+                return;
+            }
+
+            // Changer le mot de passe si nécessaire
+            if (!string.IsNullOrEmpty(newPassword))
+            {
+                var passwordResponse = await Http.PutAsJsonAsync("http://localhost:5000/api/doctorprofile/password", new
+                {
+                    CurrentPassword = currentPassword,
+                    NewPassword = newPassword
+                });
+
+                if (!passwordResponse.IsSuccessStatusCode)
+                {
+                    errorMessage = "Mot de passe actuel incorrect";
+                    await ClearMessages();
+                    return;
+                }
+                
+                currentPassword = "";
+                newPassword = "";
+                confirmPassword = "";
+            }
+
+            successMessage = "Profil mis à jour avec succès !";
+            await ClearMessages();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur: {ex.Message}";
+            await ClearMessages();
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ClearMessages()
+    {
+        await Task.Delay(4000);
+        successMessage = "";
+        errorMessage = "";
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public class DoctorProfileResponse
+    {
+        public string Email { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Speciality { get; set; } = "";
+        public string LicenseNumber { get; set; } = "";
+        public string Address { get; set; } = "";
+    }
+}

@@ -1,0 +1,182 @@
+@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject IJSRuntime JS
+
+<PageTitle>SympNet — Espace Médecin</PageTitle>
+
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
+
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Instrument Sans', sans-serif; background: #F9FAFB; min-height: 100vh; color: #1F2937; }
+    .doctor-app { display: flex; min-height: 100vh; }
+    .doctor-sidebar {
+        position: fixed; left: 0; top: 0; width: 280px; height: 100vh;
+        background: #FFFFFF; border-right: 1px solid rgba(13,148,136,0.1);
+        display: flex; flex-direction: column; z-index: 100;
+    }
+    .doctor-sidebar-header { padding: 28px 24px; border-bottom: 1px solid rgba(13,148,136,0.1); }
+    .doctor-logo { display: flex; align-items: center; gap: 12px; }
+    .doctor-logo-icon {
+        width: 40px; height: 40px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        border-radius: 12px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; color: white;
+    }
+    .doctor-logo-text h2 {
+        font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;
+        background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin: 0;
+    }
+    .doctor-logo-text p { font-size: 11px; color: #6B7280; margin-top: 2px; }
+    .doctor-sidebar-nav { flex: 1; padding: 24px 16px; overflow-y: auto; }
+    .doctor-nav-label {
+        font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+        color: #9CA3AF; padding: 0 12px; margin-bottom: 12px;
+    }
+    .doctor-nav-item {
+        display: flex; align-items: center; gap: 12px; padding: 10px 16px; margin: 4px 0;
+        border-radius: 12px; color: #6B7280; text-decoration: none;
+        font-size: 14px; font-weight: 500; cursor: pointer;
+    }
+    .doctor-nav-item i { width: 20px; font-size: 16px; }
+    .doctor-nav-item:hover { background: rgba(13,148,136,0.05); color: #0D9488; }
+    .doctor-nav-item.active {
+        background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        color: white;
+    }
+    .doctor-sidebar-footer { padding: 20px 16px; border-top: 1px solid rgba(13,148,136,0.1); }
+    .doctor-user-info {
+        display: flex; align-items: center; gap: 12px; padding: 12px;
+        border-radius: 12px; background: rgba(13,148,136,0.05); margin-bottom: 12px;
+        cursor: pointer;
+    }
+    .doctor-user-avatar {
+        width: 44px; height: 44px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        border-radius: 12px; display: flex; align-items: center; justify-content: center;
+        font-weight: 700; font-size: 16px; color: white;
+    }
+    .doctor-user-details h4 { font-size: 14px; font-weight: 600; margin: 0; color: #1F2937; }
+    .doctor-user-details p { font-size: 11px; color: #6B7280; margin: 2px 0 0; }
+    .doctor-logout-btn {
+        width: 100%; padding: 10px; background: none; border: 1px solid rgba(239,68,68,0.2);
+        border-radius: 12px; color: #EF4444; font-size: 13px; font-weight: 500;
+        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .doctor-logout-btn:hover { background: rgba(239,68,68,0.1); border-color: #EF4444; }
+    .doctor-main-content { margin-left: 280px; min-height: 100vh; background: #F9FAFB; padding: 24px 32px; width: calc(100% - 280px); }
+    
+    @@media (max-width: 768px) {
+        .doctor-sidebar { transform: translateX(-100%); }
+        .doctor-main-content { margin-left: 0; width: 100%; padding: 16px; }
+    }
+</style>
+
+<div class="doctor-app">
+    <aside class="doctor-sidebar">
+        <div class="doctor-sidebar-header">
+            <div class="doctor-logo">
+                <div class="doctor-logo-icon"><i class="fas fa-brain"></i></div>
+                <div class="doctor-logo-text"><h2>SympNet</h2><p>Espace Médecin</p></div>
+            </div>
+        </div>
+        <div class="doctor-sidebar-nav">
+            <div class="doctor-nav-label">Vue Générale</div>
+            <div class="doctor-nav-item @(IsActive("/doctor/dashboard") ? "active" : "")" @onclick="GoToDashboard">
+                <i class="fas fa-chart-line"></i><span>Tableau de bord</span>
+            </div>
+            <div class="doctor-nav-label">Gestion</div>
+            <div class="doctor-nav-item @(IsActive("/doctor/patients") ? "active" : "")" @onclick="GoToPatients">
+                <i class="fas fa-users"></i><span>Mes patients</span>
+            </div>
+            <div class="doctor-nav-item @(IsActive("/doctor/consultations") ? "active" : "")" @onclick="GoToConsultations">
+                <i class="fas fa-stethoscope"></i><span>Consultations</span>
+            </div>
+            <div class="doctor-nav-label">Compte</div>
+            <div class="doctor-nav-item @(IsActive("/doctor/profile") ? "active" : "")" @onclick="GoToProfile">
+                <i class="fas fa-user-circle"></i><span>Mon Profil</span>
+            </div>
+        </div>
+        <div class="doctor-sidebar-footer">
+            <div class="doctor-user-info" @onclick="GoToProfile">
+                <div class="doctor-user-avatar">@doctorInitial</div>
+                <div class="doctor-user-details">
+                    <h4>Dr. @doctorName</h4>
+                    <p>@doctorSpeciality</p>
+                </div>
+            </div>
+            <button class="doctor-logout-btn" @onclick="Logout">
+                <i class="fas fa-sign-out-alt"></i> Déconnexion
+            </button>
+        </div>
+    </aside>
+    <div class="doctor-main-content">@Body</div>
+</div>
+
+@code {
+    private string doctorName = "Médecin";
+    private string doctorInitial = "M";
+    private string doctorSpeciality = "Médecine Générale";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var userEmail = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_email");
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            
+            if (!string.IsNullOrEmpty(userEmail))
+            {
+                doctorName = userEmail.Split('@')[0];
+                doctorInitial = doctorName.Length > 0 ? doctorName[0].ToString().ToUpper() : "M";
+            }
+            
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                
+                // Charger le profil médecin
+                try
+                {
+                    var profile = await Http.GetFromJsonAsync<DoctorProfileDto>("http://localhost:5000/api/doctorprofile");
+                    if (profile != null)
+                    {
+                        doctorName = profile.FirstName;
+                        doctorInitial = profile.FirstName?.Length > 0 ? profile.FirstName[0].ToString().ToUpper() : "M";
+                        doctorSpeciality = profile.Speciality ?? "Médecine Générale";
+                    }
+                }
+                catch { }
+            }
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur: {ex.Message}");
+        }
+    }
+
+    private bool IsActive(string path) => Navigation.Uri.Contains(path, StringComparison.OrdinalIgnoreCase);
+
+    private void GoToDashboard() => Navigation.NavigateTo("/doctor/dashboard");
+    private void GoToPatients() => Navigation.NavigateTo("/doctor/patients");
+    private void GoToConsultations() => Navigation.NavigateTo("/doctor/consultations");
+    private void GoToProfile() => Navigation.NavigateTo("/doctor/profile");
+
+    private async Task Logout()
+    {
+        await JS.InvokeVoidAsync("localStorage.removeItem", "sympnet_token");
+        await JS.InvokeVoidAsync("localStorage.removeItem", "sympnet_email");
+        Http.DefaultRequestHeaders.Authorization = null;
+        Navigation.NavigateTo("/login", true);
+    }
+
+    public class DoctorProfileDto
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Speciality { get; set; } = "";
+    }
+}
