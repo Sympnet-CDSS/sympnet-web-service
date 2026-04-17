@@ -2,7 +2,7 @@
 @layout DoctorLayout
 @inject HttpClient Http
 @inject IJSRuntime JS
-@inject NavigationManager Navigation   // ← AJOUTE CETTE LIGNE
+@inject NavigationManager Navigation
 
 <PageTitle>SympNet — Dashboard Médecin</PageTitle>
 
@@ -10,17 +10,30 @@
     .dashboard-container { max-width: 1400px; margin: 0 auto; }
     .welcome-banner { background: linear-gradient(135deg, #0D9488, #14B8A6); border-radius: 24px; padding: 32px; color: white; margin-bottom: 32px; }
     .welcome-banner h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
-    .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
     .stat-card { background: white; border-radius: 20px; padding: 24px; border: 1px solid rgba(13,148,136,0.1); transition: all 0.3s; cursor: pointer; }
     .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
     .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; }
     .stat-icon.patients { background: rgba(13,148,136,0.1); color: #0D9488; }
     .stat-icon.today { background: rgba(245,158,11,0.1); color: #F59E0B; }
     .stat-icon.total { background: rgba(59,130,246,0.1); color: #3B82F6; }
+    .stat-icon.diseases { background: rgba(139,92,246,0.1); color: #8B5CF6; }
     .stat-value { font-size: 32px; font-weight: 800; color: #1F2937; margin-bottom: 4px; }
     .stat-label { font-size: 13px; color: #6B7280; }
+    
+    .diseases-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; margin-top: 24px; }
+    .disease-card { background: white; border-radius: 16px; padding: 16px 20px; border: 1px solid rgba(13,148,136,0.1); transition: all 0.2s; }
+    .disease-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .disease-name { font-weight: 700; color: #1F2937; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .disease-count { background: #0D9488; color: white; padding: 2px 10px; border-radius: 20px; font-size: 12px; }
+    .disease-bar { height: 6px; background: #E5E7EB; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+    .disease-fill { height: 100%; background: linear-gradient(90deg, #0D9488, #14B8A6); border-radius: 3px; }
+    
     .loading-spinner { width: 48px; height: 48px; border: 3px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; margin: 60px auto; animation: spin 1s linear infinite; }
     @@keyframes spin { to { transform: rotate(360deg); } }
+    
+    .section-title { font-size: 18px; font-weight: 700; margin: 32px 0 16px 0; color: #1F2937; display: flex; align-items: center; gap: 10px; }
+    .section-title i { color: #0D9488; }
 </style>
 
 <div class="dashboard-container">
@@ -42,15 +55,61 @@
                 <div class="stat-value">@stats.TotalPatients</div>
                 <div class="stat-label">Mes patients</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" @onclick="GoToConsultations">
                 <div class="stat-icon today"><i class="fas fa-calendar-day"></i></div>
                 <div class="stat-value">@stats.TodayConsultations</div>
                 <div class="stat-label">Consultations aujourd'hui</div>
             </div>
-            <div class="stat-card">
+            <div class="stat-card" @onclick="GoToConsultations">
                 <div class="stat-icon total"><i class="fas fa-stethoscope"></i></div>
                 <div class="stat-value">@stats.TotalConsultations</div>
                 <div class="stat-label">Total consultations</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon diseases"><i class="fas fa-chart-pie"></i></div>
+                <div class="stat-value">@diseaseStats.Count</div>
+                <div class="stat-label">Pathologies différentes</div>
+            </div>
+        </div>
+
+        <!-- Statistiques par catégorie de maladie -->
+        @if (diseaseStats.Any())
+        {
+            <div class="section-title">
+                <i class="fas fa-chart-bar"></i> Répartition des diagnostics
+            </div>
+            <div class="diseases-grid">
+                @foreach (var disease in diseaseStats.Take(6))
+                {
+                    var percent = stats.TotalConsultations > 0 ? (disease.Count * 100.0 / stats.TotalConsultations) : 0;
+                    <div class="disease-card">
+                        <div class="disease-name">
+                            <span>@disease.Name</span>
+                            <span class="disease-count">@disease.Count</span>
+                        </div>
+                        <div class="disease-bar">
+                            <div class="disease-fill" style="width: @percent%"></div>
+                        </div>
+                        <div style="font-size: 12px; color: #6B7280; margin-top: 6px;">@percent.ToString("F1")% des consultations</div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Boutons d'action rapide -->
+        <div class="section-title">
+            <i class="fas fa-bolt"></i> Actions rapides
+        </div>
+        <div class="stats-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 0;">
+            <div class="stat-card" @onclick="GoToAIDiagnosis" style="cursor: pointer;">
+                <div class="stat-icon" style="background: rgba(13,148,136,0.1); color: #0D9488;"><i class="fas fa-microphone-alt"></i></div>
+                <div class="stat-value" style="font-size: 18px;">Nouveau diagnostic IA</div>
+                <div class="stat-label">Analyser les symptômes avec l'IA</div>
+            </div>
+            <div class="stat-card" @onclick="GoToConsultations" style="cursor: pointer;">
+                <div class="stat-icon" style="background: rgba(13,148,136,0.1); color: #0D9488;"><i class="fas fa-folder-open"></i></div>
+                <div class="stat-value" style="font-size: 18px;">Voir l'historique</div>
+                <div class="stat-label">Consulter toutes vos consultations</div>
             </div>
         </div>
     }
@@ -59,6 +118,7 @@
 @code {
     private string doctorName = "Médecin";
     private DoctorStatsDto stats = new();
+    private List<DiseaseStatDto> diseaseStats = new();
     private bool isLoading = true;
 
     protected override async Task OnInitializedAsync()
@@ -76,18 +136,46 @@
             {
                 Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                 
+                // Charger le profil du médecin
                 var profile = await Http.GetFromJsonAsync<DoctorProfileDto>("http://localhost:5000/api/doctorprofile");
-                if (profile != null)
+                if (profile != null && !string.IsNullOrEmpty(profile.FirstName))
                 {
                     doctorName = profile.FirstName;
                 }
                 
+                // Charger les statistiques
                 stats = await Http.GetFromJsonAsync<DoctorStatsDto>("http://localhost:5000/api/doctorprofile/stats") ?? new();
+                
+                // Charger les consultations pour les statistiques par maladie
+                var consultations = await Http.GetFromJsonAsync<List<ConsultationStatDto>>("http://localhost:5000/api/consultations");
+                if (consultations != null && consultations.Any())
+                {
+                    // Calculer les stats par maladie
+                    var diseaseGroups = consultations
+                        .Where(c => !string.IsNullOrEmpty(c.Diagnosis))
+                        .GroupBy(c => c.Diagnosis)
+                        .Select(g => new DiseaseStatDto
+                        {
+                            Name = g.Key,
+                            Count = g.Count()
+                        })
+                        .OrderByDescending(d => d.Count)
+                        .ToList();
+                    
+                    diseaseStats = diseaseGroups;
+                    
+                    // Mettre à jour le total des consultations
+                    stats.TotalConsultations = consultations.Count;
+                    
+                    // Calculer les consultations d'aujourd'hui
+                    var today = DateTime.UtcNow.Date;
+                    stats.TodayConsultations = consultations.Count(c => c.CreatedAt.Date == today);
+                }
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erreur: {ex.Message}");
+            Console.WriteLine($"Erreur lors du chargement des stats: {ex.Message}");
         }
         finally
         {
@@ -101,6 +189,17 @@
         Navigation.NavigateTo("/doctor/patients");
     }
 
+    private void GoToConsultations()
+    {
+        Navigation.NavigateTo("/doctor/consultations");
+    }
+
+    private void GoToAIDiagnosis()
+    {
+        Navigation.NavigateTo("/doctor/ai-diagnosis");
+    }
+
+    // DTOs
     public class DoctorStatsDto
     {
         public int TotalPatients { get; set; }
@@ -113,5 +212,18 @@
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
         public string Speciality { get; set; } = "";
+    }
+
+    public class ConsultationStatDto
+    {
+        public int Id { get; set; }
+        public string Diagnosis { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class DiseaseStatDto
+    {
+        public string Name { get; set; } = "";
+        public int Count { get; set; }
     }
 }
