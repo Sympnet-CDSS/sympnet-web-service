@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SympNet.WebApi.Data;
 using SympNet.WebApi.Services;
+using SympNet.WebApi.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,6 +59,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddCors();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
@@ -112,5 +114,6 @@ app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>("/chatHub");
 
 app.Run();
