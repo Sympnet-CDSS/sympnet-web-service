@@ -1,23 +1,23 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\lenovo\\Desktop\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj": {}
+    "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj": {}
   },
   "projects": {
-    "C:\\Users\\lenovo\\Desktop\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj": {
+    "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\lenovo\\Desktop\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
+        "projectUniqueName": "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
         "projectName": "SympNet.WebDashboard",
-        "projectPath": "C:\\Users\\lenovo\\Desktop\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
-        "packagesPath": "C:\\Users\\lenovo\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\lenovo\\Desktop\\sympnet-web-service\\SympNet.WebDashboard\\obj\\",
+        "projectPath": "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
+        "packagesPath": "C:\\Users\\Yasmine\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
         ],
         "configFilePaths": [
-          "C:\\Users\\lenovo\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Users\\Yasmine\\AppData\\Roaming\\NuGet\\NuGet.Config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
           "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
         ],
@@ -26,11 +26,11 @@
         ],
         "sources": {
           "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-          "C:\\Program Files\\dotnet\\library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
           "net10.0": {
+            "framework": "net10.0",
             "targetAlias": "net10.0",
             "projectReferences": {}
           }
@@ -49,12 +49,13 @@
       },
       "frameworks": {
         "net10.0": {
+          "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
             "Microsoft.AspNetCore.App.Internal.Assets": {
               "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.2, )",
+              "version": "[10.0.6, )",
               "autoReferenced": true
             },
             "Microsoft.AspNetCore.Authentication.JwtBearer": {
@@ -85,7 +86,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200-preview.0.26103.119/PortableRuntimeIdentifierGraph.json",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json",
           "packagesToPrune": {
             "Microsoft.AspNetCore": "(,10.0.32767]",
             "Microsoft.AspNetCore.Antiforgery": "(,10.0.32767]",
