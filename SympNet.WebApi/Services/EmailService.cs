@@ -48,9 +48,9 @@ public class EmailService
 
         await SendEmailAsync(toEmail, "Vos identifiants SympNet — Compte Médecin", body);
     }
- public async Task SendPasswordResetEmailAsync(string toEmail, string firstName, string resetLink)
-{
-    var body = $@"
+    public async Task SendPasswordResetEmailAsync(string toEmail, string firstName, string resetLink)
+    {
+        var body = $@"
 <div style='font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; background: #fff; border-radius: 16px; border: 1px solid #DFF0EF; overflow: hidden;'>
     <div style='background: linear-gradient(135deg, #084E4B, #1A9E97); padding: 32px 40px; text-align: center;'>
         <h1 style='color: #fff; font-size: 24px; margin: 0;'>SympNet</h1>
@@ -79,8 +79,8 @@ public class EmailService
     </div>
 </div>";
 
-    await SendEmailAsync(toEmail, "Réinitialisation de votre mot de passe SympNet", body);
-}
+        await SendEmailAsync(toEmail, "Réinitialisation de votre mot de passe SympNet", body);
+    }
     private async Task SendEmailAsync(string to, string subject, string htmlBody)
     {
         var smtpHost = _config["Email:SmtpHost"] ?? "smtp.gmail.com";
@@ -100,5 +100,49 @@ public class EmailService
         await client.AuthenticateAsync(smtpUser, smtpPass);
         await client.SendAsync(message);
         await client.DisconnectAsync(true);
+    }
+    public async Task SendVerificationCodeAsync(string toEmail, string code)
+    {
+        var body = $@"
+<div style='font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; background: #fff; border-radius: 16px; border: 1px solid #DFF0EF; overflow: hidden;'>
+    <div style='background: linear-gradient(135deg, #084E4B, #1A9E97); padding: 32px 40px; text-align: center;'>
+        <h1 style='color: #fff; font-size: 24px; margin: 0;'>SympNet</h1>
+    </div>
+    <div style='padding: 32px 40px; text-align: center;'>
+        <h2 style='color: #0B2D2C;'>Code de vérification</h2>
+        <p style='color: #5E8584; font-size: 14px;'>Utilisez ce code pour confirmer votre inscription. Il expire dans <strong>10 minutes</strong>.</p>
+        <div style='background: #F0FBFA; border-radius: 12px; padding: 20px; margin: 24px 0; border: 1px solid #DFF0EF;'>
+            <span style='font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #084E4B; font-family: monospace;'>{code}</span>
+        </div>
+        <p style='color: #9DBDBC; font-size: 12px;'>Si vous n'avez pas créé de compte, ignorez cet email.</p>
+    </div>
+    <div style='background: #F0FBFA; padding: 16px 40px; text-align: center; border-top: 1px solid #DFF0EF;'>
+        <p style='color: #9DBDBC; font-size: 11px; margin: 0;'>© 2026 SympNet — Tous droits réservés</p>
+    </div>
+</div>";
+
+        await SendEmailAsync(toEmail, "Votre code de vérification SympNet", body);
+    }
+    public async Task SendPasswordResetCodeAsync(string toEmail, string code)
+    {
+        var body = $@"
+<div style='font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; background: #fff; border-radius: 16px; border: 1px solid #DFF0EF; overflow: hidden;'>
+    <div style='background: linear-gradient(135deg, #084E4B, #1A9E97); padding: 32px 40px; text-align: center;'>
+        <h1 style='color: #fff; font-size: 24px; margin: 0;'>SympNet</h1>
+    </div>
+    <div style='padding: 32px 40px; text-align: center;'>
+        <h2 style='color: #0B2D2C;'>Réinitialisation du mot de passe</h2>
+        <p style='color: #5E8584; font-size: 14px;'>Utilisez ce code pour réinitialiser votre mot de passe. Il expire dans <strong>10 minutes</strong>.</p>
+        <div style='background: #F0FBFA; border-radius: 12px; padding: 20px; margin: 24px 0; border: 1px solid #DFF0EF;'>
+            <span style='font-size: 36px; font-weight: 700; letter-spacing: 8px; color: #084E4B; font-family: monospace;'>{code}</span>
+        </div>
+        <p style='color: #9DBDBC; font-size: 12px;'>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
+    </div>
+    <div style='background: #F0FBFA; padding: 16px 40px; text-align: center; border-top: 1px solid #DFF0EF;'>
+        <p style='color: #9DBDBC; font-size: 11px; margin: 0;'>© 2026 SympNet — Tous droits réservés</p>
+    </div>
+</div>";
+
+        await SendEmailAsync(toEmail, "Code de réinitialisation SympNet", body);
     }
 }

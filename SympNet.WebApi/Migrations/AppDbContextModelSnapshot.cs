@@ -134,8 +134,23 @@ namespace SympNet.WebApi.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Allergies")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("BloodType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("ConsultationCount")
                         .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("timestamp with time zone");
@@ -149,6 +164,10 @@ namespace SympNet.WebApi.Migrations
                         .HasColumnType("text");
 
                     b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MedicalHistory")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -185,6 +204,9 @@ namespace SympNet.WebApi.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsEmailVerified")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -213,6 +235,12 @@ namespace SympNet.WebApi.Migrations
 
                     b.Property<string>("Speciality")
                         .HasColumnType("text");
+
+                    b.Property<string>("VerificationCode")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("VerificationCodeExpiry")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
