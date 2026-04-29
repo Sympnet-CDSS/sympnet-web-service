@@ -3,6 +3,7 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Nav
+@inject IConfiguration Config
 
 <PageTitle>SympNet — Gestion des Médecins</PageTitle>
 
@@ -258,7 +259,8 @@
             if (!string.IsNullOrEmpty(token))
             {
                 Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                var apiUrl = "http://localhost:5000/api/doctors";
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                var apiUrl = $"{baseUrl}/api/doctors";
                 doctors = await Http.GetFromJsonAsync<List<DoctorDto>>(apiUrl) ?? new();
             }
         }
@@ -266,7 +268,7 @@
         finally { isLoading = false; StateHasChanged(); }
     }
 
-    private void OpenConfirmModal(string action, int id, string firstName, string lastName)
+    private void OpenConfirmModal(string action, int id, string? firstName, string lastName)
     {
         string name = $"{firstName} {lastName}".Trim();
         if (string.IsNullOrWhiteSpace(name)) name = "ce médecin";
@@ -350,7 +352,8 @@
             var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            var apiUrl = "http://localhost:5000/api/doctors";
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var apiUrl = $"{baseUrl}/api/doctors";
             var response = await Http.PostAsJsonAsync(apiUrl, newDoctor);
             
             if (response.IsSuccessStatusCode)
@@ -374,7 +377,8 @@
     {
         try
         {
-            var apiUrl = $"http://localhost:5000/api/doctors/{id}/activate";
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var apiUrl = $"{baseUrl}/api/doctors/{id}/activate";
             await Http.PutAsJsonAsync(apiUrl, new { });
             ShowToast("Médecin activé avec succès", "success");
             await LoadDoctors();
@@ -386,7 +390,8 @@
     {
         try
         {
-            var apiUrl = $"http://localhost:5000/api/doctors/{id}/deactivate";
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var apiUrl = $"{baseUrl}/api/doctors/{id}/deactivate";
             await Http.PutAsJsonAsync(apiUrl, new { });
             ShowToast("Médecin désactivé", "info");
             await LoadDoctors();
@@ -398,24 +403,25 @@
     {
         try
         {
-            var apiUrl = $"http://localhost:5000/api/doctors/{id}";
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var apiUrl = $"{baseUrl}/api/doctors/{id}";
             await Http.DeleteAsync(apiUrl);
             ShowToast($"Dr. {name} supprimé définitivement", "success");
             await LoadDoctors();
         }
         catch (Exception) { ShowToast("Erreur lors de la suppression", "error"); }
     }
-private void OpenConfirmModalForActivate(int id, string firstName, string lastName)
+private void OpenConfirmModalForActivate(int id, string? firstName, string lastName)
 {
     OpenConfirmModal("activate", id, firstName, lastName);
 }
 
-private void OpenConfirmModalForDeactivate(int id, string firstName, string lastName)
+private void OpenConfirmModalForDeactivate(int id, string? firstName, string lastName)
 {
     OpenConfirmModal("deactivate", id, firstName, lastName);
 }
 
-private void OpenConfirmModalForDelete(int id, string firstName, string lastName)
+private void OpenConfirmModalForDelete(int id, string? firstName, string lastName)
 {
     OpenConfirmModal("delete", id, firstName, lastName);
 }

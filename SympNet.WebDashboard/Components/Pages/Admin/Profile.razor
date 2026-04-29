@@ -2,6 +2,7 @@
 @layout AdminLayout
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject IConfiguration Config
 @using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>SympNet — Mon Profil</PageTitle>
@@ -126,7 +127,6 @@
     private bool isSaving = false;
     private string successMessage = "";
     private string errorMessage = "";
-    private ElementReference fileInput;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -142,7 +142,7 @@
             {
                 Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                 
-                var apiUrl = "http://localhost:5000/api/profile";
+                var apiUrl = $"{Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057"}/api/profile";
                 var profile = await Http.GetFromJsonAsync<ProfileDto>(apiUrl);
                 if (profile != null)
                 {
@@ -199,7 +199,7 @@
             var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            var response = await Http.PutAsJsonAsync("http://localhost:5000/api/profile/photo", new { PhotoBase64 = photoBase64 });
+            var response = await Http.PutAsJsonAsync($"{Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057"}/api/profile/photo", new { PhotoBase64 = photoBase64 });
             
             if (response.IsSuccessStatusCode)
             {
@@ -247,7 +247,7 @@
             Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
 
             // Mettre à jour l'email
-            var emailResponse = await Http.PutAsJsonAsync("http://localhost:5000/api/profile/email", new { Email = email });
+            var emailResponse = await Http.PutAsJsonAsync($"{Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057"}/api/profile/email", new { Email = email });
             
             if (!emailResponse.IsSuccessStatusCode)
             {
@@ -260,7 +260,7 @@
             // Changer le mot de passe si fourni
             if (!string.IsNullOrEmpty(newPassword))
             {
-                var passwordResponse = await Http.PutAsJsonAsync("http://localhost:5000/api/profile/password", new 
+                var passwordResponse = await Http.PutAsJsonAsync($"{Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057"}/api/profile/password", new 
                 { 
                     CurrentPassword = currentPassword,
                     NewPassword = newPassword 

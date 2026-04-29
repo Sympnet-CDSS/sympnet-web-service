@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using SympNet.WebApi.Data;
 using SympNet.WebApi.Services;
+using SympNet.WebApi.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -58,10 +59,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddCors();
+builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-// === CRÉATION AUTO DE L'ADMIN (UNE SEULE FOIS) ===
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -88,15 +89,13 @@ using (var scope = app.Services.CreateScope())
         db.Users.Add(adminUser);
         db.SaveChanges();
         
-        Console.WriteLine("========================================");
-        Console.WriteLine("✅ ADMIN CRÉÉ AVEC SUCCÈS !");
+        Console.WriteLine(" ADMIN CRÉÉ AVEC SUCCÈS !");
         Console.WriteLine($"   Email: {adminEmail}");
         Console.WriteLine($"   Mot de passe: {adminPassword}");
-        Console.WriteLine("========================================");
     }
     else
     {
-        Console.WriteLine("ℹ️ L'administrateur existe déjà.");
+        Console.WriteLine(" L'administrateur existe déjà.");
     }
 }
 
@@ -112,5 +111,6 @@ app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<ChatHub>("/chatHub");
 
 app.Run();

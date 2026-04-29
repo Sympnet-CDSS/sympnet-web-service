@@ -12,6 +12,7 @@ public class AppDbContext : DbContext
     public DbSet<Patient> Patients => Set<Patient>();
     public DbSet<Consultation> Consultations => Set<Consultation>();
     public DbSet<Patient> Patirnts => Set<Patient>();
+    public DbSet<Appointment> Appointments => Set<Appointment>();
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -30,5 +31,10 @@ public class AppDbContext : DbContext
             .HasOne(p => p.User)
             .WithMany()
             .HasForeignKey(p => p.UserId);
+        
+        modelBuilder.Entity<Appointment>()
+             .HasOne(a => a.Doctor)
+             .WithMany()
+             .HasForeignKey(a => a.DoctorId);
     }
 }

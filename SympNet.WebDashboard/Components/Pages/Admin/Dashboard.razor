@@ -3,6 +3,7 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject IConfiguration Config
 
 <PageTitle>SympNet — Dashboard Admin</PageTitle>
 
@@ -94,7 +95,6 @@
     private StatsData? stats;
     private bool isLoading = true;
     private string? errorMessage = null;
-    private bool isFirstRender = true;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -131,7 +131,8 @@
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
             // Appel API pour les statistiques
-            var apiUrl = "http://localhost:5000/api/admin/stats";
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var apiUrl = $"{baseUrl}/api/admin/stats";
             var response = await Http.GetFromJsonAsync<ApiStatsResponse>(apiUrl);
             
             if (response != null)
@@ -156,7 +157,8 @@
         catch (HttpRequestException ex)
         {
             Console.WriteLine($"Erreur HTTP: {ex.Message}");
-            errorMessage = "Impossible de contacter l'API. Vérifiez que l'API est démarrée sur http://localhost:5000";
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            errorMessage = $"Impossible de contacter l'API. Vérifiez que l'API est démarrée sur {baseUrl}";
         }
         catch (Exception ex)
         {

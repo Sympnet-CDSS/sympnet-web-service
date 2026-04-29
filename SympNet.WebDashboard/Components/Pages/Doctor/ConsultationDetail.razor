@@ -3,11 +3,12 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject IConfiguration Config
 
-<PageTitle>SympNet — Détail Consultation</PageTitle>
+<PageTitle>SympNet — Détail consultation</PageTitle>
 
 <style>
-    .detail-container { max-width: 900px; margin: 0 auto; }
+    .detail-container { max-width: 900px; margin: 0 auto; padding: 20px; }
     .card { background: white; border-radius: 24px; padding: 28px; margin-bottom: 24px; border: 1px solid rgba(13,148,136,0.1); }
     .card-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #0D9488; }
     .info-row { display: flex; padding: 12px 0; border-bottom: 1px solid #F3F4F6; }
@@ -15,13 +16,12 @@
     .info-value { flex: 1; color: #1F2937; }
     .confidence-bar { height: 8px; background: #E5E7EB; border-radius: 4px; overflow: hidden; margin: 10px 0; }
     .confidence-fill { height: 100%; background: linear-gradient(90deg, #0D9488, #14B8A6); border-radius: 4px; }
-    .btn-back { background: #F3F4F6; color: #6B7280; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; transition: all 0.2s; }
+    .btn-back { background: #F3F4F6; color: #6B7280; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; margin-top: 20px; }
     .btn-back:hover { background: #E5E7EB; }
     .loading-spinner { text-align: center; padding: 60px; }
     .spinner { width: 48px; height: 48px; border: 3px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite; }
-    .status-completed { background: #D1FAE5; color: #10B981; padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; display: inline-block; }
-    .status-pending { background: #FEF3C7; color: #F59E0B; padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; display: inline-block; }
     @@keyframes spin { to { transform: rotate(360deg); } }
+    .recommendation-item { background: #F0FDF4; border-radius: 12px; padding: 12px; margin-bottom: 8px; border-left: 3px solid #10B981; }
 </style>
 
 <div class="detail-container">
@@ -33,15 +33,15 @@
     {
         <div class="card">
             <div class="card-title"><i class="fas fa-user-circle"></i> Informations patient</div>
-            <div class="info-row"><div class="info-label">Nom</div><div class="info-value">@consultation.PatientName</div></div>
+            <div class="info-row"><div class="info-label">Nom complet</div><div class="info-value">@consultation.PatientName</div></div>
             <div class="info-row"><div class="info-label">Email</div><div class="info-value">@consultation.PatientEmail</div></div>
-            <div class="info-row"><div class="info-label">Date</div><div class="info-value">@consultation.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div></div>
-            <div class="info-row"><div class="info-label">Statut</div><div class="info-value"><span class="@(consultation.Status == "Terminée" ? "status-completed" : "status-pending")">@consultation.Status</span></div></div>
+            <div class="info-row"><div class="info-label">Date de consultation</div><div class="info-value">@consultation.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div></div>
+            <div class="info-row"><div class="info-label">Statut</div><div class="info-value"><span class="status-completed">✓ Terminée</span></div></div>
         </div>
 
         <div class="card">
             <div class="card-title"><i class="fas fa-notes-medical"></i> Symptômes</div>
-            <p style="white-space: pre-wrap;">@consultation.Symptoms</p>
+            <p style="white-space: pre-wrap; line-height: 1.6;">@consultation.Symptoms</p>
         </div>
 
         <div class="card">
@@ -50,42 +50,44 @@
             <div class="info-row"><div class="info-label">Score de confiance</div>
                 <div class="info-value">
                     <div class="confidence-bar"><div class="confidence-fill" style="width: @(consultation.ConfidenceScore * 100)%"></div></div>
-                    <span>@(consultation.ConfidenceScore * 100)%</span>
+                    <span style="margin-top: 8px; display: inline-block;">@(consultation.ConfidenceScore * 100)%</span>
                 </div>
             </div>
         </div>
 
         <div class="card">
             <div class="card-title"><i class="fas fa-list-check"></i> Recommandations</div>
-            <ul style="margin: 0; padding-left: 20px;">
-                @foreach (var rec in consultation.Recommendations.Split('\n'))
+            @foreach (var rec in consultation.Recommendations.Split('\n'))
+            {
+                if (!string.IsNullOrWhiteSpace(rec))
                 {
-                    <li style="margin: 8px 0;">@rec</li>
+                    <div class="recommendation-item">@rec</div>
                 }
-            </ul>
+            }
         </div>
 
-        <div style="text-align: center;">
-            <button class="btn-back" @onclick="GoBack">
-                <i class="fas fa-arrow-left"></i> Retour aux consultations
-            </button>
-        </div>
+        <button class="btn-back" @onclick="GoBack">
+            <i class="fas fa-arrow-left"></i> Retour à la liste
+        </button>
     }
 </div>
+
+<style>
+    .status-completed { background: #D1FAE5; color: #10B981; padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; display: inline-block; }
+</style>
 
 @code {
     [Parameter] public int Id { get; set; }
     private ConsultationDetailDto? consultation;
     private bool isLoading = true;
+    private void GoBack() => Navigation.NavigateTo("/doctor/consultations");
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadConsultation();
-    }
-
-    private void GoBack()
-    {
-        Navigation.NavigateTo("/doctor/consultations");
+        if (firstRender)
+        {
+            await LoadConsultation();
+        }
     }
 
     private async Task LoadConsultation()
@@ -97,7 +99,8 @@
             if (!string.IsNullOrEmpty(token))
             {
                 Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                consultation = await Http.GetFromJsonAsync<ConsultationDetailDto>($"http://localhost:5000/api/consultations/{Id}");
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                consultation = await Http.GetFromJsonAsync<ConsultationDetailDto>($"{baseUrl}/api/consultations/{Id}");
             }
         }
         catch (Exception ex)
@@ -120,7 +123,6 @@
         public string Diagnosis { get; set; } = "";
         public string Recommendations { get; set; } = "";
         public double ConfidenceScore { get; set; }
-        public string Status { get; set; } = "";
         public DateTime CreatedAt { get; set; }
     }
 }

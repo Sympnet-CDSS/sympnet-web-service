@@ -2,6 +2,7 @@
 @layout AdminLayout
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject IConfiguration Config
 
 <PageTitle>SympNet — Gestion des Patients</PageTitle>
 
@@ -230,7 +231,8 @@
             if (!string.IsNullOrEmpty(token))
             {
                 Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                var apiUrl = "http://localhost:5000/api/patients";
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                var apiUrl = $"{baseUrl}/api/patients";
                 patients = await Http.GetFromJsonAsync<List<PatientDto>>(apiUrl) ?? new();
             }
         }
@@ -238,17 +240,17 @@
         finally { isLoading = false; StateHasChanged(); }
     }
 
-    private void OpenConfirmModalForActivate(int id, string firstName, string lastName)
+    private void OpenConfirmModalForActivate(int id, string? firstName, string lastName)
     {
         OpenConfirmModal("activate", id, firstName, lastName);
     }
 
-    private void OpenConfirmModalForDeactivate(int id, string firstName, string lastName)
+    private void OpenConfirmModalForDeactivate(int id, string? firstName, string lastName)
     {
         OpenConfirmModal("deactivate", id, firstName, lastName);
     }
 
-    private void OpenConfirmModal(string action, int id, string firstName, string lastName)
+    private void OpenConfirmModal(string action, int id, string? firstName, string lastName)
     {
         string name = $"{firstName} {lastName}".Trim();
         if (string.IsNullOrWhiteSpace(name)) name = "ce patient";
@@ -311,7 +313,8 @@
     {
         try
         {
-            var apiUrl = $"http://localhost:5000/api/patients/{id}/activate";
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var apiUrl = $"{baseUrl}/api/patients/{id}/activate";
             await Http.PutAsJsonAsync(apiUrl, new { });
             ShowToast("Patient activé avec succès", "success");
             await LoadPatients();
@@ -323,7 +326,8 @@
     {
         try
         {
-            var apiUrl = $"http://localhost:5000/api/patients/{id}/deactivate";
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var apiUrl = $"{baseUrl}/api/patients/{id}/deactivate";
             await Http.PutAsJsonAsync(apiUrl, new { });
             ShowToast("Patient désactivé", "info");
             await LoadPatients();

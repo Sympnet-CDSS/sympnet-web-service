@@ -1,12 +1,13 @@
-ï»¿@page "/login"
+@page "/login"
 @layout EmptyLayout
 @rendermode InteractiveServer
 @inject NavigationManager Nav
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject IConfiguration Config
 @using System.Text.Json
 
-<PageTitle>SympNet â€” Connexion</PageTitle>
+<PageTitle>SympNet — Connexion</PageTitle>
 
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 
@@ -126,16 +127,16 @@ a{text-decoration:none;color:inherit}
           <circle cx="13" cy="23" r="1.8" fill="rgba(255,255,255,.7)"/>
         </svg>
       </div>
-      <div><div class="ll-nm">SympNet</div><div class="ll-tg">SystÃ¨me Intelligent de Support DÃ©cisionnel Clinique</div></div>
+      <div><div class="ll-nm">SympNet</div><div class="ll-tg">Système Intelligent de Support Décisionnel Clinique</div></div>
     </div>
     <div class="ll-center">
       <div class="pill-wrap"><div class="pill-dot"></div><span class="pill-txt" id="pill-txt">Admin Portal</span></div>
       <h1 class="ll-h">Platform<br/><em>Control</em><br/>Center</h1>
-      <p class="ll-p">GÃ©rez les mÃ©decins, supervisez la plateforme et surveillez l'activitÃ© clinique de SympNet.</p>
+      <p class="ll-p">Gérez les médecins, supervisez la plateforme et surveillez l'activité clinique de SympNet.</p>
       <div class="feats">
-        <div class="feat"><div class="fic">ğŸ©º</div><div class="ftxt"><b>Gestion des mÃ©decins</b> â€” CrÃ©er, activer et dÃ©sactiver</div></div>
-        <div class="feat"><div class="fic">ğŸ“Š</div><div class="ftxt"><b>Statistiques</b> â€” Tableaux de bord en temps rÃ©el</div></div>
-        <div class="feat"><div class="fic">ğŸ”’</div><div class="ftxt"><b>SÃ©curitÃ©</b> â€” AccÃ¨s protÃ©gÃ© par JWT</div></div>
+        <div class="feat"><div class="fic">??</div><div class="ftxt"><b>Gestion des médecins</b> — Créer, activer et désactiver</div></div>
+        <div class="feat"><div class="fic">??</div><div class="ftxt"><b>Statistiques</b> — Tableaux de bord en temps réel</div></div>
+        <div class="feat"><div class="fic">??</div><div class="ftxt"><b>Sécurité</b> — Accès protégé par JWT</div></div>
       </div>
     </div>
   </div>
@@ -147,10 +148,10 @@ a{text-decoration:none;color:inherit}
       <!-- Role Switch -->
       <div class="role-switch">
         <button class="role-btn @(role == "admin" ? "active" : "")" @onclick='() => SwitchRole("admin")'>
-          <span>ğŸ›¡ï¸</span> Administrateur
+          <span>???</span> Administrateur
         </button>
         <button class="role-btn @(role == "doctor" ? "active" : "")" @onclick='() => SwitchRole("doctor")'>
-          <span>ğŸ©º</span> MÃ©decin
+          <span>??</span> Médecin
         </button>
       </div>
 
@@ -163,17 +164,17 @@ a{text-decoration:none;color:inherit}
           }
           else
           {
-            <span>ğŸ©º</span>
+            <span>??</span>
           }
         </div>
         <div class="rb-txt @role">
-          <div class="badge-title">@(role == "admin" ? "AccÃ¨s Administrateur" : "AccÃ¨s MÃ©decin")</div>
-          <div class="badge-sub">@(role == "admin" ? "RÃ©servÃ© aux comptes administrateurs" : "Identifiants envoyÃ©s par l'admin SympNet")</div>
+          <div class="badge-title">@(role == "admin" ? "Accès Administrateur" : "Accès Médecin")</div>
+          <div class="badge-sub">@(role == "admin" ? "Réservé aux comptes administrateurs" : "Identifiants envoyés par l'admin SympNet")</div>
         </div>
       </div>
 
-      <div class="form-title">@(role == "admin" ? "Bienvenue" : "Connexion MÃ©decin")</div>
-      <div class="form-sub">@(role == "admin" ? "Connectez-vous au tableau de bord Admin" : "AccÃ©dez Ã  votre tableau de bord clinique")</div>
+      <div class="form-title">@(role == "admin" ? "Bienvenue" : "Connexion Médecin")</div>
+      <div class="form-sub">@(role == "admin" ? "Connectez-vous au tableau de bord Admin" : "Accédez à votre tableau de bord clinique")</div>
 
       <!-- Email -->
       <div class="fld">
@@ -189,7 +190,7 @@ a{text-decoration:none;color:inherit}
         <label>Mot de passe</label>
         <div class="ish">
           <svg class="iico" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
-          <input type="@(showPassword ? "text" : "password")" @bind="password" @bind:event="oninput" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password"/>
+          <input type="@(showPassword ? "text" : "password")" @bind="password" @bind:event="oninput" placeholder="••••••••" autocomplete="current-password"/>
           <button class="eyebtn" type="button" @onclick="() => showPassword = !showPassword">
             <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/></svg>
           </button>
@@ -197,7 +198,7 @@ a{text-decoration:none;color:inherit}
       </div>
 
       <div class="forgot-link">
-    <a href="/forgot-password">Mot de passe oubliÃ© ?</a>
+    <a href="/forgot-password">Mot de passe oublié ?</a>
 </div>
 
       @if (errorMsg != null)
@@ -216,7 +217,7 @@ a{text-decoration:none;color:inherit}
         else
         {
           <svg viewBox="0 0 20 20" fill="currentColor" width="17" height="17"><path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
-          <span>@(role == "admin" ? "Se connecter en tant qu'Admin" : "Se connecter en tant que MÃ©decin")</span>
+          <span>@(role == "admin" ? "Se connecter en tant qu'Admin" : "Se connecter en tant que Médecin")</span>
         }
       </button>
 
@@ -252,7 +253,8 @@ a{text-decoration:none;color:inherit}
         loading = true;
         try
         {
-            var apiUrl = "http://localhost:5000/api/auth/login";
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var apiUrl = $"{baseUrl}/api/auth/login";
             
             var response = await Http.PostAsJsonAsync(apiUrl, new { email, password });
             var data = await response.Content.ReadAsStringAsync();
@@ -270,7 +272,7 @@ a{text-decoration:none;color:inherit}
 
             if (returnedRole != role)
             {
-                errorMsg = $"Ce compte est Â« {returnedRole} Â». SÃ©lectionnez le bon onglet.";
+                errorMsg = $"Ce compte est « {returnedRole} ». Sélectionnez le bon onglet.";
                 return;
             }
 
