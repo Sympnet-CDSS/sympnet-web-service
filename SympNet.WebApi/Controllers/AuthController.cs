@@ -4,8 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using SympNet.WebApi.Data;
 using SympNet.WebApi.Models;
 using SympNet.WebApi.Services;
-using System.Security.Claims;
-using SympNet.WebApi.Dtos;
+using System.Security.Claims;  
 
 namespace SympNet.WebApi.Controllers;
 
@@ -15,13 +14,11 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _db;
     private readonly JwtService _jwt;
-    private readonly EmailService _email;
 
-    public AuthController(AppDbContext db, JwtService jwt, EmailService email)
+    public AuthController(AppDbContext db, JwtService jwt)
     {
         _db = db;
         _jwt = jwt;
-        _email = email;
     }
 
     [HttpPost("register")]
@@ -30,41 +27,14 @@ public class AuthController : ControllerBase
         if (await _db.Users.AnyAsync(u => u.Email == dto.Email))
             return BadRequest(new { message = "Email deja utilise." });
 
-        var code = new Random().Next(100000, 999999).ToString();
-
         var user = new User
         {
             Email = dto.Email,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             Role = dto.Role,
-            FullName = dto.FullName,
-            VerificationCode = code,
-            VerificationCodeExpiry = DateTime.UtcNow.AddMinutes(10),
-            IsEmailVerified = false
+            FullName = dto.FullName
         };
-
         _db.Users.Add(user);
-        await _db.SaveChangesAsync();
-
-        await _email.SendVerificationCodeAsync(dto.Email, code);
-
-        return Ok(new { message = "Code de vérification envoyé à " + dto.Email });
-    }
-
-    [HttpPost("verify-code")]
-    public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeDto dto)
-    {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-        if (user == null)
-            return NotFound(new { message = "Utilisateur introuvable." });
-
-        if (user.VerificationCode != dto.Code || user.VerificationCodeExpiry < DateTime.UtcNow)
-            return BadRequest(new { message = "Code invalide ou expiré." });
-
-        user.IsEmailVerified = true;
-        user.IsActive = true;
-        user.VerificationCode = null;
-        user.VerificationCodeExpiry = null;
         await _db.SaveChangesAsync();
 
         var token = _jwt.GenerateToken(user);
@@ -80,9 +50,6 @@ public class AuthController : ControllerBase
 
         if (!user.IsActive)
             return Unauthorized(new { message = "Compte desactive." });
-
-        if (!user.IsEmailVerified)
-            return Unauthorized(new { message = "Email non vérifié. Vérifiez votre boîte mail." });
 
         user.LastLoginAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
@@ -103,54 +70,7 @@ public class AuthController : ControllerBase
 
         return Ok(new { user.Id, user.Email, user.Role, user.IsActive, user.FullName });
     }
-
-    [HttpPost("forgot-password")]
-    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
-    {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-        if (user == null)
-            return NotFound(new { message = "Email introuvable." });
-
-        var code = new Random().Next(100000, 999999).ToString();
-        user.ResetToken = code;
-        user.ResetTokenExpiry = DateTime.UtcNow.AddMinutes(10);
-        await _db.SaveChangesAsync();
-
-        await _email.SendPasswordResetCodeAsync(dto.Email, code);
-
-        return Ok(new { message = "Code envoyé à " + dto.Email });
-    }
-
-    [HttpPost("verify-reset-code")]
-    public async Task<IActionResult> VerifyResetCode([FromBody] VerifyCodeDto dto)
-    {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-        if (user == null)
-            return NotFound(new { message = "Utilisateur introuvable." });
-
-        if (user.ResetToken != dto.Code || user.ResetTokenExpiry < DateTime.UtcNow)
-            return BadRequest(new { message = "Code invalide ou expiré." });
-
-        return Ok(new { message = "Code valide." });
-    }
-
-    [HttpPost("reset-password")]
-    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
-    {
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-        if (user == null)
-            return NotFound(new { message = "Utilisateur introuvable." });
-
-        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
-        user.ResetToken = null;
-        user.ResetTokenExpiry = null;
-        await _db.SaveChangesAsync();
-
-        return Ok(new { message = "Mot de passe réinitialisé." });
-    }
 }
-
-// ── DTOs ──────────────────────────────────────────────────────────────────────
 
 public class RegisterDto
 {
@@ -165,13 +85,6 @@ public class LoginDto
     public string Email { get; set; } = string.Empty;
     public string Password { get; set; } = string.Empty;
 }
-
-public class VerifyCodeDto
-{
-    public string Email { get; set; } = string.Empty;
-    public string Code { get; set; } = string.Empty;
-}
-
 
 public class AuthResponseDto
 {

@@ -6,7 +6,6 @@ using SympNet.WebApi.Dtos;
 using SympNet.WebApi.Models;
 using SympNet.WebApi.Services;
 using System.Security.Cryptography;
-using SympNet.WebApi.Dtos;
 
 namespace SympNet.WebApi.Controllers;
 
