@@ -43,10 +43,11 @@ public class AppointmentsController : ControllerBase
                 Id = a.Id,
                 DoctorId = a.DoctorId,
                 DoctorName = a.Doctor != null ? $"Dr. {a.Doctor.FirstName} {a.Doctor.LastName}" : "Docteur",
-                DoctorSpeciality = a.Doctor.Speciality,
-                DoctorAddress = a.Doctor.Address,
+                DoctorSpeciality = a.Doctor != null ? a.Doctor.Speciality : "Généraliste",
+                DoctorAddress = a.Doctor != null ? a.Doctor.Address : "Adresse non renseignée",
                 DateTime = a.DateTime,
-                Status = a.Status
+                Status = a.Status,
+                Notes = a.Notes
             })
             .ToListAsync();
 
@@ -72,7 +73,7 @@ public class AppointmentsController : ControllerBase
             {
                 a.Id,
                 PatientName = a.Patient != null ? a.Patient.FullName : "Patient",
-                PatientEmail = a.Patient.Email,
+                PatientEmail = a.Patient != null ? a.Patient.Email : "Email non renseigné",
                 a.DateTime,
                 a.Status,
                 a.Notes
@@ -89,12 +90,10 @@ public class AppointmentsController : ControllerBase
     {
         var userId = GetCurrentUserId();
         
-        // Vérifier que le médecin existe
         var doctor = await _db.Doctors.FindAsync(dto.DoctorId);
         if (doctor == null)
             return NotFound(new { message = "Médecin non trouvé" });
 
-        // Vérifier que le créneau est disponible
         var existingAppointment = await _db.Appointments
             .FirstOrDefaultAsync(a => a.DoctorId == dto.DoctorId && a.DateTime == dto.DateTime);
         
@@ -131,7 +130,6 @@ public class AppointmentsController : ControllerBase
         if (appointment == null)
             return NotFound(new { message = "Rendez-vous non trouvé" });
 
-        // Vérifier que l'utilisateur est le patient ou le médecin
         var isPatient = appointment.PatientId == userId;
         var isDoctor = await _db.Doctors.AnyAsync(d => d.UserId == userId && d.Id == appointment.DoctorId);
 
@@ -140,7 +138,6 @@ public class AppointmentsController : ControllerBase
 
         if (dto.DateTime.HasValue)
         {
-            // Vérifier que le nouveau créneau est disponible
             var existingAppointment = await _db.Appointments
                 .FirstOrDefaultAsync(a => a.DoctorId == appointment.DoctorId && 
                                          a.DateTime == dto.DateTime.Value &&
@@ -160,7 +157,6 @@ public class AppointmentsController : ControllerBase
             appointment.Notes = dto.Notes;
 
         appointment.UpdatedAt = DateTime.UtcNow;
-
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Rendez-vous mis à jour" });

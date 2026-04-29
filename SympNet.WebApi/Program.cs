@@ -63,7 +63,6 @@ builder.Services.AddSignalR();
 
 var app = builder.Build();
 
-// === CRÉATION AUTO DE L'ADMIN (UNE SEULE FOIS) ===
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -90,15 +89,13 @@ using (var scope = app.Services.CreateScope())
         db.Users.Add(adminUser);
         db.SaveChanges();
         
-        Console.WriteLine("========================================");
-        Console.WriteLine("✅ ADMIN CRÉÉ AVEC SUCCÈS !");
+        Console.WriteLine(" ADMIN CRÉÉ AVEC SUCCÈS !");
         Console.WriteLine($"   Email: {adminEmail}");
         Console.WriteLine($"   Mot de passe: {adminPassword}");
-        Console.WriteLine("========================================");
     }
     else
     {
-        Console.WriteLine("ℹ️ L'administrateur existe déjà.");
+        Console.WriteLine(" L'administrateur existe déjà.");
     }
 }
 

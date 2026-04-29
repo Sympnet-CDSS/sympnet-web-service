@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SympNet.WebApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+eb7b23dcd936342bb5dbc13faca60a5a733749e6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+e2a2cc85c5ca73aa4c9cc48901b4aee43b5ab331")]
 [assembly: System.Reflection.AssemblyProductAttribute("SympNet.WebApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SympNet.WebApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

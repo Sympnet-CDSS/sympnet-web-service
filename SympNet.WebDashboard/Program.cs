@@ -10,7 +10,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ApiService>();
-// builder.Services.AddScoped<EmailService>(); ← SUPPRIME CETTE LIGNE
+// builder.Services.AddScoped<EmailService>(); 
 
 builder.Services.AddAuthentication().AddCookie("AuthCookie", options =>
 {

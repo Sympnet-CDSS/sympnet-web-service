@@ -3,6 +3,7 @@
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
+@inject IConfiguration Config
 @using Microsoft.AspNetCore.Components.Forms
 
 <PageTitle>SympNet — Diagnostic IA</PageTitle>
@@ -444,7 +445,7 @@
                 confidenceScore = confidenceLevel
             };
             
-            var response = await Http.PostAsJsonAsync("http://localhost:5000/api/consultations", consultation);
+            var response = await Http.PostAsJsonAsync($"{Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057"}/api/consultations", consultation);
             
             if (response.IsSuccessStatusCode)
             {

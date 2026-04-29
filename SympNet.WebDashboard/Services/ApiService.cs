@@ -15,7 +15,7 @@ public class ApiService
         _config = config;
     }
 
-    private string GetApiUrl() => _config["ApiSettings:BaseUrl"] ?? "http://localhost:5000";
+    private string GetApiUrl() => _config["ApiSettings:BaseUrl"] ?? "http://localhost:5002";
 
     private async Task<string?> GetTokenAsync()
     {

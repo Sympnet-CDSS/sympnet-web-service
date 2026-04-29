@@ -1,10 +1,10 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @inject NavigationManager Navigation
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject SympNet.WebDashboard.Services.ApiService ApiService
 
-<PageTitle>SympNet — Admin</PageTitle>
+<PageTitle>SympNet  Admin</PageTitle>
 
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
@@ -85,13 +85,13 @@
             </div>
         </div>
         <div class="admin-sidebar-nav">
-            <div class="admin-nav-label">Vue Générale</div>
+            <div class="admin-nav-label">Vue G�n�rale</div>
             <div class="admin-nav-item @(IsActive("/admin/dashboard") ? "active" : "")" @onclick="GoToDashboard">
                 <i class="fas fa-chart-line"></i><span>Tableau de bord</span>
             </div>
             <div class="admin-nav-label">Gestion</div>
             <div class="admin-nav-item @(IsActive("/admin/doctors") ? "active" : "")" @onclick="GoToDoctors">
-                <i class="fas fa-user-md"></i><span>Médecins</span>
+                <i class="fas fa-user-md"></i><span>M�decins</span>
             </div>
             <div class="admin-nav-item @(IsActive("/admin/patients") ? "active" : "")" @onclick="GoToPatients">
                 <i class="fas fa-users"></i><span>Patients</span>
@@ -110,7 +110,7 @@
                 </div>
             </div>
             <button class="admin-logout-btn" @onclick="Logout">
-                <i class="fas fa-sign-out-alt"></i> Déconnexion
+                <i class="fas fa-sign-out-alt"></i> D�connexion
             </button>
         </div>
     </aside>
@@ -193,8 +193,8 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erreur lors de la déconnexion: {ex.Message}");
-            // Forcer la redirection même en cas d'erreur
+            Console.WriteLine($"Erreur lors de la d�connexion: {ex.Message}");
+            // Forcer la redirection m�me en cas d'erreur
             Navigation.NavigateTo("/login", true);
         }
     }

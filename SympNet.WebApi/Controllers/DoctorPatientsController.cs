@@ -32,7 +32,7 @@ public class DoctorPatientsController : ControllerBase
     {
         var doctorId = GetCurrentDoctorId();
         
-        var patientIds = await _db.Consultations
+        var patientEmails = await _db.Consultations
             .Where(c => c.DoctorId == doctorId)
             .Select(c => c.PatientEmail)
             .Distinct()
@@ -40,7 +40,7 @@ public class DoctorPatientsController : ControllerBase
 
         var patients = await _db.Patients
             .Include(p => p.User)
-            .Where(p => patientIds.Contains(p.User.Email))
+            .Where(p => patientEmails.Contains(p.User.Email))
             .Select(p => new
             {
                 p.Id,
@@ -58,8 +58,7 @@ public class DoctorPatientsController : ControllerBase
                     .Where(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId)
                     .OrderByDescending(c => c.CreatedAt)
                     .Select(c => c.CreatedAt)
-                    .FirstOrDefault(),
-                p.CreatedAt
+                    .FirstOrDefault()
             })
             .OrderByDescending(p => p.LastConsultation)
             .ToListAsync();
@@ -69,7 +68,7 @@ public class DoctorPatientsController : ControllerBase
 
     // GET: api/doctorpatients/{id}
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetPatient(int id)
+    public async Task<IActionResult> GetPatientDetails(int id)
     {
         var doctorId = GetCurrentDoctorId();
         
@@ -101,8 +100,7 @@ public class DoctorPatientsController : ControllerBase
                         c.ConfidenceScore,
                         c.CreatedAt
                     })
-                    .ToList(),
-                p.CreatedAt
+                    .ToList()
             })
             .FirstOrDefaultAsync();
 

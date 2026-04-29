@@ -9,6 +9,7 @@ public class AppointmentDto
     public string DoctorAddress { get; set; } = string.Empty;
     public DateTime DateTime { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string? Notes { get; set; }  // ← AJOUTER CETTE LIGNE
 }
 
 public class CreateAppointmentDto

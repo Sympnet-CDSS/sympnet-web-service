@@ -2,8 +2,9 @@
 @inject NavigationManager Navigation
 @inject HttpClient Http
 @inject IJSRuntime JS
+@inject IConfiguration Config
 
-<PageTitle>SympNet — Espace Médecin</PageTitle>
+<PageTitle>SympNet — Médecin</PageTitle>
 
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
@@ -64,6 +65,7 @@
         width: 100%; padding: 10px; background: none; border: 1px solid rgba(239,68,68,0.2);
         border-radius: 12px; color: #EF4444; font-size: 13px; font-weight: 500;
         cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+        transition: all 0.2s;
     }
     .doctor-logout-btn:hover { background: rgba(239,68,68,0.1); border-color: #EF4444; }
     .doctor-main-content { margin-left: 280px; min-height: 100vh; background: #F9FAFB; padding: 24px 32px; width: calc(100% - 280px); }
@@ -78,7 +80,7 @@
     <aside class="doctor-sidebar">
         <div class="doctor-sidebar-header">
             <div class="doctor-logo">
-                <div class="doctor-logo-icon"><i class="fas fa-brain"></i></div>
+                <div class="doctor-logo-icon"><i class="fas fa-stethoscope"></i></div>
                 <div class="doctor-logo-text"><h2>SympNet</h2><p>Espace Médecin</p></div>
             </div>
         </div>
@@ -88,16 +90,23 @@
                 <i class="fas fa-chart-line"></i><span>Tableau de bord</span>
             </div>
             <div class="doctor-nav-label">Consultations</div>
-            <div class="doctor-nav-item @(IsActive("/doctor/consultations") ? "active" : "")" @onclick="GoToConsultations">
-                <i class="fas fa-folder-open"></i><span>Mes consultations</span>
+            <div class="doctor-nav-item @(IsActive("/doctor/ai-diagnosis") ? "active" : "")" @onclick="GoToAIDiagnosis">
+                <i class="fas fa-microphone-alt"></i><span>Diagnostic IA</span>
             </div>
+            <div class="doctor-nav-item @(IsActive("/doctor/consultations") ? "active" : "")" @onclick="GoToConsultations">
+                <i class="fas fa-stethoscope"></i><span>Mes consultations</span>
+            </div>
+            <div class="doctor-nav-label">Planification</div>
+<div class="doctor-nav-item @(IsActive("/doctor/agenda") ? "active" : "")" @onclick="GoToAgenda">
+    <i class="fas fa-calendar-alt"></i><span>Mon agenda</span>
+</div>
             <div class="doctor-nav-label">Gestion</div>
             <div class="doctor-nav-item @(IsActive("/doctor/patients") ? "active" : "")" @onclick="GoToPatients">
                 <i class="fas fa-users"></i><span>Mes patients</span>
             </div>
             <div class="doctor-nav-label">Compte</div>
             <div class="doctor-nav-item @(IsActive("/doctor/profile") ? "active" : "")" @onclick="GoToProfile">
-                <i class="fas fa-user-circle"></i><span>Mon Profil</span>
+                <i class="fas fa-user-md"></i><span>Mon profil</span>
             </div>
         </div>
         <div class="doctor-sidebar-footer">
@@ -119,64 +128,73 @@
 @code {
     private string doctorName = "Médecin";
     private string doctorInitial = "M";
-    private string doctorSpeciality = "Médecine Générale";
+    private string doctorSpeciality = "Médecin généraliste";
 
-    protected override async Task OnInitializedAsync()
+
+    private async Task LoadDoctorInfo()
     {
         try
         {
-            var userEmail = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_email");
             var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
-            
-            if (!string.IsNullOrEmpty(userEmail))
-            {
-                doctorName = userEmail.Split('@')[0];
-                doctorInitial = doctorName.Length > 0 ? doctorName[0].ToString().ToUpper() : "M";
-            }
-            
             if (!string.IsNullOrEmpty(token))
             {
                 Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                
-                try
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                var profile = await Http.GetFromJsonAsync<DoctorInfoDto>($"{baseUrl}/api/doctorprofile");
+                if (profile != null)
                 {
-                    var profile = await Http.GetFromJsonAsync<DoctorProfileDto>("http://localhost:5000/api/doctorprofile");
-                    if (profile != null)
-                    {
-                        doctorName = profile.FirstName;
-                        doctorInitial = profile.FirstName?.Length > 0 ? profile.FirstName[0].ToString().ToUpper() : "M";
-                        doctorSpeciality = profile.Speciality ?? "Médecine Générale";
-                    }
+                    doctorName = $"{profile.FirstName} {profile.LastName}".Trim();
+                    if (string.IsNullOrWhiteSpace(doctorName)) doctorName = "Médecin";
+                    doctorInitial = doctorName.Length > 0 ? doctorName[0].ToString().ToUpper() : "M";
+                    doctorSpeciality = !string.IsNullOrEmpty(profile.Speciality) ? profile.Speciality : "Médecin généraliste";
                 }
-                catch { }
             }
-            StateHasChanged();
         }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Erreur: {ex.Message}");
-        }
+        catch (Exception ex) { Console.WriteLine($"Erreur: {ex.Message}"); }
     }
 
-    private bool IsActive(string path) => Navigation.Uri.Contains(path, StringComparison.OrdinalIgnoreCase);
+    private bool IsActive(string path)
+    {
+        return Navigation.Uri.Contains(path, StringComparison.OrdinalIgnoreCase);
+    }
+     
+private bool _initialized = false;
+
+protected override async Task OnAfterRenderAsync(bool firstRender)
+{
+    if (firstRender && !_initialized)
+    {
+        _initialized = true;
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+        if (string.IsNullOrEmpty(token))
+        {
+            Navigation.NavigateTo("/login", true);
+            return;
+        }
+        Http.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        await LoadDoctorInfo();
+        StateHasChanged();
+    }
+}
 
     private void GoToDashboard() => Navigation.NavigateTo("/doctor/dashboard");
+    private void GoToAIDiagnosis() => Navigation.NavigateTo("/doctor/ai-diagnosis");
     private void GoToConsultations() => Navigation.NavigateTo("/doctor/consultations");
     private void GoToPatients() => Navigation.NavigateTo("/doctor/patients");
     private void GoToProfile() => Navigation.NavigateTo("/doctor/profile");
+    private void GoToAgenda() => Navigation.NavigateTo("/doctor/agenda");
 
     private async Task Logout()
     {
         await JS.InvokeVoidAsync("localStorage.removeItem", "sympnet_token");
-        await JS.InvokeVoidAsync("localStorage.removeItem", "sympnet_email");
-        Http.DefaultRequestHeaders.Authorization = null;
         Navigation.NavigateTo("/login", true);
     }
 
-    public class DoctorProfileDto
-    {
-        public string FirstName { get; set; } = "";
-        public string LastName { get; set; } = "";
+    public class DoctorInfoDto 
+    { 
+        public string FirstName { get; set; } = ""; 
+        public string LastName { get; set; } = ""; 
         public string Speciality { get; set; } = "";
     }
 }

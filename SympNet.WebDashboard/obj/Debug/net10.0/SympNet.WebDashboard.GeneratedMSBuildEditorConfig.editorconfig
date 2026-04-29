@@ -78,6 +78,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcRGFzaGJvYXJkLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/DoctorAgenda.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcRG9jdG9yQWdlbmRhLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Patients.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcUGF0aWVudHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 

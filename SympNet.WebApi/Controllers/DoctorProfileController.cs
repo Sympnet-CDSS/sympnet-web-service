@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using SympNet.WebApi.Data;
 using SympNet.WebApi.Dtos;
-using SympNet.WebApi.Models;
 using System.Security.Claims;
 
 namespace SympNet.WebApi.Controllers;
@@ -28,7 +27,6 @@ public class DoctorProfileController : ControllerBase
         return Guid.Parse(userIdClaim);
     }
 
-    // GET: api/doctorprofile
     [HttpGet]
     public async Task<IActionResult> GetProfile()
     {
@@ -57,7 +55,6 @@ public class DoctorProfileController : ControllerBase
         });
     }
 
-    // GET: api/doctorprofile/stats
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
@@ -76,11 +73,46 @@ public class DoctorProfileController : ControllerBase
         var todayConsultations = consultations.Count(c => c.CreatedAt.Date == DateTime.UtcNow.Date);
         var totalConsultations = consultations.Count;
         
-        return Ok(new
-        {
-            totalPatients,
-            todayConsultations,
-            totalConsultations
-        });
+        return Ok(new { totalPatients, todayConsultations, totalConsultations });
+    }
+
+    [HttpPut]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateDoctorProfileDto dto)
+    {
+        var userId = GetCurrentUserId();
+        var doctor = await _db.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
+        
+        if (doctor == null)
+            return NotFound(new { message = "Médecin non trouvé" });
+        
+        if (!string.IsNullOrEmpty(dto.FirstName)) doctor.FirstName = dto.FirstName;
+        if (!string.IsNullOrEmpty(dto.LastName)) doctor.LastName = dto.LastName;
+        if (!string.IsNullOrEmpty(dto.Speciality)) doctor.Speciality = dto.Speciality;
+        if (!string.IsNullOrEmpty(dto.LicenseNumber)) doctor.LicenseNumber = dto.LicenseNumber;
+        if (!string.IsNullOrEmpty(dto.Address)) doctor.Address = dto.Address;
+        
+        await _db.SaveChangesAsync();
+        return Ok(new { message = "Profil mis à jour avec succès" });
+    }
+
+    [HttpPut("password")]
+    public async Task<IActionResult> UpdatePassword([FromBody] UpdateDoctorPasswordDto dto)
+    {
+        var userId = GetCurrentUserId();
+        var user = await _db.Users.FindAsync(userId);
+        
+        if (user == null)
+            return NotFound(new { message = "Utilisateur non trouvé" });
+        
+        if (!BCrypt.Net.BCrypt.Verify(dto.CurrentPassword, user.PasswordHash))
+            return BadRequest(new { message = "Mot de passe actuel incorrect" });
+        
+        if (string.IsNullOrEmpty(dto.NewPassword) || dto.NewPassword.Length < 6)
+            return BadRequest(new { message = "Le nouveau mot de passe doit contenir au moins 6 caractères" });
+        
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+        await _db.SaveChangesAsync();
+        
+        return Ok(new { message = "Mot de passe mis à jour avec succès" });
     }
 }
