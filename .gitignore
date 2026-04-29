@@ -1,10 +1,8 @@
-# Dossiers générés par .NET
 bin/
 obj/
 compressed/
 packages/
 
-# Fichiers générés par Visual Studio
 .vs/
 .vscode/
 *.user
@@ -15,7 +13,7 @@ packages/
 *.pidb
 *.psess
 
-# Résultats de build
+
 *.dll
 *.exe
 *.pdb
@@ -23,7 +21,6 @@ packages/
 *.dylib
 *.nupkg
 
-# Fichiers de configuration sensibles (optionnel)
 appsettings.Development.json
 appsettings.Production.json
 *.secrets.json
@@ -33,6 +30,5 @@ logs/
 *.log
 *.logs
 
-# Fichiers temporaires du système
 .DS_Store
 Thumbs.db
