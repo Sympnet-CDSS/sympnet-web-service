@@ -23,6 +23,7 @@ public class DoctorsController : ControllerBase
     }
 
     // GET: api/doctors
+    [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAllDoctors()
     {
