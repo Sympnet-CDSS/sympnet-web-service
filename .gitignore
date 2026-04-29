@@ -1,0 +1,38 @@
+# Dossiers générés par .NET
+bin/
+obj/
+compressed/
+packages/
+
+# Fichiers générés par Visual Studio
+.vs/
+.vscode/
+*.user
+*.suo
+*.cache
+*.log
+*.tmp
+*.pidb
+*.psess
+
+# Résultats de build
+*.dll
+*.exe
+*.pdb
+*.so
+*.dylib
+*.nupkg
+
+# Fichiers de configuration sensibles (optionnel)
+appsettings.Development.json
+appsettings.Production.json
+*.secrets.json
+
+# Logs
+logs/
+*.log
+*.logs
+
+# Fichiers temporaires du système
+.DS_Store
+Thumbs.db
