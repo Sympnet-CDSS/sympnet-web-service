@@ -2,15 +2,18 @@
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Ajout des services
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddHttpClient();
 builder.Services.AddScoped<ApiService>();
-// builder.Services.AddScoped<EmailService>(); 
+
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.MaximumReceiveMessageSize = 102400;
+});
 
 builder.Services.AddAuthentication().AddCookie("AuthCookie", options =>
 {
@@ -22,7 +25,6 @@ builder.Services.AddAuthentication().AddCookie("AuthCookie", options =>
 
 builder.Services.AddAuthorization();
 
-// Configuration anti-forgery
 builder.Services.AddAntiforgery(options => 
 {
     options.HeaderName = "X-CSRF-TOKEN";
@@ -40,9 +42,9 @@ if (!app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
-
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseWebSockets();
 app.UseAntiforgery();
 
 app.MapRazorComponents<SympNet.WebDashboard.Components.App>()
