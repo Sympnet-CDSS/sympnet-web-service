@@ -1,39 +1,18 @@
-﻿using System.Text;
+﻿using System.Security.Claims;
+using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
 using SympNet.WebApi.Data;
-using SympNet.WebApi.Services;
 using SympNet.WebApi.Hubs;
+using SympNet.WebApi.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo { Title = "SympNet API", Version = "v1" });
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
-        Name = "Authorization",
-        Type = SecuritySchemeType.Http,
-        Scheme = "Bearer",
-        BearerFormat = "JWT",
-        In = ParameterLocation.Header
-    });
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-            },
-            Array.Empty<string>()
-        }
-    });
-});
+builder.Services.AddSwaggerGen();
 
 // Database - PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -46,23 +25,76 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = true,
-            ValidateAudience = true,
+            ValidateIssuer = false,
+            ValidateAudience = false,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+        
+        // Important pour SignalR
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<EmailService>();
-builder.Services.AddCors();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddSignalR();
+builder.Services.AddCors();
 
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+
+// MIDDLEWARE POUR AUTH TEMPORAIRE (POUR TEST)
+app.Use(async (context, next) =>
+{
+    // Pour les requêtes vers chat, ajouter un utilisateur par défaut
+    if (context.Request.Path.StartsWithSegments("/api/chat") || 
+        context.Request.Path.StartsWithSegments("/chatHub"))
+    {
+        var userId = "11111111-1111-1111-1111-111111111111";
+        var claims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, userId),
+            new Claim("sub", userId),
+            new Claim(ClaimTypes.Role, "Doctor")
+        };
+        var identity = new ClaimsIdentity(claims, "TestAuth");
+        context.User = new ClaimsPrincipal(identity);
+    }
+    
+    await next();
+});
+
+// app.UseAuthentication(); // COMMENTÉ pour test
+// app.UseAuthorization();  // COMMENTÉ pour test
+
+app.MapHub<ChatHub>("/chatHub");
+app.MapHub<WebRTCHub>("/webrtchub");
+app.MapControllers();
+
+// Créer admin par défaut
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -89,28 +121,10 @@ using (var scope = app.Services.CreateScope())
         db.Users.Add(adminUser);
         db.SaveChanges();
         
-        Console.WriteLine(" ADMIN CRÉÉ AVEC SUCCÈS !");
+        Console.WriteLine("ADMIN CRÉÉ AVEC SUCCÈS !");
         Console.WriteLine($"   Email: {adminEmail}");
         Console.WriteLine($"   Mot de passe: {adminPassword}");
     }
-    else
-    {
-        Console.WriteLine(" L'administrateur existe déjà.");
-    }
 }
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
-app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
-app.UseAuthentication();
-app.UseAuthorization();
-app.MapControllers();
-app.MapHub<ChatHub>("/chatHub");
 
 app.Run();

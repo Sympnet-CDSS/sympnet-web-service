@@ -96,6 +96,17 @@
             <div class="doctor-nav-item @(IsActive("/doctor/consultations") ? "active" : "")" @onclick="GoToConsultations">
                 <i class="fas fa-stethoscope"></i><span>Mes consultations</span>
             </div>
+            <div class="doctor-nav-label">Communication</div>
+<div class="doctor-nav-item @(IsActive("/doctor/chat") ? "active" : "")" @onclick="GoToChat">
+    <i class="fas fa-comments"></i><span>Messagerie</span>
+    @if (unreadCount > 0)
+    {
+        <span class="badge">@unreadCount</span>
+    }
+</div>
+<div class="doctor-nav-item @(IsActive("/doctor/video-call") ? "active" : "")" @onclick="GoToVideoCall">
+    <i class="fas fa-video"></i><span>Téléconsultation</span>
+</div>
             <div class="doctor-nav-label">Planification</div>
 <div class="doctor-nav-item @(IsActive("/doctor/agenda") ? "active" : "")" @onclick="GoToAgenda">
     <i class="fas fa-calendar-alt"></i><span>Mon agenda</span>
@@ -129,6 +140,7 @@
     private string doctorName = "Médecin";
     private string doctorInitial = "M";
     private string doctorSpeciality = "Médecin généraliste";
+    private int unreadCount = 0; 
 
 
     private async Task LoadDoctorInfo()
@@ -174,9 +186,20 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
         Http.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         await LoadDoctorInfo();
+        await LoadUnreadCount();
         StateHasChanged();
     }
 }
+private async Task LoadUnreadCount()
+    {
+        var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+        try
+        {
+            var result = await Http.GetFromJsonAsync<dynamic>($"{baseUrl}/api/chat/unread-count");
+            unreadCount = result?.unreadCount ?? 0;
+        }
+        catch { }
+    }
 
     private void GoToDashboard() => Navigation.NavigateTo("/doctor/dashboard");
     private void GoToAIDiagnosis() => Navigation.NavigateTo("/doctor/ai-diagnosis");
@@ -184,6 +207,8 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
     private void GoToPatients() => Navigation.NavigateTo("/doctor/patients");
     private void GoToProfile() => Navigation.NavigateTo("/doctor/profile");
     private void GoToAgenda() => Navigation.NavigateTo("/doctor/agenda");
+    private void GoToChat() => Navigation.NavigateTo("/doctor/chat");
+    private void GoToVideoCall() => Navigation.NavigateTo("/doctor/video-call");
 
     private async Task Logout()
     {
