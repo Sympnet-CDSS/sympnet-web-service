@@ -39,8 +39,8 @@ public class DoctorsController : ControllerBase
                 Speciality = d.Speciality,
                 LicenseNumber = d.LicenseNumber,
                 Address = d.Address,
-                Latitude = d.Latitude,
-                Longitude = d.Longitude,
+                Latitude = d.Latitude ?? 0,
+                Longitude = d.Longitude ?? 0,
                 CreatedAt = d.CreatedAt
             })
             .OrderByDescending(d => d.CreatedAt)

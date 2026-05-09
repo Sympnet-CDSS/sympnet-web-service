@@ -20,14 +20,15 @@ public class BlockedSlotsController : ControllerBase
         _db = db;
     }
 
-    private Guid GetCurrentDoctorId()
+    private int GetCurrentDoctorId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim))
             throw new UnauthorizedAccessException();
         
         var doctor = _db.Doctors.FirstOrDefault(d => d.UserId == Guid.Parse(userIdClaim));
-        return doctor?.UserId ?? Guid.Parse(userIdClaim);
+        if (doctor == null) throw new UnauthorizedAccessException("Doctor profile not found.");
+        return doctor.Id;
     }
 
     // GET: api/blockedslots
@@ -65,7 +66,7 @@ public class BlockedSlotsController : ControllerBase
         
         // Vérifier qu'il n'y a pas de rendez-vous sur ce créneau
         var conflictingAppointments = await _db.Appointments
-            .Where(a => a.DoctorId == int.Parse(doctorId.ToString()) && 
+            .Where(a => a.DoctorId == doctorId && 
                        a.DateTime >= dto.StartDateTime && 
                        a.DateTime < dto.EndDateTime &&
                        a.Status != "Annulé")

@@ -43,6 +43,33 @@ public class PatientsController : ControllerBase
         return Ok(patients);
     }
 
+    // GET: api/patients/{id}
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetPatient(int id)
+    {
+        var patient = await _db.Patients
+            .Include(p => p.User)
+            .Where(p => p.Id == id)
+            .Select(p => new PatientDto
+            {
+                Id = p.Id,
+                Email = p.User.Email,
+                IsActive = p.User.IsActive,
+                FirstName = p.FirstName,
+                LastName = p.LastName,
+                PhoneNumber = p.PhoneNumber,
+                DateOfBirth = p.DateOfBirth,
+                Gender = p.Gender,
+                ConsultationCount = p.ConsultationCount
+            })
+            .FirstOrDefaultAsync();
+
+        if (patient == null)
+            return NotFound(new { message = "Patient non trouvé" });
+
+        return Ok(patient);
+    }
+
     // POST: api/patients
     [HttpPost]
     public async Task<IActionResult> CreatePatient([FromBody] CreatePatientDto dto)
@@ -109,4 +136,5 @@ public class PatientsController : ControllerBase
 
         return Ok(new { message = "Patient désactivé" });
     }
+    
 }

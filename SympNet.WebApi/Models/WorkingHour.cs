@@ -9,7 +9,7 @@ namespace SympNet.WebApi.Models
         [Key]
         public int Id { get; set; }
         
-        public Guid DoctorId { get; set; }
+        public int DoctorId { get; set; }
         
         [ForeignKey("DoctorId")]
         public virtual Doctor? Doctor { get; set; }

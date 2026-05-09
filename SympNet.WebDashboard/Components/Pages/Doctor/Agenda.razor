@@ -1,0 +1,759 @@
+@page "/doctor/agenda"
+@layout DoctorLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject IConfiguration Config
+@using System.Globalization
+
+<PageTitle>SympNet — Mon Agenda</PageTitle>
+
+<style>
+    .agenda-container { max-width: 1600px; margin: 0 auto; padding: 20px; }
+    .agenda-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+    .agenda-header h1 { font-size: 28px; font-weight: 800; color: #1F2937; margin: 0; display: flex; align-items: center; gap: 12px; }
+    .agenda-header h1 svg { color: #0D9488; }
+    .view-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .view-btn { padding: 10px 20px; border-radius: 12px; border: 1px solid #E5E7EB; background: white; cursor: pointer; transition: all 0.2s; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; }
+    .view-btn svg { width: 16px; height: 16px; }
+    .view-btn.active { background: #0D9488; color: white; border-color: #0D9488; }
+    .view-btn.active svg { color: white; }
+    .nav-btn { padding: 10px 16px; border-radius: 12px; border: 1px solid #E5E7EB; background: white; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+    .nav-btn svg { width: 14px; height: 14px; }
+    .nav-btn:hover { background: #F3F4F6; }
+    .current-date { font-size: 20px; font-weight: 600; color: #1F2937; }
+    .calendar-container { background: white; border-radius: 24px; border: 1px solid rgba(13,148,136,0.1); overflow: hidden; }
+    .calendar-header { display: grid; grid-template-columns: repeat(7, 1fr); background: #F9FAFB; border-bottom: 1px solid #E5E7EB; }
+    .calendar-day-header { padding: 16px; text-align: center; font-weight: 600; color: #6B7280; font-size: 14px; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+    .calendar-day { min-height: 120px; border-right: 1px solid #F3F4F6; border-bottom: 1px solid #F3F4F6; padding: 8px; cursor: pointer; transition: all 0.2s; position: relative; }
+    .calendar-day:hover { background: #F9FAFB; }
+    .calendar-day.today { background: rgba(13,148,136,0.05); }
+    .calendar-day.other-month { background: #F9FAFB; color: #9CA3AF; }
+    .day-number { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+    .event-item { font-size: 11px; padding: 4px 8px; border-radius: 6px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 4px; }
+    .event-item svg { width: 10px; height: 10px; flex-shrink: 0; }
+    .event-item:hover { transform: translateX(2px); }
+    .event-appointment { background: rgba(13,148,136,0.1); color: #0D9488; border-left: 3px solid #0D9488; }
+    .event-appointment-urgent { background: rgba(239,68,68,0.1); color: #EF4444; border-left: 3px solid #EF4444; }
+    .event-blocked { background: rgba(239,68,68,0.1); color: #EF4444; border-left: 3px solid #EF4444; text-decoration: line-through; }
+    .more-events { font-size: 11px; color: #6B7280; margin-top: 4px; cursor: pointer; }
+    .time-slots-view { display: flex; flex-direction: column; gap: 12px; max-height: 600px; overflow-y: auto; padding: 16px; }
+    .time-slot { display: flex; align-items: center; padding: 12px 16px; border-radius: 12px; background: white; border: 1px solid #E5E7EB; transition: all 0.2s; }
+    .time-slot.available { cursor: pointer; border-left: 4px solid #10B981; }
+    .time-slot.available:hover { background: #ECFDF5; transform: translateX(4px); }
+    .time-slot.unavailable { opacity: 0.5; background: #F9FAFB; }
+    .time-label { width: 100px; font-weight: 600; color: #1F2937; }
+    .slot-status { flex: 1; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+    .slot-available { color: #10B981; display: flex; align-items: center; gap: 4px; }
+    .slot-unavailable { color: #EF4444; display: flex; align-items: center; gap: 4px; }
+    .slot-status svg { width: 14px; height: 14px; }
+    .empty-slots { text-align: center; padding: 60px; color: #6B7280; }
+    .empty-slots svg { margin-bottom: 16px; }
+    
+    /* Modal styles */
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 2000; animation: fadeIn 0.2s ease; }
+    .modal-content { background: white; border-radius: 24px; width: 520px; max-width: 90%; max-height: 85vh; overflow-y: auto; animation: slideIn 0.3s ease; }
+    .modal-header { padding: 20px 24px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { font-size: 20px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .modal-header svg { width: 20px; height: 20px; color: #0D9488; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid #E5E7EB; display: flex; justify-content: flex-end; gap: 12px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #374151; }
+    .form-group label svg { width: 14px; height: 14px; color: #0D9488; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1.5px solid #E5E7EB; border-radius: 10px; font-size: 14px; transition: all 0.2s; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+    .btn-primary { background: linear-gradient(135deg, #0D9488, #14B8A6); color: white; padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-primary svg { width: 14px; height: 14px; color: white; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13,148,136,0.3); }
+    .btn-secondary { background: #F3F4F6; color: #6B7280; padding: 10px 20px; border: none; border-radius: 10px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+    .btn-secondary svg { width: 14px; height: 14px; }
+    .btn-secondary:hover { background: #E5E7EB; }
+    
+    .loading-spinner { text-align: center; padding: 60px; }
+    .spinner { width: 48px; height: 48px; border: 3px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite; }
+    
+    .working-hours-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 12px; background: #F9FAFB; border-radius: 12px; }
+    .day-name { width: 100px; font-weight: 600; }
+    .time-input { flex: 1; display: flex; align-items: center; gap: 8px; }
+    .time-input input { width: 100px; padding: 6px 8px; border: 1px solid #E5E7EB; border-radius: 8px; }
+    .checkbox-label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    
+    .toast-container { position: fixed; bottom: 30px; right: 30px; z-index: 10000; display: flex; flex-direction: column; gap: 12px; }
+    .toast { background: white; border-radius: 16px; padding: 14px 20px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); min-width: 300px; animation: slideInRight 0.3s ease; border-left: 4px solid; }
+    .toast.success { border-left-color: #10B981; }
+    .toast.error { border-left-color: #EF4444; }
+    .toast.info { border-left-color: #0D9488; }
+    .toast svg { width: 18px; height: 18px; }
+    .toast-content { flex: 1; }
+    .toast-title { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+    .toast-message { font-size: 13px; color: #6B7280; }
+    
+    @@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @@keyframes slideIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @@keyframes slideInRight { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    
+    @@media (max-width: 768px) { .calendar-day { min-height: 80px; } .event-item { display: none; } .view-controls { width: 100%; justify-content: center; } .working-hours-row { flex-wrap: wrap; } }
+</style>
+
+<div class="agenda-container">
+    <div class="agenda-header">
+        <h1>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+                <circle cx="12" cy="15" r="1"/>
+                <circle cx="16" cy="15" r="1"/>
+                <circle cx="8" cy="15" r="1"/>
+            </svg>
+            Mon Agenda
+        </h1>
+        <div class="view-controls">
+            <button class="view-btn @(viewMode == "day" ? "active" : "")" @onclick='() => SetViewMode("day")'>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                Jour
+            </button>
+            <button class="view-btn @(viewMode == "week" ? "active" : "")" @onclick='() => SetViewMode("week")'>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Semaine
+            </button>
+            <button class="view-btn @(viewMode == "month" ? "active" : "")" @onclick='() => SetViewMode("month")'>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                Mois
+            </button>
+            <button class="view-btn" @onclick="OpenWorkingHoursModal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Horaires
+            </button>
+            <button class="view-btn" @onclick="OpenBlockSlotModal">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                Bloquer
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-spinner"><div class="spinner"></div></div>
+    }
+    else if (viewMode == "month")
+    {
+        <div class="calendar-container">
+            <div style="padding: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <button class="nav-btn" @onclick="PreviousPeriod">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    Mois précédent
+                </button>
+                <span class="current-date">@currentDate.ToString("MMMM yyyy", CultureInfo.GetCultureInfo("fr-FR"))</span>
+                <button class="nav-btn" @onclick="NextPeriod">
+                    Mois suivant
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <button class="nav-btn" @onclick="GoToToday">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Aujourd'hui
+                </button>
+            </div>
+            <div class="calendar-header">
+                @foreach (var day in weekDays)
+                {
+                    <div class="calendar-day-header">@day</div>
+                }
+            </div>
+            <div class="calendar-grid">
+                @foreach (var day in monthDays)
+                {
+                    <div class="calendar-day @(day.Date == DateTime.Today ? "today" : "") @(day.Month != currentDate.Month ? "other-month" : "")"
+                         @onclick='() => SelectDate(day.Date)'>
+                        <div class="day-number">@day.Day</div>
+                        @if (dayEvents.ContainsKey(day.Date))
+                        {
+                            @foreach (var evt in dayEvents[day.Date].Take(2))
+                            {
+                                <div class="event-item @GetEventClass(evt)" @onclick:stopPropagation @onclick='() => OpenEventDetail(evt)'>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                    <span>@evt.Title</span>
+                                </div>
+                            }
+                            @if (dayEvents[day.Date].Count > 2)
+                            {
+                                <div class="more-events" @onclick:stopPropagation @onclick='() => ShowAllEvents(day.Date)'>
+                                    + @(dayEvents[day.Date].Count - 2) autres...
+                                </div>
+                            }
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    @if (viewMode == "day" || viewMode == "week")
+    {
+        <div class="calendar-container">
+            <div style="padding: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <button class="nav-btn" @onclick="PreviousPeriod">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                    Jour précédent
+                </button>
+                <span class="current-date">@currentDate.ToString("dddd dd MMMM yyyy", CultureInfo.GetCultureInfo("fr-FR"))</span>
+                <button class="nav-btn" @onclick="NextPeriod">
+                    Jour suivant
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+                <button class="nav-btn" @onclick="GoToToday">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                    Aujourd'hui
+                </button>
+            </div>
+            @if (availableSlots.Any())
+            {
+                <div class="time-slots-view">
+                    @foreach (var slot in availableSlots)
+                    {
+                        @if (slot.IsAvailable)
+                        {
+                            <div class="time-slot available" @onclick='() => OpenNewAppointmentModal(slot.StartTime)'>
+                                <div class="time-label">@slot.StartTime.ToString("HH:mm") - @slot.EndTime.ToString("HH:mm")</div>
+                                <div class="slot-status"><span class="slot-available"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg> Disponible</span></div>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"/></svg>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="time-slot unavailable">
+                                <div class="time-label">@slot.StartTime.ToString("HH:mm") - @slot.EndTime.ToString("HH:mm")</div>
+                                <div class="slot-status"><span class="slot-unavailable"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Indisponible</span></div>
+                            </div>
+                        }
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-slots">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <p>Aucun créneau disponible pour cette journée</p>
+                    <button class="btn-primary" style="margin-top: 16px;" @onclick="OpenWorkingHoursModal">Configurer mes horaires</button>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<!-- Modal Rendez-vous -->
+@if (showAppointmentModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg> Nouveau rendez-vous</h3>
+                <button class="btn-secondary" style="padding:4px 12px;" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Patient</label>
+                    <input type="text" @bind="newAppointment.PatientEmail" placeholder="Email du patient" />
+                </div>
+                <div class="form-group">
+                    <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Date et heure</label>
+                    <!-- FIX: bind to DateTime property directly -->
+                    <input type="datetime-local" @bind="newAppointment.DateTime" />
+                </div>
+                <div class="form-group">
+                    <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Durée</label>
+                    <select @bind="newAppointment.Duration"><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">60 min</option></select>
+                </div>
+                <div class="form-group">
+                    <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9-4-18-3 9H2"/></svg> Type</label>
+                    <select @bind="newAppointment.Type"><option value="Consultation">Consultation standard</option><option value="Urgence">Urgence</option></select>
+                </div>
+                <div class="form-group">
+                    <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg> Notes</label>
+                    <textarea rows="3" @bind="newAppointment.Notes" placeholder="Motif de la consultation..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CloseModal">Annuler</button>
+                <button class="btn-primary" @onclick="CreateAppointment" disabled="@isSaving">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M20 6L9 17l-5-5"/></svg>
+                    @(isSaving ? "Création..." : "Créer")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Horaires -->
+@if (showWorkingHoursModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" style="width: 600px;" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Mes horaires de travail</h3>
+                <button class="btn-secondary" style="padding:4px 12px;" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                @foreach (var wh in workingHoursList.OrderBy(w => w.DayOfWeek))
+                {
+                    <div class="working-hours-row">
+                        <div class="day-name">@wh.DayName</div>
+                        <div class="time-input">
+                            <!-- FIX: use value + @onchange for TimeOnly? -->
+                            <input type="time"
+                                   value="@wh.StartTime?.ToString("HH:mm")"
+                                   @onchange="e => wh.StartTime = TimeOnly.TryParse(e.Value?.ToString(), out var t) ? t : new TimeOnly(9, 0)" />
+                            <span>→</span>
+                            <input type="time"
+                                   value="@wh.EndTime?.ToString("HH:mm")"
+                                   @onchange="e => wh.EndTime = TimeOnly.TryParse(e.Value?.ToString(), out var t) ? t : new TimeOnly(17, 0)" />
+                        </div>
+                        <label class="checkbox-label">
+                            <input type="checkbox" @bind="wh.IsActive" />
+                            Actif
+                        </label>
+                    </div>
+                }
+                <div class="form-group" style="margin-top: 16px;">
+                    <label>⏱️ Durée par défaut des créneaux</label>
+                    <select @bind="defaultSlotDuration">
+                        <option value="15">15 minutes</option>
+                        <option value="30">30 minutes</option>
+                        <option value="45">45 minutes</option>
+                        <option value="60">60 minutes</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CloseModal">Annuler</button>
+                <button class="btn-primary" @onclick="SaveWorkingHours">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Modal Bloquer créneau -->
+@if (showBlockSlotModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation>
+            <div class="modal-header">
+                <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg> Bloquer un créneau</h3>
+                <button class="btn-secondary" style="padding:4px 12px;" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/></svg> Date de début</label>
+                    <!-- FIX: bind to DateTime properties directly -->
+                    <input type="datetime-local" @bind="newBlock.StartDateTime" />
+                </div>
+                <div class="form-group">
+                    <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/></svg> Date de fin</label>
+                    <input type="datetime-local" @bind="newBlock.EndDateTime" />
+                </div>
+                <div class="form-group">
+                    <label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M22 12h-4l-3 9-4-18-3 9H2"/></svg> Motif</label>
+                    <select @bind="newBlock.Reason">
+                        <option value="Congé">Congé</option>
+                        <option value="Formation">Formation</option>
+                        <option value="Réunion">Réunion</option>
+                        <option value="RTT">RTT</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" @bind="newBlock.IsRecurring" />
+                        Créneau récurrent (toutes les semaines)
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CloseModal">Annuler</button>
+                <button class="btn-primary" @onclick="CreateBlockedSlot">Bloquer</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Toast notifications -->
+@if (!string.IsNullOrEmpty(toastMessage))
+{
+    <div class="toast-container">
+        <div class="toast @toastType">
+            @if (toastType == "success")
+            {
+                <svg viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            }
+            else if (toastType == "error")
+            {
+                <svg viewBox="0 0 24 24" fill="none" stroke="#EF4444" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            }
+            else
+            {
+                <svg viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            }
+            <div class="toast-content">
+                <div class="toast-title">@(toastType == "success" ? "Succès" : toastType == "error" ? "Erreur" : "Information")</div>
+                <div class="toast-message">@toastMessage</div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string viewMode = "month";
+    private DateTime currentDate = DateTime.Today;
+    private List<string> weekDays = new() { "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim" };
+    private List<CalendarDay> monthDays = new();
+    private Dictionary<DateTime, List<CalendarEvent>> dayEvents = new();
+    private List<AvailableSlot> availableSlots = new();
+    private List<WorkingHour> workingHoursList = new();
+    private int defaultSlotDuration = 30;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string toastMessage = "";
+    private string toastType = "success";
+
+    private bool showAppointmentModal = false;
+    private bool showWorkingHoursModal = false;
+    private bool showBlockSlotModal = false;
+
+    private NewAppointmentDto newAppointment = new();
+    private NewBlockDto newBlock = new();
+
+    private async Task SetViewMode(string mode)
+    {
+        viewMode = mode;
+        await LoadData();
+    }
+
+    private async Task SelectDate(DateTime date)
+    {
+        currentDate = date;
+        await SetViewMode("day");
+    }
+
+    private async Task PreviousPeriod()
+    {
+        if (viewMode == "month")
+            currentDate = currentDate.AddMonths(-1);
+        else
+            currentDate = currentDate.AddDays(-1);
+        await LoadData();
+    }
+
+    private async Task NextPeriod()
+    {
+        if (viewMode == "month")
+            currentDate = currentDate.AddMonths(1);
+        else
+            currentDate = currentDate.AddDays(1);
+        await LoadData();
+    }
+
+    private async Task GoToToday()
+    {
+        currentDate = DateTime.Today;
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        await LoadEvents();
+        if (viewMode != "month")
+            await LoadAvailableSlots();
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadEvents()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+
+            var startDate = new DateTime(currentDate.Year, currentDate.Month, 1);
+            var endDate = startDate.AddMonths(1).AddDays(-1);
+
+            var events = await Http.GetFromJsonAsync<List<CalendarEvent>>($"{baseUrl}/api/agenda/events?start={startDate:yyyy-MM-dd}&end={endDate:yyyy-MM-dd}");
+
+            dayEvents.Clear();
+            foreach (var evt in events ?? new())
+            {
+                if (!dayEvents.ContainsKey(evt.Start.Date))
+                    dayEvents[evt.Start.Date] = new();
+                dayEvents[evt.Start.Date].Add(evt);
+            }
+
+            GenerateMonthDays();
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Erreur chargement: {ex.Message}", "error");
+        }
+    }
+
+    private async Task LoadAvailableSlots()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+
+            availableSlots = await Http.GetFromJsonAsync<List<AvailableSlot>>($"{baseUrl}/api/agenda/available-slots?date={currentDate:yyyy-MM-dd}") ?? new();
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Erreur chargement créneaux: {ex.Message}", "error");
+        }
+    }
+
+    private async Task LoadWorkingHours()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var hours = await Http.GetFromJsonAsync<List<WorkingHour>>($"{baseUrl}/api/workinghours");
+            if (hours != null && hours.Any())
+                workingHoursList = hours;
+            else
+                InitDefaultWorkingHours();
+        }
+        catch
+        {
+            InitDefaultWorkingHours();
+        }
+    }
+
+    // FIX: use TimeOnly? instead of string to match API response
+    private void InitDefaultWorkingHours()
+    {
+        workingHoursList.Clear();
+        for (int i = 1; i <= 5; i++)
+        {
+            workingHoursList.Add(new WorkingHour
+            {
+                DayOfWeek = i,
+                DayName = weekDays[i - 1],
+                StartTime = new TimeOnly(9, 0),
+                EndTime = new TimeOnly(17, 0),
+                IsActive = true
+            });
+        }
+    }
+
+    private void GenerateMonthDays()
+    {
+        monthDays.Clear();
+        var firstOfMonth = new DateTime(currentDate.Year, currentDate.Month, 1);
+        int offset = ((int)firstOfMonth.DayOfWeek + 6) % 7;
+        var startDate = firstOfMonth.AddDays(-offset);
+        for (int i = 0; i < 42; i++)
+            monthDays.Add(new CalendarDay { Date = startDate.AddDays(i), Day = startDate.AddDays(i).Day, Month = startDate.AddDays(i).Month });
+    }
+
+    // FIX: assign DateTime directly, no string formatting needed
+    private void OpenNewAppointmentModal(DateTime startTime)
+    {
+        newAppointment = new NewAppointmentDto
+        {
+            DateTime = startTime,
+            Duration = defaultSlotDuration,
+            Type = "Consultation"
+        };
+        showAppointmentModal = true;
+        StateHasChanged();
+    }
+
+    private async Task OpenWorkingHoursModal()
+    {
+        await LoadWorkingHours();
+        showWorkingHoursModal = true;
+        StateHasChanged();
+    }
+
+    private void OpenBlockSlotModal()
+    {
+        newBlock = new NewBlockDto();
+        showBlockSlotModal = true;
+        StateHasChanged();
+    }
+
+    private void OpenEventDetail(CalendarEvent evt) { }
+    private void ShowAllEvents(DateTime date) { }
+
+    private async Task CreateAppointment()
+    {
+        isSaving = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            // FIX: send DateTime directly, no parsing needed
+            await Http.PostAsJsonAsync($"{baseUrl}/api/appointments", new
+            {
+                PatientEmail = newAppointment.PatientEmail,
+                DateTime = newAppointment.DateTime,
+                Duration = newAppointment.Duration,
+                Type = newAppointment.Type,
+                Notes = newAppointment.Notes
+            });
+            showAppointmentModal = false;
+            await LoadData();
+            ShowToast("Rendez-vous créé avec succès", "success");
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Erreur: {ex.Message}", "error");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveWorkingHours()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            foreach (var wh in workingHoursList.Where(h => h.IsActive))
+            {
+                await Http.PostAsJsonAsync($"{baseUrl}/api/workinghours", new
+                {
+                    DayOfWeek = wh.DayOfWeek,
+                    // FIX: format TimeOnly? to string for the API
+                    StartTime = wh.StartTime?.ToString("HH:mm"),
+                    EndTime = wh.EndTime?.ToString("HH:mm"),
+                    SlotDuration = defaultSlotDuration
+                });
+            }
+            showWorkingHoursModal = false;
+            ShowToast("Horaires enregistrés", "success");
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Erreur: {ex.Message}", "error");
+        }
+    }
+
+    private async Task CreateBlockedSlot()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            // FIX: use DateTime properties directly, no DateTime.Parse needed
+            await Http.PostAsJsonAsync($"{baseUrl}/api/blockedslots", new
+            {
+                StartDateTime = newBlock.StartDateTime,
+                EndDateTime = newBlock.EndDateTime,
+                Reason = newBlock.Reason,
+                IsRecurring = newBlock.IsRecurring
+            });
+            showBlockSlotModal = false;
+            await LoadData();
+            ShowToast("Créneau bloqué", "success");
+        }
+        catch (Exception ex)
+        {
+            ShowToast($"Erreur: {ex.Message}", "error");
+        }
+    }
+
+    private void CloseModal()
+    {
+        showAppointmentModal = false;
+        showWorkingHoursModal = false;
+        showBlockSlotModal = false;
+        StateHasChanged();
+    }
+
+    private void ShowToast(string message, string type)
+    {
+        toastMessage = message;
+        toastType = type;
+        StateHasChanged();
+        Task.Delay(3000).ContinueWith(_ => { toastMessage = ""; InvokeAsync(StateHasChanged); });
+    }
+
+    private string GetEventClass(CalendarEvent evt) => evt.Type switch
+    {
+        "appointment" when evt.IsUrgent => "event-appointment-urgent",
+        "appointment" => "event-appointment",
+        "blocked" => "event-blocked",
+        _ => "event-appointment"
+    };
+
+    // ─── DTOs ───────────────────────────────────────────────────────────────
+
+    public class CalendarDay
+    {
+        public DateTime Date { get; set; }
+        public int Day { get; set; }
+        public int Month { get; set; }
+    }
+
+    public class CalendarEvent
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public DateTime Start { get; set; }
+        public DateTime End { get; set; }
+        public string Type { get; set; } = "";
+        public bool IsUrgent { get; set; }
+    }
+
+    public class AvailableSlot
+    {
+        public DateTime StartTime { get; set; }
+        public DateTime EndTime { get; set; }
+        public bool IsAvailable { get; set; }
+    }
+
+    // FIX: StartTime/EndTime are TimeOnly? to match API deserialization
+    public class WorkingHour
+    {
+        public int Id { get; set; }
+        public int DayOfWeek { get; set; }
+        public string DayName { get; set; } = "";
+        public TimeOnly? StartTime { get; set; }
+        public TimeOnly? EndTime { get; set; }
+        public bool IsActive { get; set; }
+    }
+
+    // FIX: DateTime instead of string for datetime-local binding
+    public class NewAppointmentDto
+    {
+        public string PatientEmail { get; set; } = "";
+        public DateTime DateTime { get; set; } = DateTime.Now;
+        public int Duration { get; set; } = 30;
+        public string Type { get; set; } = "Consultation";
+        public string Notes { get; set; } = "";
+    }
+
+    // FIX: DateTime instead of string for datetime-local binding
+    public class NewBlockDto
+    {
+        public DateTime StartDateTime { get; set; } = DateTime.Now;
+        public DateTime EndDateTime { get; set; } = DateTime.Now.AddHours(1);
+        public string Reason { get; set; } = "Congé";
+        public bool IsRecurring { get; set; }
+    }
+}
