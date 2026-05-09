@@ -22,6 +22,7 @@ packages/
 *.nupkg
 
 appsettings.Development.json
+appsettings.json
 appsettings.Production.json
 *.secrets.json
 

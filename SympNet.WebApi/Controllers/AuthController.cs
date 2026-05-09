@@ -68,7 +68,7 @@ public class AuthController : ControllerBase
         return Ok(new AuthResponseDto(token, user.Email, user.Role, user.Id, user.FullName));
     }
 
-
+    // ── EXISTANT : Me ──────────────────────────────────────────────────────
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> Me()
