@@ -235,16 +235,6 @@ protected override async Task OnAfterRenderAsync(bool firstRender)
         StateHasChanged();
     }
 }
-private async Task LoadUnreadCount()
-    {
-        var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
-        try
-        {
-            var result = await Http.GetFromJsonAsync<dynamic>($"{baseUrl}/api/chat/unread-count");
-            unreadCount = result?.unreadCount ?? 0;
-        }
-        catch { }
-    }
 
 private async Task InitializeSignalR(string token)
 {
