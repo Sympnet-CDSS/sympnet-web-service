@@ -33,7 +33,7 @@ public class AppointmentsController : ControllerBase
     public async Task<IActionResult> GetMyAppointments()
     {
         var userId = GetCurrentUserId();
-        
+
         var appointments = await _db.Appointments
             .Include(a => a.Doctor)
             .Where(a => a.PatientId == userId)
@@ -47,11 +47,54 @@ public class AppointmentsController : ControllerBase
                 DoctorAddress = a.Doctor != null ? a.Doctor.Address : "Adresse non renseignée",
                 DateTime = a.DateTime,
                 Status = a.Status,
-                Notes = a.Notes
+                Notes = a.Notes,
+                Type = a.Type,
+                IsUrgent = a.IsUrgent,
+                Reason = a.Reason
             })
             .ToListAsync();
 
         return Ok(appointments);
+    }
+
+    // GET: api/appointments/{id}
+    [HttpGet("{id}")]
+    [Authorize]
+    public async Task<IActionResult> GetAppointmentById(int id)
+    {
+        var userId = GetCurrentUserId();
+
+        var appointment = await _db.Appointments
+            .Include(a => a.Doctor)
+            .FirstOrDefaultAsync(a => a.Id == id);
+
+        if (appointment == null)
+            return NotFound(new { message = "Rendez-vous non trouvé" });
+
+        var isPatient = appointment.PatientId == userId;
+        var isDoctor = await _db.Doctors.AnyAsync(d => d.UserId == userId && d.Id == appointment.DoctorId);
+
+        if (!isPatient && !isDoctor)
+            return Unauthorized();
+
+        var dto = new AppointmentDto
+        {
+            Id = appointment.Id,
+            DoctorId = appointment.DoctorId,
+            DoctorName = appointment.Doctor != null
+                                ? $"Dr. {appointment.Doctor.FirstName} {appointment.Doctor.LastName}"
+                                : "Docteur",
+            DoctorSpeciality = appointment.Doctor != null ? appointment.Doctor.Speciality : "Généraliste",
+            DoctorAddress = appointment.Doctor != null ? appointment.Doctor.Address : "Adresse non renseignée",
+            DateTime = appointment.DateTime,
+            Status = appointment.Status,
+            Notes = appointment.Notes,
+            Type = appointment.Type,
+            IsUrgent = appointment.IsUrgent,
+            Reason = appointment.Reason
+        };
+
+        return Ok(dto);
     }
 
     // GET: api/appointments/doctor/{doctorId}
@@ -60,7 +103,7 @@ public class AppointmentsController : ControllerBase
     public async Task<IActionResult> GetDoctorAppointments(int doctorId)
     {
         var userId = GetCurrentUserId();
-        
+
         var doctor = await _db.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
         if (doctor == null || doctor.Id != doctorId)
             return Unauthorized();
@@ -85,18 +128,26 @@ public class AppointmentsController : ControllerBase
 
     // POST: api/appointments
     [HttpPost]
-    [Authorize(Roles = "Patient")]
+    [Authorize]
+
     public async Task<IActionResult> CreateAppointment([FromBody] CreateAppointmentDto dto)
     {
+        // DEBUG — afficher tous les headers reçus
+        foreach (var header in Request.Headers)
+        {
+            Console.WriteLine($"Header: {header.Key} = {header.Value}");
+        }
         var userId = GetCurrentUserId();
-        
+
         var doctor = await _db.Doctors.FindAsync(dto.DoctorId);
         if (doctor == null)
             return NotFound(new { message = "Médecin non trouvé" });
 
+        var dateTimeUtc = DateTime.SpecifyKind(dto.DateTime, DateTimeKind.Utc);
+
         var existingAppointment = await _db.Appointments
-            .FirstOrDefaultAsync(a => a.DoctorId == dto.DoctorId && a.DateTime == dto.DateTime);
-        
+            .FirstOrDefaultAsync(a => a.DoctorId == dto.DoctorId && a.DateTime == dateTimeUtc);
+
         if (existingAppointment != null)
             return BadRequest(new { message = "Ce créneau est déjà pris" });
 
@@ -104,9 +155,12 @@ public class AppointmentsController : ControllerBase
         {
             PatientId = userId,
             DoctorId = dto.DoctorId,
-            DateTime = dto.DateTime,
+            DateTime = DateTime.SpecifyKind(dto.DateTime, DateTimeKind.Utc),
+            Type = dto.Type ?? "InPerson",
+            IsUrgent = dto.IsUrgent,
             Status = "En attente",
             Notes = dto.Notes,
+            Reason = dto.Reason,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -122,7 +176,7 @@ public class AppointmentsController : ControllerBase
     public async Task<IActionResult> UpdateAppointment(int id, [FromBody] UpdateAppointmentDto dto)
     {
         var userId = GetCurrentUserId();
-        
+
         var appointment = await _db.Appointments
             .Include(a => a.Patient)
             .FirstOrDefaultAsync(a => a.Id == id);
@@ -139,13 +193,13 @@ public class AppointmentsController : ControllerBase
         if (dto.DateTime.HasValue)
         {
             var existingAppointment = await _db.Appointments
-                .FirstOrDefaultAsync(a => a.DoctorId == appointment.DoctorId && 
+                .FirstOrDefaultAsync(a => a.DoctorId == appointment.DoctorId &&
                                          a.DateTime == dto.DateTime.Value &&
                                          a.Id != id);
-            
+
             if (existingAppointment != null)
                 return BadRequest(new { message = "Ce créneau est déjà pris" });
-                
+
             appointment.DateTime = dto.DateTime.Value;
             appointment.Status = "En attente";
         }
@@ -168,7 +222,7 @@ public class AppointmentsController : ControllerBase
     public async Task<IActionResult> CancelAppointment(int id)
     {
         var userId = GetCurrentUserId();
-        
+
         var appointment = await _db.Appointments
             .FirstOrDefaultAsync(a => a.Id == id);
 
