@@ -1,4 +1,3 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -9,7 +8,7 @@ namespace SympNet.WebApi.Models
         [Key]
         public int Id { get; set; }
         
-        public Guid DoctorId { get; set; }
+        public int DoctorId { get; set; }  // Changé de Guid à int
         
         [ForeignKey("DoctorId")]
         public virtual Doctor? Doctor { get; set; }

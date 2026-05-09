@@ -13,5 +13,17 @@
     <script src="/js/audio-recorder.js"></script>
     <script src="js/chat.js"></script>
     <script src="js/webrtc.js"></script>
+    <script src="js/speech-recorder.js"></script>
+    <script>
+        window.downloadFileFromBytes = function (filename, contentType, content) {
+            const blob = new Blob([new Uint8Array(content)], { type: contentType });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
 </body>
 </html>

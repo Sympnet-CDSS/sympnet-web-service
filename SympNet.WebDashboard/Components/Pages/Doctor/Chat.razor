@@ -622,8 +622,12 @@
         
         try
         {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
             hubConnection = new HubConnectionBuilder()
-                .WithUrl($"{baseUrl}/chatHub")
+                .WithUrl($"{baseUrl}/hubs/chat", options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult(token);
+                })
                 .WithAutomaticReconnect()
                 .Build();
 
@@ -698,6 +702,8 @@
         
         try
         {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             var response = await Http.GetFromJsonAsync<List<ConversationDto>>($"{baseUrl}/api/chat/conversations");
             
             if (response != null)
@@ -729,6 +735,8 @@
         
         try
         {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             var response = await Http.GetFromJsonAsync<List<MessageDto>>(
                 $"{baseUrl}/api/chat/conversations/{conversation.OtherUserId}/messages");
             
@@ -761,6 +769,8 @@
         
         try
         {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             var messageData = new
             {
                 ReceiverId = selectedConversation.OtherUserId,

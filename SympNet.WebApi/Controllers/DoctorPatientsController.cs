@@ -32,12 +32,19 @@ public class DoctorPatientsController : ControllerBase
     {
         var doctorId = GetCurrentDoctorId();
         
+        // Récupérer les emails des patients du docteur
         var patientEmails = await _db.Consultations
             .Where(c => c.DoctorId == doctorId)
             .Select(c => c.PatientEmail)
             .Distinct()
             .ToListAsync();
 
+        if (!patientEmails.Any())
+        {
+            return Ok(new List<object>());
+        }
+
+        // Récupérer les détails des patients
         var patients = await _db.Patients
             .Include(p => p.User)
             .Where(p => patientEmails.Contains(p.User.Email))
@@ -53,14 +60,10 @@ public class DoctorPatientsController : ControllerBase
                 p.BloodType,
                 p.Allergies,
                 p.MedicalHistory,
-                p.ConsultationCount,
-                LastConsultation = _db.Consultations
-                    .Where(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId)
-                    .OrderByDescending(c => c.CreatedAt)
-                    .Select(c => c.CreatedAt)
-                    .FirstOrDefault()
+                ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
+                p.CreatedAt
             })
-            .OrderByDescending(p => p.LastConsultation)
+            .OrderByDescending(p => p.CreatedAt)
             .ToListAsync();
 
         return Ok(patients);
@@ -84,11 +87,10 @@ public class DoctorPatientsController : ControllerBase
                 p.PhoneNumber,
                 p.DateOfBirth,
                 p.Gender,
-                p.Address,
                 p.BloodType,
                 p.Allergies,
                 p.MedicalHistory,
-                p.ConsultationCount,
+                ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
                 Consultations = _db.Consultations
                     .Where(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId)
                     .OrderByDescending(c => c.CreatedAt)
@@ -96,6 +98,7 @@ public class DoctorPatientsController : ControllerBase
                     {
                         c.Id,
                         c.Diagnosis,
+                        c.Symptoms,
                         c.Recommendations,
                         c.ConfidenceScore,
                         c.CreatedAt

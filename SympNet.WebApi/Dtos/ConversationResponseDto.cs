@@ -1,4 +1,4 @@
-namespace SympNet.WebApi.Dtos;
+namespace SympNet.WebApi;
 
 public class ConversationResponseDto
 {

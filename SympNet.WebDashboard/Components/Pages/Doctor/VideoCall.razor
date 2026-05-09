@@ -174,8 +174,13 @@
     {
         var baseUrl = "http://localhost:5057";
         
+        var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
         hubConnection = new HubConnectionBuilder()
-            .WithUrl($"{baseUrl}/webrtchub")
+            .WithUrl($"{baseUrl}/hubs/chat", options =>
+            {
+                options.AccessTokenProvider = () => Task.FromResult(token);
+            })
+            .WithAutomaticReconnect()
             .Build();
 
         hubConnection.On<string, string>("ReceiveOffer", async (fromUserId, sdp) =>

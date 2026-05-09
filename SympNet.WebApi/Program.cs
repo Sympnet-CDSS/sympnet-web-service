@@ -1,4 +1,3 @@
-﻿using System.Security.Claims;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -6,40 +5,49 @@ using Microsoft.IdentityModel.Tokens;
 using SympNet.WebApi.Data;
 using SympNet.WebApi.Hubs;
 using SympNet.WebApi.Services;
+using SympNet.WebApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+// Configuration
+builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+// Contrôleurs
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Database - PostgreSQL
+// Database
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
-// JWT Configuration
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "SympNet_Super_Secret_Key_2026_TEKup!";
+// JWT Authentication
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "SympNet_Super_Secret_Key_2026_TEKup_Very_Long_For_256bits_Minimum!";
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "SympNet";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "SympNetUsers";
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
-        
-        // Important pour SignalR
+
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/chatHub"))
+                
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
                 {
                     context.Token = accessToken;
                 }
@@ -48,15 +56,46 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
+// Authorization Policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("DoctorOnly", policy => policy.RequireRole("Doctor"));
+    options.AddPolicy("PatientOnly", policy => policy.RequireRole("Patient"));
+    options.AddPolicy("DoctorOrAdmin", policy => policy.RequireRole("Doctor", "Admin"));
+});
+
+// Services
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<EmailService>();
-builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IAIService, AIService>();
+// builder.Services.AddScoped<INotificationService, NotificationService>();
+
+// HTTP Client for AI Service
+builder.Services.AddHttpClient<IAIService, AIService>(client =>
+{
+    var aiUrl = builder.Configuration["AIService:Url"] ?? "http://localhost:8001";
+    client.BaseAddress = new Uri(aiUrl);
+    client.Timeout = TimeSpan.FromSeconds(60);
+});
+
+// SignalR
 builder.Services.AddSignalR();
-builder.Services.AddCors();
+
+// CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -64,66 +103,55 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-app.UseCors(x => x.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
+app.UseStaticFiles(); // Allow serving uploads (avatars)
+app.UseCors("AllowAll");
+app.UseAuthentication();
+app.UseAuthorization();
 
-// MIDDLEWARE POUR AUTH TEMPORAIRE (POUR TEST)
-app.Use(async (context, next) =>
-{
-    // Pour les requêtes vers chat, ajouter un utilisateur par défaut
-    if (context.Request.Path.StartsWithSegments("/api/chat") || 
-        context.Request.Path.StartsWithSegments("/chatHub"))
-    {
-        var userId = "11111111-1111-1111-1111-111111111111";
-        var claims = new List<Claim>
-        {
-            new Claim(ClaimTypes.NameIdentifier, userId),
-            new Claim("sub", userId),
-            new Claim(ClaimTypes.Role, "Doctor")
-        };
-        var identity = new ClaimsIdentity(claims, "TestAuth");
-        context.User = new ClaimsPrincipal(identity);
-    }
-    
-    await next();
-});
+// SignalR Hubs
+app.MapHub<NotificationHub>("/hubs/notification");
+app.MapHub<ChatHub>("/hubs/chat");
+app.MapHub<VideoCallHub>("/hubs/videocall");
 
-// app.UseAuthentication(); // COMMENTÉ pour test
-// app.UseAuthorization();  // COMMENTÉ pour test
-
-app.MapHub<ChatHub>("/chatHub");
-app.MapHub<WebRTCHub>("/webrtchub");
+// Controllers
 app.MapControllers();
 
-// Créer admin par défaut
+// Migration et Seed
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var adminEmail = builder.Configuration["Admin:Email"] ?? "admin@sympnet.com";
-    var adminPassword = builder.Configuration["Admin:Password"] ?? "Admin123!";
-    
     db.Database.EnsureCreated();
     
-    var adminExists = db.Users.Any(u => u.Role == "Admin");
-    
-    if (!adminExists)
+    try
     {
-        var adminUser = new SympNet.WebApi.Models.User
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Ordonnances\" ADD COLUMN IF NOT EXISTS \"OrdonnanceCode\" text NOT NULL DEFAULT '';");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Ordonnances\" ADD COLUMN IF NOT EXISTS \"Status\" integer NOT NULL DEFAULT 0;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Ordonnances\" ADD COLUMN IF NOT EXISTS \"HasAIAlerts\" boolean NOT NULL DEFAULT FALSE;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Ordonnances\" ADD COLUMN IF NOT EXISTS \"AIAlertsJson\" text NULL;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Ordonnances\" ADD COLUMN IF NOT EXISTS \"DoctorConfirmed\" boolean NOT NULL DEFAULT FALSE;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Ordonnances\" ADD COLUMN IF NOT EXISTS \"ConfirmedAt\" timestamp with time zone NULL;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Ordonnances\" ADD COLUMN IF NOT EXISTS \"PdfPath\" text NULL;");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Schema update skipped: {ex.Message}");
+    }
+    
+    // Seed admin si nécessaire
+    if (!db.Users.Any(u => u.Role == "Admin"))
+    {
+        var admin = new User
         {
-            Id = Guid.NewGuid(),
-            Email = adminEmail,
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
+            Email = "admin@sympnet.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin@123"),
             Role = "Admin",
             IsActive = true,
-            FullName = "Super Administrateur",
-            CreatedAt = DateTime.UtcNow
+            IsEmailVerified = true,
+            FullName = "Administrateur SympNet"
         };
-        
-        db.Users.Add(adminUser);
-        db.SaveChanges();
-        
-        Console.WriteLine("ADMIN CRÉÉ AVEC SUCCÈS !");
-        Console.WriteLine($"   Email: {adminEmail}");
-        Console.WriteLine($"   Mot de passe: {adminPassword}");
+        db.Users.Add(admin);
+        await db.SaveChangesAsync();
+        Console.WriteLine("✓ Admin user created: admin@sympnet.com / Admin@123");
     }
 }
 

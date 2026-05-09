@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using SympNet.WebApi.Data;
+using System.Security.Claims;
 
 namespace SympNet.WebApi.Controllers;
 
@@ -8,68 +11,66 @@ namespace SympNet.WebApi.Controllers;
 [Authorize]
 public class UploadController : ControllerBase
 {
+    private readonly AppDbContext _db;
     private readonly IWebHostEnvironment _env;
-    private readonly ILogger<UploadController> _logger;
 
-    public UploadController(IWebHostEnvironment env, ILogger<UploadController> logger)
+    public UploadController(AppDbContext db, IWebHostEnvironment env)
     {
+        _db = db;
         _env = env;
-        _logger = logger;
     }
 
-    [HttpPost("file")]
-    public async Task<IActionResult> UploadFile(IFormFile file, [FromQuery] string type = "general")
+    [HttpPost("photo")]
+    public async Task<IActionResult> UploadPhoto(IFormFile file)
     {
         if (file == null || file.Length == 0)
-            return BadRequest(new { message = "Aucun fichier" });
+            return BadRequest(new { message = "Aucun fichier n'a été fourni." });
 
-        var allowedTypes = new[] { "image/jpeg", "image/png", "image/gif", "application/pdf", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document" };
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif" };
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         
-        if (!allowedTypes.Contains(file.ContentType))
-            return BadRequest(new { message = "Type de fichier non autorisé" });
+        if (!allowedExtensions.Contains(extension))
+            return BadRequest(new { message = "Type de fichier non autorisé. Utilisez JPG, PNG ou GIF." });
 
-        if (file.Length > 10 * 1024 * 1024) // 10 MB
-            return BadRequest(new { message = "Fichier trop volumineux (max 10 MB)" });
+        if (file.Length > 5 * 1024 * 1024) // 5 MB max
+            return BadRequest(new { message = "Le fichier est trop volumineux (5 Mo maximum)." });
 
-        var uploadFolder = Path.Combine(_env.WebRootPath, "uploads", type);
-        if (!Directory.Exists(uploadFolder))
-            Directory.CreateDirectory(uploadFolder);
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim))
+            return Unauthorized();
 
-        var fileName = $"{Guid.NewGuid()}_{Path.GetFileName(file.FileName)}";
-        var filePath = Path.Combine(uploadFolder, fileName);
+        var userId = Guid.Parse(userIdClaim);
+        var user = await _db.Users.FindAsync(userId);
+        if (user == null)
+            return NotFound(new { message = "Utilisateur non trouvé" });
 
-        using (var stream = new FileStream(filePath, FileMode.Create))
+        var uploadsFolder = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "avatars");
+        if (!Directory.Exists(uploadsFolder))
+            Directory.CreateDirectory(uploadsFolder);
+
+        var uniqueFileName = $"{userId}_{Guid.NewGuid()}{extension}";
+        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+        using (var fileStream = new FileStream(filePath, FileMode.Create))
         {
-            await file.CopyToAsync(stream);
+            await file.CopyToAsync(fileStream);
         }
 
-        var fileUrl = $"{Request.Scheme}://{Request.Host}/uploads/{type}/{fileName}";
-
-        return Ok(new
+        // Supprimer l'ancienne photo si elle existe
+        if (!string.IsNullOrEmpty(user.PhotoUrl))
         {
-            url = fileUrl,
-            fileName = file.FileName,
-            size = file.Length,
-            type = file.ContentType
-        });
-    }
-
-    [HttpGet("download/{type}/{fileName}")]
-    public IActionResult DownloadFile(string type, string fileName)
-    {
-        var filePath = Path.Combine(_env.WebRootPath, "uploads", type, fileName);
-        
-        if (!System.IO.File.Exists(filePath))
-            return NotFound();
-
-        var memory = new MemoryStream();
-        using (var stream = new FileStream(filePath, FileMode.Open))
-        {
-            stream.CopyTo(memory);
+            var oldFileName = Path.GetFileName(new Uri(user.PhotoUrl).LocalPath);
+            var oldFilePath = Path.Combine(uploadsFolder, oldFileName);
+            if (System.IO.File.Exists(oldFilePath))
+            {
+                System.IO.File.Delete(oldFilePath);
+            }
         }
-        memory.Position = 0;
-        
-        var contentType = "application/octet-stream";
-        return File(memory, contentType, fileName);
+
+        var photoUrl = $"{Request.Scheme}://{Request.Host}/uploads/avatars/{uniqueFileName}";
+        user.PhotoUrl = photoUrl;
+        await _db.SaveChangesAsync();
+
+        return Ok(new { photoUrl = photoUrl, message = "Photo mise à jour avec succès" });
     }
 }
