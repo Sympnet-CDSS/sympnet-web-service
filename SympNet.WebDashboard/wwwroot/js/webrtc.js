@@ -11,14 +11,14 @@ window.webrtc = {
         ]
     },
 
-    init: async function(dotNetHelper, hubConnection) {
+    init: async function (dotNetHelper, hubConnection) {
         this.dotNetHelper = dotNetHelper;
         this.hubConnection = hubConnection;
         await this.startLocalStream();
         this.setupEventListeners();
     },
 
-    startLocalStream: async function() {
+    startLocalStream: async function () {
         try {
             this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             const localVideo = document.getElementById('localVideo');
@@ -29,10 +29,10 @@ window.webrtc = {
         }
     },
 
-    setupEventListeners: function() {
+    setupEventListeners: function () {
         const btnMic = document.getElementById('btnMic');
         const btnCamera = document.getElementById('btnCamera');
-        
+
         if (btnMic) {
             btnMic.onclick = () => this.toggleMicrophone();
         }
@@ -41,79 +41,79 @@ window.webrtc = {
         }
     },
 
-    startCall: async function(targetUserId) {
+    startCall: async function (targetUserId) {
         this.targetUserId = targetUserId;
-        
+
         this.peerConnection = new RTCPeerConnection(this.configuration);
-        
+
         this.localStream.getTracks().forEach(track => {
             this.peerConnection.addTrack(track, this.localStream);
         });
-        
+
         this.peerConnection.ontrack = (event) => {
             const remoteVideo = document.getElementById('remoteVideo');
             if (remoteVideo && event.streams[0]) {
                 remoteVideo.srcObject = event.streams[0];
             }
         };
-        
+
         this.peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                this.dotNetHelper.invokeMethodAsync('SendIceCandidate', 
-                    this.targetUserId, 
-                    JSON.stringify(event.candidate), 
-                    event.candidate.sdpMid, 
+                this.dotNetHelper.invokeMethodAsync('SendIceCandidate',
+                    this.targetUserId,
+                    JSON.stringify(event.candidate),
+                    event.candidate.sdpMid,
                     event.candidate.sdpMLineIndex);
             }
         };
-        
+
         const offer = await this.peerConnection.createOffer();
         await this.peerConnection.setLocalDescription(offer);
         await this.dotNetHelper.invokeMethodAsync('SendOffer', this.targetUserId, JSON.stringify(offer));
     },
 
-    handleOffer: async function(fromUserId, sdp) {
+    handleOffer: async function (fromUserId, sdp) {
         this.targetUserId = fromUserId;
-        
+
         this.peerConnection = new RTCPeerConnection(this.configuration);
-        
+
         this.localStream.getTracks().forEach(track => {
             this.peerConnection.addTrack(track, this.localStream);
         });
-        
+
         this.peerConnection.ontrack = (event) => {
             const remoteVideo = document.getElementById('remoteVideo');
             if (remoteVideo && event.streams[0]) {
                 remoteVideo.srcObject = event.streams[0];
             }
         };
-        
+
         this.peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
-                this.dotNetHelper.invokeMethodAsync('SendIceCandidate', 
-                    this.targetUserId, 
-                    JSON.stringify(event.candidate), 
-                    event.candidate.sdpMid, 
+                this.dotNetHelper.invokeMethodAsync('SendIceCandidate',
+                    this.targetUserId,
+                    JSON.stringify(event.candidate),
+                    event.candidate.sdpMid,
                     event.candidate.sdpMLineIndex);
             }
         };
-        
+
         await this.peerConnection.setRemoteDescription(JSON.parse(sdp));
         const answer = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answer);
         await this.dotNetHelper.invokeMethodAsync('SendAnswer', this.targetUserId, JSON.stringify(answer));
     },
 
-    handleAnswer: async function(fromUserId, sdp) {
+    handleAnswer: async function (fromUserId, sdp) {
         await this.peerConnection.setRemoteDescription(JSON.parse(sdp));
     },
 
-    handleIceCandidate: async function(fromUserId, candidate, sdpMid, sdpMLineIndex) {
+    handleIceCandidate: async function (fromUserId, candidate, sdpMid, sdpMLineIndex) {
         const iceCandidate = new RTCIceCandidate(JSON.parse(candidate));
         await this.peerConnection.addIceCandidate(iceCandidate);
     },
 
-    toggleMicrophone: function() {
+    toggleMicrophone: function () {
         if (this.localStream) {
             const audioTrack = this.localStream.getAudioTracks()[0];
             if (audioTrack) {
@@ -128,7 +128,7 @@ window.webrtc = {
         }
     },
 
-    toggleVideo: function() {
+    toggleVideo: function () {
         if (this.localStream) {
             const videoTrack = this.localStream.getVideoTracks()[0];
             if (videoTrack) {
@@ -143,7 +143,7 @@ window.webrtc = {
         }
     },
 
-    toggleScreenShare: async function() {
+    toggleScreenShare: async function () {
         try {
             const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
             if (this.peerConnection) {
@@ -163,7 +163,7 @@ window.webrtc = {
         }
     },
 
-    endCall: function() {
+    endCall: function () {
         if (this.peerConnection) this.peerConnection.close();
         if (this.localStream) this.localStream.getTracks().forEach(track => track.stop());
         if (this.hubConnection && this.targetUserId) {

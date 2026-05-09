@@ -38,8 +38,30 @@ public class AppDbContext : DbContext
             .HasForeignKey(p => p.UserId);
         
         modelBuilder.Entity<Appointment>()
-             .HasOne(a => a.Doctor)
-             .WithMany()
-             .HasForeignKey(a => a.DoctorId);
+            .HasOne(a => a.Doctor)
+            .WithMany()
+            .HasForeignKey(a => a.DoctorId);
+        
+        // Configurations pour Message
+        modelBuilder.Entity<Message>()
+            .HasOne(m => m.Sender)
+            .WithMany()
+            .HasForeignKey(m => m.SenderId)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        modelBuilder.Entity<Message>()
+            .HasOne(m => m.Receiver)
+            .WithMany()
+            .HasForeignKey(m => m.ReceiverId)
+            .OnDelete(DeleteBehavior.Restrict);
+        
+        modelBuilder.Entity<Message>()
+            .Property(m => m.Content)
+            .HasMaxLength(5000);
+        
+        // Index pour optimiser les recherches de messages
+        modelBuilder.Entity<Message>()
+            .HasIndex(m => new { m.SenderId, m.ReceiverId, m.SentAt });
+        
     }
 }
