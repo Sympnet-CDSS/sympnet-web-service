@@ -1,7 +1,330 @@
 @page "/"
+@layout SympNet.WebDashboard.Components.Layout.EmptyLayout
+@inject NavigationManager Navigation
 
-<PageTitle>Home</PageTitle>
+<PageTitle>SympNet - HealthCare</PageTitle>
 
-<h1>Hello, world!</h1>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
 
-Welcome to your new app.
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Instrument Sans', sans-serif; background: #F8FAFC; color: #1F2937; line-height: 1.5; }
+    
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    
+    /* Navbar */
+    .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+    .logo { font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 800; color: #0D9488; display: flex; align-items: center; gap: 8px; }
+    .nav-links { display: flex; gap: 24px; font-weight: 500; font-size: 15px; }
+    .nav-links a { text-decoration: none; color: #4B5563; transition: 0.2s; }
+    .nav-links a:hover { color: #0D9488; }
+    .nav-actions { display: flex; align-items: center; gap: 16px; }
+    .btn-text { font-weight: 600; color: #0D9488; background: none; border: none; cursor: pointer; font-size: 15px; }
+    
+    .doctor-logo-icon {
+        width: 40px; height: 40px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        border-radius: 12px; display: flex; align-items: center; justify-content: center;
+        font-size: 20px; color: white;
+    }
+    
+    .btn-primary { 
+        background: #0D9488; 
+        color: white; 
+        border: none; 
+        padding: 10px 20px; 
+        border-radius: 8px; 
+        font-size: 14px; 
+        font-weight: 600; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        gap: 8px; 
+        transition: 0.2s; 
+    }
+    .btn-primary:hover { background: #0F766E; }
+
+    /* Hero Section */
+    .hero { display: flex; align-items: center; padding: 60px 0 100px; }
+    .hero-content { flex: 1; padding-right: 40px; }
+    .hero-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: 56px; font-weight: 800; line-height: 1.1; color: #111827; margin-bottom: 24px; }
+    .hero-title span { color: #0D9488; }
+    .hero-desc { font-size: 18px; color: #4B5563; margin-bottom: 32px; max-width: 480px; }
+    .hero-btns { display: flex; gap: 16px; }
+    .btn-outline { padding: 12px 24px; border-radius: 8px; border: 2px solid #E5E7EB; background: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    
+    .hero-image { flex: 1; display: flex; justify-content: flex-end; position: relative; }
+    .doctor-blob { background: linear-gradient(135deg, #0D9488, #14B8A6); width: 400px; height: 500px; border-radius: 40px 140px 40px 140px; position: relative; display: flex; justify-content: center; align-items: flex-end; overflow: hidden; }
+    .doctor-image { width: 100%; height: auto; object-fit: cover; z-index: 2; position: relative; }
+    
+    /* Search Box */
+    .search-box-wrapper { max-width: 900px; margin: -50px auto 80px; background: white; padding: 24px 32px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); display: flex; align-items: flex-end; gap: 16px; position: relative; z-index: 10; border: 1px solid #E2E8F0; }
+    .search-field { flex: 1; }
+    .search-field label { display: block; font-size: 13px; font-weight: 600; color: #64748B; margin-bottom: 8px; }
+    .search-field input, .search-field select { width: 100%; padding: 12px 16px; border: 1px solid #E2E8F0; border-radius: 8px; outline: none; font-size: 15px; }
+    .search-field input:focus, .search-field select:focus { border-color: #0D9488; }
+    .toggle-available { display: flex; align-items: center; gap: 12px; height: 45px; }
+    
+    /* Stats */
+    .stats-section { text-align: center; margin-bottom: 80px; }
+    .stats-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; color: #0D9488; margin-bottom: 40px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+    .stat-item h3 { font-size: 40px; font-weight: 800; color: #111827; }
+    .stat-item p { color: #64748B; font-weight: 500; margin-top: 4px; }
+
+    /* Services */
+    .services-section { background: white; padding: 80px 0; }
+    .section-header { text-align: center; margin-bottom: 50px; }
+    .section-header h2 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 32px; color: #0D9488; margin-bottom: 12px; }
+    .section-header p { color: #64748B; max-width: 500px; margin: 0 auto; }
+    
+    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .service-card { border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px; transition: 0.3s; }
+    .service-card:hover { box-shadow: 0 10px 30px rgba(13,148,136,0.1); border-color: #0D9488; }
+    .service-icon { width: 60px; height: 60px; background: #F0FDF4; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; color: #0D9488; }
+    .service-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
+    .service-card p { color: #64748B; font-size: 14px; margin-bottom: 20px; }
+    .learn-more { color: #0D9488; font-weight: 600; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 4px; }
+
+    /* Footer */
+    .footer { background: #0D9488; color: white; padding: 60px 0 30px; margin-top: 80px; }
+    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 60px; }
+    .footer-col h4 { font-size: 18px; margin-bottom: 20px; font-weight: 600; }
+    .footer-links { list-style: none; }
+    .footer-links li { margin-bottom: 12px; }
+    .footer-links a { color: #CCFBF1; text-decoration: none; font-size: 14px; transition: 0.2s; }
+    .footer-links a:hover { color: white; }
+    .newsletter-form { display: flex; margin-top: 16px; }
+    .newsletter-form input { padding: 12px 16px; border: none; border-radius: 8px 0 0 8px; outline: none; width: 100%; }
+    .newsletter-form button { background: #111827; color: white; border: none; padding: 0 20px; border-radius: 0 8px 8px 0; font-weight: 600; cursor: pointer; }
+    
+    .footer-bottom { text-align: center; padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); color: #CCFBF1; font-size: 14px; }
+</style>
+
+<header>
+    <nav class="navbar">
+        <div class="logo">
+           <div class="doctor-logo-icon"><i class="fas fa-stethoscope"></i></div>
+            SympNet
+        </div>
+        <div class="nav-links">
+            <a href="#">Accueil</a>
+            <a href="#">Services</a>
+            <a href="/contact">Contactez-nous</a>
+            <a href="#">Aide</a>
+            <a href="#">Blog</a>
+        </div>
+        <div class="nav-actions">
+            <button class="btn-primary" @onclick="GoToLogin">Connexion</button>
+        </div>
+    </nav>
+</header>
+
+<main>
+    <section class="container">
+        <div class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">Fournir des Soins de Qualité Pour un <span>Avenir Plus Sain</span></h1>
+                <p class="hero-desc">Dans notre hôpital, nous sommes dédiés à fournir des soins médicaux exceptionnels à nos patients et à leurs familles. Notre équipe expérimentée de professionnels de santé est là pour vous.</p>
+                <div class="hero-btns">
+                    <button class="btn-primary" style="padding: 14px 28px; font-size: 16px;" @onclick="GoToLogin">Rendez-vous</button>
+                    <button class="btn-outline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                        Voir la Vidéo
+                    </button>
+                </div>
+            </div>
+            <div class="hero-image">
+                <div class="doctor-blob">
+                    <img src="images/doctor.png" alt="Doctor" class="doctor-image" />
+                    <!-- Remplacez le SVG ci-dessous par votre image en mettant la bonne adresse dans 'src' ci-dessus. -->
+                    <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1" style="opacity: 0.5; margin-bottom: 50px; position: absolute; z-index: 1;">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container">
+        <div class="search-box-wrapper">
+            <div style="position: absolute; top: 16px; left: 32px; font-weight: 700; font-size: 18px;">Trouver un Médecin</div>
+            <div class="search-field" style="margin-top: 32px;">
+                <input type="text" placeholder="Nom" @bind="searchName" />
+            </div>
+            <div class="search-field">
+                <input type="text" placeholder="Spécialité" @bind="searchSpecialty" />
+            </div>
+            <div class="toggle-available" style="cursor: pointer;" @onclick="ToggleAvailable">
+                <span style="font-weight: 500; color: #4B5563;">Disponible</span>
+                <div style="width: 40px; height: 24px; background: @(isAvailable ? "#0D9488" : "#E2E8F0"); border-radius: 12px; position: relative; transition: background 0.3s;">
+                    <div style="width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 3px; @(isAvailable ? "right: 3px;" : "left: 3px;"); transition: all 0.3s;"></div>
+                </div>
+            </div>
+            <button class="btn-primary" style="padding: 12px 32px;" @onclick="SearchDoctor">Rechercher</button>
+        </div>
+
+        <div class="stats-section">
+            <h2 class="stats-title">Nos résultats en chiffres</h2>
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h3>99%</h3>
+                    <p>Satisfaction client</p>
+                </div>
+                <div class="stat-item">
+                    <h3>15k</h3>
+                    <p>Patients en ligne</p>
+                </div>
+                <div class="stat-item">
+                    <h3>12k</h3>
+                    <p>Patients guéris</p>
+                </div>
+                <div class="stat-item">
+                    <h3>240%</h3>
+                    <p>Croissance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <section class="services-section">
+        <div class="container">
+            <div class="section-header">
+                <h2>Nos services</h2>
+                <p>Nous offrons une gamme complète de services médicaux pour répondre à tous vos besoins de santé avec professionnalisme et empathie.</p>
+            </div>
+            <div class="services-grid">
+                <div class="service-card">
+                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+                    <h3>Soins dentaires</h3>
+                    <p>Des soins dentaires de haute qualité pour préserver et améliorer votre sourire au quotidien.</p>
+                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+                    <h3>Orthopédie</h3>
+                    <p>Traitements spécialisés pour vos os et articulations, vous aidant à retrouver votre mobilité.</p>
+                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
+                    <h3>Diagnostic</h3>
+                    <p>Des outils de diagnostic de pointe soutenus par notre intelligence artificielle avancée.</p>
+                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg></div>
+                    <h3>Cardiologie</h3>
+                    <p>Prise en charge complète de la santé de votre cœur par nos cardiologues experts.</p>
+                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+                    <h3>Chirurgie</h3>
+                    <p>Des interventions chirurgicales sécurisées et précises grâce à nos équipements de pointe.</p>
+                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
+                </div>
+                <div class="service-card">
+                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
+                    <h3>Ophtalmologie</h3>
+                    <p>Des soins spécialisés pour vos yeux pour préserver et améliorer votre vision à tout âge.</p>
+                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div class="footer-col" style="padding-right: 40px;">
+                <div class="logo" style="color: white; margin-bottom: 20px;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                    </svg>
+                    HealthCare
+                </div>
+                <p style="color: #CCFBF1; font-size: 14px; margin-bottom: 20px;">Abonnez-vous à notre newsletter !</p>
+                <div class="newsletter-form">
+                    <input type="email" placeholder="Entrez votre email" @bind="newsletterEmail" />
+                    <button @onclick="SubscribeNewsletter">S'abonner</button>
+                </div>
+            </div>
+            <div class="footer-col">
+                <h4>Produit</h4>
+                <ul class="footer-links">
+                    <li><a href="#">Fonctionnalités</a></li>
+                    <li><a href="#">Tarifs</a></li>
+                    <li><a href="#">Études de cas</a></li>
+                    <li><a href="#">Avis</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Entreprise</h4>
+                <ul class="footer-links">
+                    <li><a href="#">À propos</a></li>
+                    <li><a href="/contact">Contactez-nous</a></li>
+                    <li><a href="#">Carrières</a></li>
+                    <li><a href="#">Culture</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Support</h4>
+                <ul class="footer-links">
+                    <li><a href="#">Démarrage</a></li>
+                    <li><a href="#">Centre d'aide</a></li>
+                    <li><a href="#">État des serveurs</a></li>
+                    <li><a href="#">Signaler un bug</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h4>Suivez-nous</h4>
+                <ul class="footer-links">
+                    <li><a href="#">Facebook</a></li>
+                    <li><a href="#">Twitter</a></li>
+                    <li><a href="#">Instagram</a></li>
+                    <li><a href="#">LinkedIn</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            Copyright © 2024 HealthCare. Tous droits réservés.
+        </div>
+    </div>
+</footer>
+
+@inject IJSRuntime JSRuntime
+@code {
+    private string searchName = "";
+    private string searchSpecialty = "";
+    private bool isAvailable = true;
+    private string newsletterEmail = "";
+
+    private void GoToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+
+    private async Task SearchDoctor()
+    {
+        await JSRuntime.InvokeVoidAsync("alert", $"Recherche d'un médecin...\nNom: {searchName}\nSpécialité: {searchSpecialty}\nDisponible: {isAvailable}");
+    }
+
+    private void ToggleAvailable()
+    {
+        isAvailable = !isAvailable;
+    }
+
+    private async Task SubscribeNewsletter()
+    {
+        if (!string.IsNullOrWhiteSpace(newsletterEmail))
+        {
+            await JSRuntime.InvokeVoidAsync("alert", $"Abonnement réussi avec {newsletterEmail} !");
+            newsletterEmail = "";
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Veuillez entrer une adresse email valide.");
+        }
+    }
+}
