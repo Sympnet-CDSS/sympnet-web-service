@@ -224,8 +224,8 @@ window.getDictationText = () => speechRecorder.getTranscribedText();
 window.resetDictation = () => speechRecorder.resetText();
 
 // Ajouter les styles CSS
-const style = document.createElement('style');
-style.textContent = `
+const speechStyle = document.createElement('style');
+speechStyle.textContent = `
     @keyframes pulse {
         0%, 100% { transform: scale(1); opacity: 1; }
         50% { transform: scale(1.05); opacity: 0.8; }
@@ -242,6 +242,6 @@ style.textContent = `
         }
     }
 `;
-document.head.appendChild(style);
+document.head.appendChild(speechStyle);
 
 console.log(" SpeechRecorder chargé");
