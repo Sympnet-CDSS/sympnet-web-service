@@ -1,0 +1,937 @@
+@page "/doctor/chat"
+@layout DoctorLayout
+@using Microsoft.AspNetCore.SignalR.Client
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject IConfiguration Config
+@implements IAsyncDisposable
+
+<PageTitle>SympNet — Messagerie</PageTitle>
+
+<style>
+
+    .chat-container {
+        display: flex;
+        height: calc(100vh - 100px);
+        background: #F9FAFB;
+        border-radius: 28px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    .conversations-panel {
+        width: 340px;
+        background: white;
+        border-right: 1px solid #E5E7EB;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .panel-header {
+        padding: 24px;
+        border-bottom: 1px solid #E5E7EB;
+    }
+
+    .panel-header h2 {
+        font-size: 20px;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+        color: #1F2937;
+    }
+
+    .panel-header p {
+        font-size: 13px;
+        color: #6B7280;
+        margin: 0;
+    }
+
+    .search-conversation {
+        padding: 16px;
+        border-bottom: 1px solid #E5E7EB;
+    }
+
+    .search-conversation input {
+        width: 100%;
+        padding: 10px 16px;
+        background: #F9FAFB;
+        border: 1px solid #E5E7EB;
+        border-radius: 24px;
+        font-size: 14px;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    .search-conversation input:focus {
+        border-color: #0D9488;
+        box-shadow: 0 0 0 3px rgba(13,148,136,0.1);
+    }
+
+    .conversations-list {
+        flex: 1;
+        overflow-y: auto;
+    }
+
+    .conversation-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border-bottom: 1px solid #F3F4F6;
+    }
+
+    .conversation-item:hover {
+        background: #F9FAFB;
+    }
+
+    .conversation-item.active {
+        background: linear-gradient(135deg, #E6F8F7, #E0F2FE);
+    }
+
+    .conv-avatar {
+        width: 52px;
+        height: 52px;
+        background: linear-gradient(135deg, #0D9488, #14B8A6);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+        color: white;
+        position: relative;
+    }
+
+    .online-dot {
+        position: absolute;
+        bottom: 2px;
+        right: 2px;
+        width: 12px;
+        height: 12px;
+        background: #10B981;
+        border-radius: 50%;
+        border: 2px solid white;
+    }
+
+    .conv-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .conv-name {
+        font-weight: 600;
+        font-size: 15px;
+        color: #1F2937;
+        margin-bottom: 4px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .conv-time {
+        font-size: 11px;
+        color: #9CA3AF;
+    }
+
+    .conv-last-message {
+        font-size: 13px;
+        color: #6B7280;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .unread-badge {
+        background: #0D9488;
+        color: white;
+        border-radius: 50%;
+        width: 22px;
+        height: 22px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        font-weight: 600;
+    }
+
+    .chat-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: white;
+    }
+
+    .chat-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #E5E7EB;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .chat-user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .chat-user-avatar {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, #0D9488, #14B8A6);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: 700;
+        color: white;
+    }
+
+    .chat-user-details h4 {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0 0 4px 0;
+        color: #1F2937;
+    }
+
+    .chat-user-details .status {
+        font-size: 12px;
+    }
+
+    .status.online {
+        color: #10B981;
+    }
+
+    .status.offline {
+        color: #9CA3AF;
+    }
+
+    .typing-indicator {
+        font-size: 12px;
+        color: #0D9488;
+        font-style: italic;
+        animation: blink 1s infinite;
+    }
+
+    @@keyframes blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .chat-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .chat-action-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #F3F4F6;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #6B7280;
+    }
+
+    .chat-action-btn:hover {
+        background: #E6F8F7;
+        color: #0D9488;
+    }
+
+    .messages-area {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        background: #F9FAFB;
+    }
+
+    .message {
+        display: flex;
+        max-width: 75%;
+    }
+
+    .message.sent {
+        align-self: flex-end;
+    }
+
+    .message.received {
+        align-self: flex-start;
+    }
+
+    .message-bubble {
+        padding: 12px 18px;
+        border-radius: 20px;
+        position: relative;
+        word-wrap: break-word;
+    }
+
+    .message.sent .message-bubble {
+        background: #0D9488;
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .message.received .message-bubble {
+        background: white;
+        color: #1F2937;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .message-time {
+        font-size: 10px;
+        margin-top: 4px;
+        opacity: 0.7;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .message.sent .message-time {
+        justify-content: flex-end;
+    }
+
+    .message-status {
+        font-size: 10px;
+    }
+
+    .input-area {
+        padding: 20px 24px;
+        border-top: 1px solid #E5E7EB;
+        background: white;
+    }
+
+    .quick-replies {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+    }
+
+    .quick-reply-btn {
+        background: #F3F4F6;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: #374151;
+    }
+
+    .quick-reply-btn:hover {
+        background: #E6F8F7;
+        color: #0D9488;
+    }
+
+    .input-container {
+        display: flex;
+        gap: 12px;
+        align-items: flex-end;
+    }
+
+    .message-input {
+        flex: 1;
+        border: 1px solid #E5E7EB;
+        border-radius: 24px;
+        padding: 12px 18px;
+        resize: none;
+        font-family: inherit;
+        font-size: 14px;
+        max-height: 120px;
+        outline: none;
+        transition: all 0.2s;
+    }
+
+    .message-input:focus {
+        border-color: #0D9488;
+        box-shadow: 0 0 0 3px rgba(13,148,136,0.1);
+    }
+
+    .send-btn {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: #0D9488;
+        border: none;
+        cursor: pointer;
+        transition: all 0.2s;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .send-btn:hover {
+        background: #0F766E;
+        transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .empty-chat {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background: #F9FAFB;
+    }
+
+    .empty-chat i {
+        font-size: 64px;
+        color: #D1D5DB;
+        margin-bottom: 20px;
+    }
+
+    .empty-chat h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .empty-chat p {
+        color: #6B7280;
+    }
+
+    .messages-area::-webkit-scrollbar,
+    .conversations-list::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .messages-area::-webkit-scrollbar-track,
+    .conversations-list::-webkit-scrollbar-track {
+        background: #E5E7EB;
+    }
+
+    .messages-area::-webkit-scrollbar-thumb,
+    .conversations-list::-webkit-scrollbar-thumb {
+        background: #9CA3AF;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="chat-container">
+    <div class="conversations-panel">
+        <div class="panel-header">
+            <h2><i class="fas fa-comments"></i> Messages</h2>
+            <p>Discutez avec vos patients</p>
+        </div>
+        <div class="search-conversation">
+            <input type="text" placeholder="Rechercher..." @bind="searchTerm" @bind:event="oninput" />
+        </div>
+        <div class="conversations-list">
+            @if (isLoadingConversations)
+            {
+                <div style="text-align: center; padding: 40px;">
+                    <div class="spinner"></div>
+                </div>
+            }
+            else if (!conversations.Any())
+            {
+                <div style="text-align: center; padding: 40px; color: #6B7280;">
+                    <i class="fas fa-inbox" style="font-size: 48px; margin-bottom: 16px;"></i>
+                    <p>Aucune conversation</p>
+                </div>
+            }
+            else
+            {
+                foreach (var conv in filteredConversations)
+                {
+                    <div class="conversation-item @(selectedConversation?.OtherUserId == conv.OtherUserId ? "active" : "")"
+                         @onclick="() => SelectConversation(conv)">
+                        <div class="conv-avatar">
+                            @GetInitials(conv.OtherUserName)
+                            @if (conv.IsOnline)
+                            {
+                                <div class="online-dot"></div>
+                            }
+                        </div>
+                        <div class="conv-info">
+                            <div class="conv-name">
+                                <span>@conv.OtherUserName</span>
+                                <span class="conv-time">@FormatDate(conv.LastMessageAt)</span>
+                            </div>
+                            <div class="conv-last-message">@conv.LastMessage</div>
+                        </div>
+                        @if (conv.UnreadCount > 0)
+                        {
+                            <div class="unread-badge">@conv.UnreadCount</div>
+                        }
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    @if (selectedConversation != null)
+    {
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="chat-user-info">
+                    <div class="chat-user-avatar">@GetInitials(selectedConversation.OtherUserName)</div>
+                    <div class="chat-user-details">
+                        <h4>@selectedConversation.OtherUserName</h4>
+                        <div class="status @(isUserOnline ? "online" : "offline")">
+                            @if (isUserOnline)
+                            {
+                                <span><i class="fas fa-circle"></i> En ligne</span>
+                            }
+                            else
+                            {
+                                <span><i class="fas fa-circle"></i> Hors ligne</span>
+                            }
+                            @if (isTyping)
+                            {
+                                <span class="typing-indicator"> ✏️ Tape un message...</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-actions">
+                    <button class="chat-action-btn" @onclick="StartVideoCall" title="Appel vidéo">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="chat-action-btn" @onclick="ClearHistory" title="Effacer l'historique">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="messages-area" @ref="messagesContainer">
+                @foreach (var msg in messages)
+                {
+                    <div class="message @(msg.IsMine ? "sent" : "received")">
+                        <div class="message-bubble">
+                            @msg.Content
+                            <div class="message-time">
+                                @msg.SentAt.ToString("HH:mm")
+                                @if (msg.IsMine && msg.IsRead)
+                                {
+                                    <span class="message-status"><i class="fas fa-check-double"></i></span>
+                                }
+                                else if (msg.IsMine)
+                                {
+                                    <span class="message-status"><i class="fas fa-check"></i></span>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="input-area">
+                <div class="quick-replies">
+                    @foreach (var reply in quickReplies)
+                    {
+                        <button class="quick-reply-btn" @onclick="() => UseQuickReply(reply)">
+                            <i class="fas @GetReplyIcon(reply)"></i> @reply
+                        </button>
+                    }
+                </div>
+                <div class="input-container">
+                    <textarea class="message-input" rows="1" @bind="newMessage" @bind:event="oninput"
+                              placeholder="Écrivez votre message..." 
+                              @onkeypress="OnKeyPress"></textarea>
+                    <button class="send-btn" @onclick="SendMessage" disabled="@string.IsNullOrWhiteSpace(newMessage)">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="empty-chat">
+            <i class="fas fa-comments"></i>
+            <h3>Bienvenue sur la messagerie</h3>
+            <p>Sélectionnez une conversation pour commencer</p>
+        </div>
+    }
+</div>
+
+<style>
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #E5E7EB;
+        border-top-color: #0D9488;
+        border-radius: 50%;
+        margin: 0 auto;
+        animation: spin 1s linear infinite;
+    }
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+
+@code {
+    private List<ConversationDto> conversations = new();
+    private ConversationDto? selectedConversation;
+    private List<MessageDto> messages = new();
+    private string newMessage = "";
+    private string searchTerm = "";
+    private bool isLoadingConversations = true;
+    private bool isTyping = false;
+    private bool isUserOnline = false;
+    private System.Timers.Timer? typingTimer;
+    private ElementReference messagesContainer;
+    private HubConnection? hubConnection;
+    private bool _isInitialized = false;
+    
+    private List<string> quickReplies = new()
+    {
+        "📅 Je vous propose un rendez-vous",
+        "💊 Votre ordonnance est prête",
+        "📊 Vos résultats sont disponibles",
+        "🏥 En cas d'urgence, appelez le 15"
+    };
+
+    private List<ConversationDto> filteredConversations => conversations
+        .Where(c => string.IsNullOrEmpty(searchTerm) || 
+                   c.OtherUserName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isInitialized = true;
+            await LoadConversations();
+            await InitializeSignalR();
+            await ScrollToBottom();
+            StateHasChanged();
+        }
+    }
+
+    private async Task InitializeSignalR()
+    {
+        var baseUrl = "http://localhost:5057";
+        
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{baseUrl}/hubs/chat", options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult(token);
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On<dynamic>("ReceiveMessage", async (message) =>
+            {
+                if (selectedConversation?.OtherUserId.ToString() == message.senderId.ToString())
+                {
+                    messages.Add(new MessageDto
+                    {
+                        Id = message.id,
+                        Content = message.content,
+                        SentAt = message.sentAt,
+                        IsMine = false,
+                        IsRead = false
+                    });
+                    await InvokeAsync(async () =>
+                    {
+                        StateHasChanged();
+                        await ScrollToBottom();
+                    });
+                }
+                else
+                {
+                    await LoadConversations();
+                }
+            });
+
+            hubConnection.On<string>("UserOnline", (userId) =>
+            {
+                if (selectedConversation?.OtherUserId.ToString() == userId)
+                {
+                    isUserOnline = true;
+                    InvokeAsync(StateHasChanged);
+                }
+                var conv = conversations.FirstOrDefault(c => c.OtherUserId.ToString() == userId);
+                if (conv != null) conv.IsOnline = true;
+            });
+
+            hubConnection.On<string>("UserOffline", (userId) =>
+            {
+                if (selectedConversation?.OtherUserId.ToString() == userId)
+                {
+                    isUserOnline = false;
+                    InvokeAsync(StateHasChanged);
+                }
+                var conv = conversations.FirstOrDefault(c => c.OtherUserId.ToString() == userId);
+                if (conv != null) conv.IsOnline = false;
+            });
+
+            hubConnection.On<dynamic>("UserTyping", (data) =>
+            {
+                if (selectedConversation?.OtherUserId.ToString() == data.userId.ToString())
+                {
+                    isTyping = data.isTyping;
+                    InvokeAsync(StateHasChanged);
+                }
+            });
+
+            await hubConnection.StartAsync();
+            Console.WriteLine("SignalR connecté");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur SignalR: {ex.Message}");
+        }
+    }
+
+    private async Task LoadConversations()
+    {
+        isLoadingConversations = true;
+        var baseUrl = "http://localhost:5057";
+        
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var response = await Http.GetFromJsonAsync<List<ConversationDto>>($"{baseUrl}/api/chat/conversations");
+            
+            if (response != null)
+            {
+                conversations = response;
+            }
+            else
+            {
+                conversations = new List<ConversationDto>();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur chargement conversations: {ex.Message}");
+            conversations = new List<ConversationDto>();
+        }
+        finally 
+        { 
+            isLoadingConversations = false; 
+            StateHasChanged(); 
+        }
+    }
+
+    private async Task SelectConversation(ConversationDto conversation)
+    {
+        selectedConversation = conversation;
+        isUserOnline = conversation.IsOnline;
+        var baseUrl = "http://localhost:5057";
+        
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var response = await Http.GetFromJsonAsync<List<MessageDto>>(
+                $"{baseUrl}/api/chat/conversations/{conversation.OtherUserId}/messages");
+            
+            if (response != null)
+            {
+                messages = response;
+            }
+            else
+            {
+                messages = new List<MessageDto>();
+            }
+            
+            conversation.UnreadCount = 0;
+            await ScrollToBottom();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur chargement messages: {ex.Message}");
+            messages = new List<MessageDto>();
+        }
+        
+        StateHasChanged();
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(newMessage) || selectedConversation == null) return;
+
+        var baseUrl = "http://localhost:5057";
+        
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var messageData = new
+            {
+                ReceiverId = selectedConversation.OtherUserId,
+                Content = newMessage
+            };
+            
+            var response = await Http.PostAsJsonAsync($"{baseUrl}/api/chat/messages", messageData);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var savedMessage = await response.Content.ReadFromJsonAsync<MessageDto>();
+                
+                if (savedMessage != null)
+                {
+                    savedMessage.IsMine = true;
+                    messages.Add(savedMessage);
+                }
+                
+                if (hubConnection?.State == HubConnectionState.Connected)
+                {
+                    await hubConnection.SendAsync("SendMessage", 
+                        selectedConversation.OtherUserId.ToString(), 
+                        newMessage);
+                }
+                
+                newMessage = "";
+                await ScrollToBottom();
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur envoi message: {ex.Message}");
+        }
+    }
+
+    private async Task UseQuickReply(string reply)
+    {
+        newMessage = reply;
+        await SendMessage();
+    }
+
+    private async Task OnKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendMessage();
+        }
+        else if (!string.IsNullOrWhiteSpace(newMessage))
+        {
+            await SendTypingNotification();
+        }
+    }
+
+    private async Task SendTypingNotification()
+    {
+        if (typingTimer != null) 
+        {
+            typingTimer.Stop();
+            typingTimer.Dispose();
+            typingTimer = null;
+        }
+        
+        if (selectedConversation != null && hubConnection?.State == HubConnectionState.Connected)
+        {
+            await hubConnection.SendAsync("UserTyping", selectedConversation.OtherUserId.ToString());
+        }
+        
+        typingTimer = new System.Timers.Timer(1000);
+        typingTimer.Elapsed += async (sender, e) =>
+        {
+            if (selectedConversation != null && hubConnection?.State == HubConnectionState.Connected)
+            {
+                await hubConnection.SendAsync("UserStoppedTyping", selectedConversation.OtherUserId.ToString());
+            }
+        };
+        typingTimer.AutoReset = false;
+        typingTimer.Start();
+    }
+
+    private void StartVideoCall()
+    {
+        if (selectedConversation != null)
+        {
+            Navigation.NavigateTo($"/doctor/video-call/{selectedConversation.OtherUserId}");
+        }
+    }
+
+    private async Task ClearHistory()
+    {
+        messages.Clear();
+        await ScrollToBottom();
+        StateHasChanged();
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("scrollToBottom", messagesContainer);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur scroll: {ex.Message}");
+        }
+    }
+
+    private string GetInitials(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return "?";
+        var parts = name.Split(' ');
+        if (parts.Length >= 2) return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return name[0].ToString().ToUpper();
+    }
+
+    private string FormatDate(DateTime date)
+    {
+        var today = DateTime.Today;
+        if (date.Date == today) return date.ToString("HH:mm");
+        if (date.Date == today.AddDays(-1)) return "Hier";
+        return date.ToString("dd/MM");
+    }
+
+    private string GetReplyIcon(string reply)
+    {
+        if (reply.Contains("rendez-vous")) return "fa-calendar-alt";
+        if (reply.Contains("ordonnance")) return "fa-prescription-bottle";
+        if (reply.Contains("résultats")) return "fa-chart-line";
+        if (reply.Contains("urgence")) return "fa-ambulance";
+        return "fa-comment";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+        if (typingTimer != null)
+        {
+            typingTimer.Stop();
+            typingTimer.Dispose();
+        }
+    }
+
+    private class ConversationDto
+    {
+        public Guid OtherUserId { get; set; }
+        public string OtherUserName { get; set; } = "";
+        public string? LastMessage { get; set; }
+        public DateTime LastMessageAt { get; set; }
+        public int UnreadCount { get; set; }
+        public bool IsOnline { get; set; }
+    }
+
+    private class MessageDto
+    {
+        public long Id { get; set; }
+        public string Content { get; set; } = "";
+        public DateTime SentAt { get; set; }
+        public bool IsMine { get; set; }
+        public bool IsRead { get; set; }
+    }
+}

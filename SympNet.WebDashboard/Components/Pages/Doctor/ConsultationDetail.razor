@@ -1,5 +1,6 @@
 @page "/doctor/consultation/{id:int}"
-@layout DoctorLayout
+@layout SympNet.WebDashboard.Components.Layout.DoctorLayout
+@using System.Text.Json
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
@@ -7,90 +8,215 @@
 
 <PageTitle>SympNet — Détail consultation</PageTitle>
 
-<style>
-    .detail-container { max-width: 900px; margin: 0 auto; padding: 20px; }
-    .card { background: white; border-radius: 24px; padding: 28px; margin-bottom: 24px; border: 1px solid rgba(13,148,136,0.1); }
-    .card-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #0D9488; }
-    .info-row { display: flex; padding: 12px 0; border-bottom: 1px solid #F3F4F6; }
-    .info-label { width: 150px; font-weight: 600; color: #6B7280; }
-    .info-value { flex: 1; color: #1F2937; }
-    .confidence-bar { height: 8px; background: #E5E7EB; border-radius: 4px; overflow: hidden; margin: 10px 0; }
-    .confidence-fill { height: 100%; background: linear-gradient(90deg, #0D9488, #14B8A6); border-radius: 4px; }
-    .btn-back { background: #F3F4F6; color: #6B7280; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; margin-top: 20px; }
-    .btn-back:hover { background: #E5E7EB; }
-    .loading-spinner { text-align: center; padding: 60px; }
-    .spinner { width: 48px; height: 48px; border: 3px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; margin: 0 auto; animation: spin 1s linear infinite; }
-    @@keyframes spin { to { transform: rotate(360deg); } }
-    .recommendation-item { background: #F0FDF4; border-radius: 12px; padding: 12px; margin-bottom: 8px; border-left: 3px solid #10B981; }
-</style>
-
 <div class="detail-container">
     @if (isLoading)
     {
-        <div class="loading-spinner"><div class="spinner"></div></div>
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Chargement des détails...</p>
+        </div>
     }
     else if (consultation != null)
     {
-        <div class="card">
-            <div class="card-title"><i class="fas fa-user-circle"></i> Informations patient</div>
-            <div class="info-row"><div class="info-label">Nom complet</div><div class="info-value">@consultation.PatientName</div></div>
-            <div class="info-row"><div class="info-label">Email</div><div class="info-value">@consultation.PatientEmail</div></div>
-            <div class="info-row"><div class="info-label">Date de consultation</div><div class="info-value">@consultation.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div></div>
-            <div class="info-row"><div class="info-label">Statut</div><div class="info-value"><span class="status-completed">✓ Terminée</span></div></div>
-        </div>
-
-        <div class="card">
-            <div class="card-title"><i class="fas fa-notes-medical"></i> Symptômes</div>
-            <p style="white-space: pre-wrap; line-height: 1.6;">@consultation.Symptoms</p>
-        </div>
-
-        <div class="card">
-            <div class="card-title"><i class="fas fa-diagnoses"></i> Diagnostic IA</div>
-            <div class="info-row"><div class="info-label">Diagnostic</div><div class="info-value" style="font-weight: 700; color: #0D9488;">@consultation.Diagnosis</div></div>
-            <div class="info-row"><div class="info-label">Score de confiance</div>
-                <div class="info-value">
-                    <div class="confidence-bar"><div class="confidence-fill" style="width: @(consultation.ConfidenceScore * 100)%"></div></div>
-                    <span style="margin-top: 8px; display: inline-block;">@(consultation.ConfidenceScore * 100)%</span>
-                </div>
+        <div class="header-section">
+            <div class="header-content">
+                <button class="btn-back" @onclick="GoBack"><i class="fas fa-arrow-left"></i> Retour</button>
+                <h2>Détails de la consultation</h2>
+                <div class="status-badge"><i class="fas fa-check-circle"></i> Terminée le @consultation.CreatedAt.ToString("dd/MM/yyyy à HH:mm")</div>
+            </div>
+            <div class="header-actions">
+                <button class="btn-secondary"><i class="fas fa-print"></i> Imprimer</button>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-title"><i class="fas fa-list-check"></i> Recommandations</div>
-            @foreach (var rec in consultation.Recommendations.Split('\n'))
-            {
-                if (!string.IsNullOrWhiteSpace(rec))
-                {
-                    <div class="recommendation-item">@rec</div>
-                }
-            }
-        </div>
+        <div class="grid-layout">
+            <div class="main-column">
+                <div class="card premium-card">
+                    <h3><i class="fas fa-user-circle"></i> Informations patient</h3>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <span class="info-label">Nom complet</span>
+                            <span class="info-value font-semibold">@consultation.PatientName</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Email</span>
+                            <span class="info-value">@consultation.PatientEmail</span>
+                        </div>
+                    </div>
+                </div>
 
-        <button class="btn-back" @onclick="GoBack">
-            <i class="fas fa-arrow-left"></i> Retour à la liste
-        </button>
+                <div class="card premium-card">
+                    <h3><i class="fas fa-stethoscope"></i> Diagnostic & Symptômes</h3>
+                    <div class="diagnostic-box">
+                        <div class="d-label">Diagnostic retenu</div>
+                        <div class="d-value">@(!string.IsNullOrEmpty(consultation.Diagnosis) ? consultation.Diagnosis : "Non spécifié")</div>
+                    </div>
+                    
+                    <div class="symptoms-box mt-4">
+                        <span class="info-label mb-2 d-block">Symptômes et examen clinique :</span>
+                        <p class="symptoms-text">@(string.IsNullOrEmpty(consultation.Symptoms) ? "Aucune note" : consultation.Symptoms)</p>
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(consultation.Recommendations))
+                {
+                    <div class="card premium-card">
+                        <h3><i class="fas fa-list-check"></i> Recommandations</h3>
+                        <div class="recommendations-list">
+                            @foreach (var rec in consultation.Recommendations.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                            {
+                                <div class="rec-item"><i class="fas fa-angle-right"></i> @rec</div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="side-column">
+                @if (ordonnance != null)
+                {
+                    <div class="card premium-card ordonnance-card">
+                        <h3><i class="fas fa-prescription-bottle-alt"></i> Ordonnance associée</h3>
+                        
+                        @if (!string.IsNullOrEmpty(ordonnance.MedicationsJson))
+                        {
+                            var meds = JsonSerializer.Deserialize<List<MedicationDto>>(ordonnance.MedicationsJson) ?? new();
+                            <div class="meds-list">
+                                @foreach (var med in meds)
+                                {
+                                    <div class="med-item">
+                                        <div class="med-name">@med.Name</div>
+                                        <div class="med-details">@med.Dosage @(!string.IsNullOrEmpty(med.Frequency) ? "- " + med.Frequency : "")</div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">Aucun médicament prescrit.</p>
+                        }
+
+                        @if (!string.IsNullOrEmpty(ordonnance.Notes))
+                        {
+                            <div class="ordonnance-notes mt-4">
+                                <span class="info-label">Notes :</span>
+                                <p>@ordonnance.Notes</p>
+                            </div>
+                        }
+
+                        <button class="btn-primary w-100 mt-4"><i class="fas fa-file-pdf"></i> Télécharger l'ordonnance</button>
+                    </div>
+                }
+                else
+                {
+                    <div class="card premium-card empty-card">
+                        <i class="fas fa-file-prescription"></i>
+                        <p>Aucune ordonnance n'a été rattachée à cette consultation.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="card text-center py-5">
+            <h3>Consultation introuvable</h3>
+            <button class="btn-primary mt-3" @onclick="GoBack">Retour aux consultations</button>
+        </div>
     }
 </div>
 
 <style>
-    .status-completed { background: #D1FAE5; color: #10B981; padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; display: inline-block; }
+    :root {
+        --primary: #0D9488;
+        --primary-hover: #0F766E;
+        --text-main: #1E293B;
+        --text-muted: #64748B;
+        --bg-color: #F8FAFC;
+        --card-bg: #FFFFFF;
+        --border-color: #E2E8F0;
+    }
+
+    .detail-container { max-width: 1200px; margin: 0 auto; font-family: 'Inter', sans-serif; color: var(--text-main); animation: fadeIn 0.4s ease-out; }
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .header-section { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+    .header-content h2 { margin: 12px 0 8px; font-size: 28px; font-weight: 800; color: var(--text-main); }
+    
+    .btn-back { background: transparent; color: var(--text-muted); border: none; padding: 0; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
+    .btn-back:hover { color: var(--primary); }
+    
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; background: #ECFDF5; color: #10B981; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+    
+    .btn-primary { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(13,148,136,0.2); }
+    .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(13,148,136,0.3); }
+    
+    .btn-secondary { background: #FFFFFF; color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .btn-secondary:hover { background: #F8FAFC; border-color: #CBD5E1; }
+
+    .grid-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+    @@media (max-width: 992px) { .grid-layout { grid-template-columns: 1fr; } }
+
+    .premium-card { background: var(--card-bg); border-radius: 20px; padding: 28px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border: 1px solid var(--border-color); margin-bottom: 24px; }
+    .premium-card h3 { margin: 0 0 20px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--text-main); border-bottom: 1px solid #F1F5F9; padding-bottom: 16px; }
+    .premium-card h3 i { color: var(--primary); }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .info-item { display: flex; flex-direction: column; gap: 4px; }
+    .info-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; color: var(--text-muted); }
+    .info-value { font-size: 15px; color: var(--text-main); }
+    .font-semibold { font-weight: 600; }
+
+    .diagnostic-box { background: #F0FDFA; padding: 16px 20px; border-radius: 12px; border-left: 4px solid var(--primary); }
+    .d-label { font-size: 12px; font-weight: 700; color: var(--primary); text-transform: uppercase; margin-bottom: 4px; }
+    .d-value { font-size: 16px; font-weight: 700; color: var(--text-main); }
+
+    .symptoms-text { background: #F8FAFC; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); font-size: 14px; line-height: 1.6; color: var(--text-main); white-space: pre-wrap; margin: 0; }
+
+    .recommendations-list { display: flex; flex-direction: column; gap: 12px; }
+    .rec-item { background: #F8FAFC; padding: 12px 16px; border-radius: 10px; font-size: 14px; color: var(--text-main); display: flex; align-items: flex-start; gap: 10px; border: 1px solid var(--border-color); }
+    .rec-item i { color: var(--primary); margin-top: 3px; }
+
+    .ordonnance-card h3 i { color: #3B82F6; }
+    .meds-list { display: flex; flex-direction: column; gap: 12px; }
+    .med-item { background: #EFF6FF; border-left: 3px solid #3B82F6; padding: 12px 16px; border-radius: 8px; }
+    .med-name { font-weight: 700; color: #1E3A8A; font-size: 14px; margin-bottom: 4px; }
+    .med-details { font-size: 13px; color: #3B82F6; }
+
+    .ordonnance-notes p { background: #F8FAFC; padding: 12px; border-radius: 8px; font-size: 13px; margin: 4px 0 0 0; border: 1px solid var(--border-color); }
+
+    .empty-card { text-align: center; padding: 40px 20px; color: var(--text-muted); background: #F8FAFC; border: 1px dashed #CBD5E1; }
+    .empty-card i { font-size: 32px; color: #CBD5E1; margin-bottom: 12px; }
+    
+    .loading-state { text-align: center; padding: 80px 20px; color: var(--text-muted); }
+    .spinner { width: 48px; height: 48px; border: 4px solid #E2E8F0; border-top-color: var(--primary); border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    
+    .mt-3 { margin-top: 16px; }
+    .mt-4 { margin-top: 24px; }
+    .mb-2 { margin-bottom: 8px; }
+    .d-block { display: block; }
+    .w-100 { width: 100%; }
+    .py-5 { padding-top: 40px; padding-bottom: 40px; }
+    .text-center { text-align: center; }
 </style>
 
 @code {
     [Parameter] public int Id { get; set; }
+    
     private ConsultationDetailDto? consultation;
+    private OrdonnanceDto? ordonnance;
     private bool isLoading = true;
-    private void GoBack() => Navigation.NavigateTo("/doctor/consultations");
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await LoadConsultation();
+            await LoadData();
         }
     }
 
-    private async Task LoadConsultation()
+    private async Task LoadData()
     {
         isLoading = true;
         try
@@ -100,7 +226,21 @@
             {
                 Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
                 var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                
+                // Fetch consultation
                 consultation = await Http.GetFromJsonAsync<ConsultationDetailDto>($"{baseUrl}/api/consultations/{Id}");
+                
+                // If consultation exists, try to fetch related ordonnance
+                if (consultation != null)
+                {
+                    // Assuming we have an endpoint to get ordonnances by consultation ID, or we fetch all and filter
+                    var ordonnances = await Http.GetFromJsonAsync<List<OrdonnanceDto>>($"{baseUrl}/api/ordonnances");
+                    if (ordonnances != null)
+                    {
+                        // Note: C# Model has ConsultationId nullable.
+                        ordonnance = ordonnances.FirstOrDefault(o => o.ConsultationId == Id);
+                    }
+                }
             }
         }
         catch (Exception ex)
@@ -114,6 +254,8 @@
         }
     }
 
+    private void GoBack() => Navigation.NavigateTo("/doctor/consultations");
+
     public class ConsultationDetailDto
     {
         public int Id { get; set; }
@@ -124,5 +266,25 @@
         public string Recommendations { get; set; } = "";
         public double ConfidenceScore { get; set; }
         public DateTime CreatedAt { get; set; }
+    }
+
+    public class OrdonnanceDto
+    {
+        public int Id { get; set; }
+        public int PatientId { get; set; }
+        public int? ConsultationId { get; set; }
+        public string Diagnosis { get; set; } = "";
+        public string MedicationsJson { get; set; } = "";
+        public string? Notes { get; set; }
+        public bool HasAIAlerts { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+    
+    public class MedicationDto
+    {
+        public string Name { get; set; } = "";
+        public string Dosage { get; set; } = "";
+        public string Frequency { get; set; } = "";
+        public string Duration { get; set; } = "";
     }
 }

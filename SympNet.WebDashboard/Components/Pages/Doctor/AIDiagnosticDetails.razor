@@ -1,0 +1,280 @@
+@page "/doctor/ai-diagnostic-details/{Id:int}"
+@layout SympNet.WebDashboard.Components.Layout.DoctorLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject IConfiguration Config
+
+<PageTitle>SympNet — Détails du Diagnostic IA</PageTitle>
+
+<div class="page-container">
+    <div class="page-header">
+        <button class="btn-back" @onclick="GoBack">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+            Retour à la liste
+        </button>
+        <div class="header-actions">
+            <button class="btn-outline">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                Modifier
+            </button>
+            <button class="btn-primary" @onclick="ValidateDiagnosis">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                Valider le diagnostic
+            </button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Chargement des détails de l'analyse...</p>
+        </div>
+    }
+    else if (diagnostic == null)
+    {
+        <div class="empty-state">
+            <h3>Diagnostic introuvable</h3>
+            <p>Ce diagnostic a peut-être été supprimé ou n'existe pas.</p>
+        </div>
+    }
+    else
+    {
+        var urgency = GetUrgencyFromScore(diagnostic.ConfidenceScore);
+        var uClass = urgency == "Haute" ? "urgency-high" : (urgency == "Moyenne" ? "urgency-medium" : "urgency-low");
+
+        <div class="diag-detail-card">
+            <div class="diag-header">
+                <div class="patient-info">
+                    <div class="patient-avatar">@GetInitials(diagnostic.PatientName)</div>
+                    <div>
+                        <h2>@diagnostic.PatientName</h2>
+                        <span class="date-text">Analyse effectuée le @diagnostic.CreatedAt.ToString("dd MMMM yyyy à HH:mm")</span>
+                    </div>
+                </div>
+                <div class="urgency-badge @uClass">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    Urgence @urgency
+                </div>
+            </div>
+
+            <div class="diag-body">
+                <div class="info-section">
+                    <h3>Symptômes analysés</h3>
+                    <div class="symptoms-list">
+                        @foreach (var symptom in GetSymptomsList(diagnostic.Symptoms))
+                        {
+                            <span class="symptom-tag">@symptom</span>
+                        }
+                    </div>
+                </div>
+
+                <div class="prediction-section">
+                    <h3>Résultat de l'Intelligence Artificielle</h3>
+                    <div class="main-prediction">
+                        <div class="pred-title">Diagnostic Principal</div>
+                        <div class="pred-value">@(!string.IsNullOrEmpty(diagnostic.Diagnosis) ? diagnostic.Diagnosis : "Non spécifié")</div>
+                        
+                        <div class="score-container mt-3">
+                            <div class="score-label">
+                                <span>Indice de confiance du modèle</span>
+                                <strong>@diagnostic.ConfidenceScore.ToString("0")%</strong>
+                            </div>
+                            <div class="progress-bar-bg">
+                                <div class="progress-bar-fill" style="width: @(diagnostic.ConfidenceScore)%"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="shap-section">
+                        <h4>Analyse d'explicabilité (SHAP Values)</h4>
+                        <p class="text-muted">Impact des symptômes sur le diagnostic généré :</p>
+                        <div class="shap-bar">
+                            <div class="shap-item" style="width: 60%; background: #0D9488;">
+                                <span>Symptôme Primaire (+60%)</span>
+                            </div>
+                            <div class="shap-item" style="width: 25%; background: #14B8A6;">
+                                <span>Facteur B (+25%)</span>
+                            </div>
+                            <div class="shap-item" style="width: 15%; background: #94A3B8;">
+                                <span>Autres (+15%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                @if (!string.IsNullOrEmpty(diagnostic.Recommendations))
+                {
+                    <div class="info-section mt-4">
+                        <h3>Recommandations suggérées</h3>
+                        <div class="recommendations-box">
+                            @diagnostic.Recommendations
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    .page-container { padding: 24px; max-width: 900px; margin: 0 auto; animation: fadeIn 0.4s ease; }
+    
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    
+    .btn-back { background: transparent; border: none; color: #4B5563; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px; cursor: pointer; transition: 0.2s; padding: 8px 12px; border-radius: 8px; }
+    .btn-back:hover { background: #F3F4F6; color: #111827; }
+    
+    .header-actions { display: flex; gap: 12px; }
+    
+    .btn-outline { background: white; color: #374151; border: 1px solid #D1D5DB; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+    .btn-outline:hover { background: #F9FAFB; color: #111827; }
+    
+    .btn-primary { background: #0D9488; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+    .btn-primary:hover { background: #0F766E; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(13,148,136,0.2); }
+    
+    .diag-detail-card { background: white; border-radius: 20px; border: 1px solid #E5E7EB; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05); overflow: hidden; }
+    
+    .diag-header { padding: 24px 32px; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; background: #F8FAFC; }
+    .patient-info { display: flex; align-items: center; gap: 16px; }
+    .patient-avatar { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #0D9488, #14B8A6); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; }
+    .patient-info h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; color: #111827; }
+    .date-text { font-size: 14px; color: #6B7280; }
+    
+    .urgency-badge { display: flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 30px; font-weight: 700; font-size: 14px; border: 1px solid transparent; }
+    .urgency-high { background: #FEF2F2; color: #DC2626; border-color: #FCA5A5; }
+    .urgency-medium { background: #FFF7ED; color: #EA580C; border-color: #FDBA74; }
+    .urgency-low { background: #F0FDF4; color: #16A34A; border-color: #86EFAC; }
+    
+    .diag-body { padding: 32px; }
+    
+    .info-section { margin-bottom: 32px; }
+    .info-section h3 { margin: 0 0 16px; font-size: 16px; font-weight: 700; color: #111827; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    .symptoms-list { display: flex; flex-wrap: wrap; gap: 10px; }
+    .symptom-tag { background: #F3F4F6; color: #374151; padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: 500; border: 1px solid #E5E7EB; }
+    
+    .prediction-section { background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 16px; padding: 24px; margin-top: 24px; }
+    .prediction-section h3 { margin: 0 0 20px; font-size: 16px; font-weight: 700; color: #16A34A; }
+    
+    .main-prediction { background: white; border-radius: 12px; padding: 20px; border: 1px solid #DCFCE7; box-shadow: 0 2px 4px rgba(22,163,74,0.05); }
+    .pred-title { font-size: 13px; color: #6B7280; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .pred-value { font-size: 24px; font-weight: 800; color: #111827; }
+    
+    .mt-3 { margin-top: 16px; }
+    .mt-4 { margin-top: 24px; }
+    
+    .score-label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 8px; color: #374151; }
+    .progress-bar-bg { width: 100%; height: 8px; background: #E5E7EB; border-radius: 4px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: #10B981; border-radius: 4px; transition: width 1s ease-out; }
+    
+    .shap-section { margin-top: 24px; }
+    .shap-section h4 { margin: 0 0 4px; font-size: 15px; font-weight: 600; color: #374151; }
+    .text-muted { font-size: 13px; color: #6B7280; margin: 0 0 12px; }
+    
+    .shap-bar { display: flex; height: 32px; border-radius: 8px; overflow: hidden; }
+    .shap-item { display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; padding: 0 8px; }
+    
+    .recommendations-box { background: #F9FAFB; padding: 20px; border-radius: 12px; border: 1px solid #E5E7EB; font-size: 14px; line-height: 1.6; color: #374151; white-space: pre-wrap; }
+    
+    .loading-state { text-align: center; padding: 60px; color: #6B7280; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; margin: 0 auto 16px; animation: spin 1s linear infinite; }
+    .empty-state { text-align: center; padding: 60px; color: #6B7280; }
+    
+    @@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private ConsultationDetailDto? diagnostic;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDiagnosticDetail();
+    }
+
+    private async Task LoadDiagnosticDetail()
+    {
+        isLoading = true;
+        StateHasChanged();
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                
+                diagnostic = await Http.GetFromJsonAsync<ConsultationDetailDto>($"{baseUrl}/api/consultations/{Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/doctor/ai-diagnostics");
+    }
+
+    private void ValidateDiagnosis()
+    {
+        // En réalité, rediriger vers la page de nouvelle consultation ou d'ordonnance en pré-remplissant
+        Navigation.NavigateTo($"/doctor/consultations/new");
+    }
+
+    private string GetUrgencyFromScore(double score)
+    {
+        if (score > 85) return "Haute";
+        if (score > 60) return "Moyenne";
+        return "Basse";
+    }
+
+    private string[] GetSymptomsList(string symptoms)
+    {
+        if (string.IsNullOrWhiteSpace(symptoms)) return new[] { "Non spécifié" };
+        
+        // Split par virgules si ça vient d'un input, sinon retourner la string entière dans un tableau
+        if (symptoms.Contains(","))
+        {
+            return symptoms.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                           .Select(s => s.Trim())
+                           .ToArray();
+        }
+        
+        return new[] { symptoms };
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "IA";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, 1).ToUpper();
+        return (parts[0].Substring(0, 1) + parts[parts.Length - 1].Substring(0, 1)).ToUpper();
+    }
+
+    public class ConsultationDetailDto
+    {
+        public int Id { get; set; }
+        public string PatientName { get; set; } = "";
+        public string PatientEmail { get; set; } = "";
+        public string Symptoms { get; set; } = "";
+        public string Diagnosis { get; set; } = "";
+        public string Recommendations { get; set; } = "";
+        public double ConfidenceScore { get; set; }
+        public string Status { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+    }
+}

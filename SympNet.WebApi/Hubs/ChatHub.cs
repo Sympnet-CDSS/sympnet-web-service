@@ -7,50 +7,89 @@ namespace SympNet.WebApi.Hubs;
 [Authorize]
 public class ChatHub : Hub
 {
-    private static readonly Dictionary<string, string> _userConnections = new();
-
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!string.IsNullOrEmpty(userId))
-        {
-            _userConnections[userId] = Context.ConnectionId;
-        }
         await base.OnConnectedAsync();
     }
 
-    public override async Task OnDisconnectedAsync(Exception? exception)
+    public async Task JoinConsultation(string consultationId)
     {
-        var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (!string.IsNullOrEmpty(userId))
-        {
-            _userConnections.Remove(userId);
-        }
-        await base.OnDisconnectedAsync(exception);
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"consultation_{consultationId}");
+        await Clients.Group($"consultation_{consultationId}")
+            .SendAsync("UserJoined", Context.ConnectionId);
     }
 
-    public async Task SendMessage(string receiverId, string message, string messageType = "text")
+    public async Task LeaveConsultation(string consultationId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"consultation_{consultationId}");
+    }
+
+    public async Task SendMessage(string consultationId, string message, bool isVoice = false)
     {
         var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        
-        if (string.IsNullOrEmpty(senderId))
-            return;
+        var senderName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
+        var senderRole = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
 
-        if (_userConnections.TryGetValue(receiverId, out var connectionId))
-        {
-            await Clients.Client(connectionId).SendAsync("ReceiveMessage", senderId, message, messageType, DateTime.UtcNow);
-        }
-        
-        await Clients.Caller.SendAsync("MessageSent", senderId, message, messageType, DateTime.UtcNow);
+        await Clients.Group($"consultation_{consultationId}")
+            .SendAsync("ReceiveMessage", new
+            {
+                senderId,
+                senderName,
+                senderRole,
+                content = message,
+                isVoice,
+                sentAt = DateTime.UtcNow,
+            });
     }
 
-    public async Task JoinChat(string doctorId, string patientId)
+    public async Task SendTyping(string consultationId, bool isTyping)
     {
-        await Groups.AddToGroupAsync(Context.ConnectionId, $"chat_{doctorId}_{patientId}");
+        var senderName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
+        await Clients.OthersInGroup($"consultation_{consultationId}")
+            .SendAsync("UserTyping", new { senderName, isTyping });
     }
 
-    public async Task LeaveChat(string doctorId, string patientId)
+    // --- WebRTC Signaling ---
+    public async Task SendOffer(string targetUserId, string sdp)
     {
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"chat_{doctorId}_{patientId}");
+        var callerId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var callerName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
+        
+        await Clients.User(targetUserId).SendAsync("ReceiveOffer", callerId, sdp);
+        await Clients.User(targetUserId).SendAsync("IncomingCall", new 
+        { 
+            SessionId = Guid.NewGuid(), 
+            CallerId = callerId, 
+            CallerName = callerName 
+        });
+    }
+
+    public async Task SendAnswer(string targetUserId, string sdp)
+    {
+        var answererId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        await Clients.User(targetUserId).SendAsync("ReceiveAnswer", answererId, sdp);
+    }
+
+    public async Task SendIceCandidate(string targetUserId, string candidate, string sdpMid, int sdpMLineIndex)
+    {
+        var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        await Clients.User(targetUserId).SendAsync("ReceiveIceCandidate", senderId, candidate, sdpMid, sdpMLineIndex);
+    }
+
+    public async Task AcceptCall(string sessionId)
+    {
+        // Broadcast to caller that call is accepted
+        // Here we just broadcast to the other user assuming 1-1 mappings
+        await Clients.Caller.SendAsync("CallAccepted", sessionId);
+    }
+
+    public async Task RejectCall(string sessionId)
+    {
+        await Clients.Caller.SendAsync("CallRejected", sessionId);
+    }
+
+    public async Task EndCall()
+    {
+        await Clients.Others.SendAsync("CallEnded", new { SessionId = Guid.NewGuid(), Duration = 0 });
     }
 }

@@ -65,18 +65,85 @@ public class ConsultationsController : ControllerBase
         return Ok(consultation);
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteConsultation(int id)
+    {
+        var doctorId = GetCurrentUserId();
+        var consultation = await _db.Consultations
+            .Where(c => c.Id == id && c.DoctorId == doctorId)
+            .FirstOrDefaultAsync();
+
+        if (consultation == null)
+            return NotFound(new { message = "Consultation non trouvée" });
+
+        _db.Consultations.Remove(consultation);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Consultation supprimée avec succès" });
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateConsultation([FromBody] CreateConsultationRequest request)
     {
         if (request == null)
             return BadRequest(new { message = "Données invalides" });
         
+        if (string.IsNullOrEmpty(request.PatientEmail))
+            return BadRequest(new { message = "L'email du patient est requis" });
+        
         var doctorId = GetCurrentUserId();
         
+        // Vérifier si le patient existe, sinon le créer
+        var patient = await _db.Patients
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.User.Email == request.PatientEmail);
+        
+        if (patient == null)
+        {
+            // Créer l'utilisateur patient
+            var user = new User
+            {
+                Email = request.PatientEmail,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Patient@123"), // Mot de passe par défaut
+                Role = "Patient",
+                IsActive = true,
+                FullName = request.PatientName,
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+            
+            // Créer le patient
+            patient = new Patient
+            {
+                UserId = user.Id,
+                FirstName = request.PatientName?.Split(' ').FirstOrDefault() ?? "",
+                LastName = request.PatientName?.Split(' ').Skip(1).FirstOrDefault() ?? "",
+                PhoneNumber = "",
+                DateOfBirth = DateTime.UtcNow.AddYears(-30),
+                Gender = "Non spécifié",
+                ConsultationCount = 0,
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            _db.Patients.Add(patient);
+            await _db.SaveChangesAsync();
+            
+            Console.WriteLine($"Patient créé: {request.PatientEmail}");
+        }
+        else
+        {
+            // Incrémenter le compteur de consultations
+            patient.ConsultationCount++;
+            await _db.SaveChangesAsync();
+        }
+        
+        // Créer la consultation
         var consultation = new Consultation
         {
-            PatientName = request.PatientName ?? "",
-            PatientEmail = request.PatientEmail ?? "",
+            PatientName = request.PatientName ?? patient.FirstName + " " + patient.LastName,
+            PatientEmail = request.PatientEmail,
             Symptoms = request.Symptoms ?? "",
             Diagnosis = request.Diagnosis ?? "",
             Recommendations = request.Recommendations ?? "",
@@ -90,7 +157,11 @@ public class ConsultationsController : ControllerBase
         _db.Consultations.Add(consultation);
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Consultation enregistrée", consultationId = consultation.Id });
+        return Ok(new { 
+            message = "Consultation enregistrée avec succès", 
+            consultationId = consultation.Id,
+            patientCreated = patient != null 
+        });
     }
 }
 

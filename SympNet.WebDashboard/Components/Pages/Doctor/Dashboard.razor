@@ -4,81 +4,201 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject IConfiguration Config
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
 
 <PageTitle>SympNet — Tableau de bord Médecin</PageTitle>
 
 <style>
     .dashboard-container { max-width: 1400px; margin: 0 auto; }
-    
-    /* Banner de bienvenue */
-    .welcome-banner { 
-        background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); 
-        border-radius: 28px; 
-        padding: 32px 40px; 
-        color: white; 
+
+    .welcome-banner {
+        background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        border-radius: 28px;
+        padding: 32px 40px;
+        color: white;
         margin-bottom: 32px;
         position: relative;
         overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     .welcome-banner::before {
         content: '';
         position: absolute;
-        top: -50%;
-        right: -20%;
-        width: 300px;
-        height: 300px;
+        top: -50%; right: -20%;
+        width: 300px; height: 300px;
         background: rgba(255,255,255,0.1);
         border-radius: 50%;
     }
     .welcome-banner::after {
         content: '';
         position: absolute;
-        bottom: -30%;
-        left: -10%;
-        width: 200px;
-        height: 200px;
+        bottom: -30%; left: -10%;
+        width: 200px; height: 200px;
         background: rgba(255,255,255,0.08);
         border-radius: 50%;
     }
-    .welcome-banner h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; position: relative; z-index: 1; }
-    .welcome-banner p { opacity: 0.9; margin-bottom: 0; position: relative; z-index: 1; }
-    .welcome-banner small { opacity: 0.7; font-size: 13px; position: relative; z-index: 1; }
-    
-    /* Stats Grid */
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
-    .stat-card { 
-        background: white; 
-        border-radius: 24px; 
-        padding: 24px; 
-        border: 1px solid rgba(13,148,136,0.1);
-        transition: all 0.3s;
-        cursor: pointer;
+    .welcome-text { position: relative; z-index: 1; }
+    .welcome-text h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+    .welcome-text p { opacity: 0.9; margin-bottom: 0; }
+    .welcome-text small { opacity: 0.7; font-size: 13px; }
+    .welcome-actions { position: relative; z-index: 1; }
+
+    .notif-btn {
         position: relative;
-        overflow: hidden;
+        background: rgba(255,255,255,0.15);
+        border: 2px solid rgba(255,255,255,0.3);
+        border-radius: 50%;
+        width: 52px; height: 52px;
+        cursor: pointer;
+        font-size: 22px;
+        color: white;
+        display: flex; align-items: center; justify-content: center;
+        transition: all 0.2s;
+    }
+    .notif-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.05); }
+    .notif-badge {
+        position: absolute;
+        top: -4px; right: -4px;
+        background: #EF4444;
+        color: white;
+        font-size: 11px; font-weight: 700;
+        min-width: 20px; height: 20px;
+        border-radius: 10px;
+        display: flex; align-items: center; justify-content: center;
+        padding: 0 4px;
+        border: 2px solid white;
+        animation: pulse-badge 1.5s infinite;
+    }
+    @@keyframes pulse-badge {
+        0%,100% { transform: scale(1); }
+        50% { transform: scale(1.2); }
+    }
+
+    .overlay {
+        position: fixed; inset: 0;
+        background: rgba(0,0,0,0.35);
+        z-index: 9998;
+        backdrop-filter: blur(2px);
+    }
+    .notif-panel {
+        position: fixed;
+        top: 0; right: 0;
+        width: 400px; height: 100vh;
+        background: white;
+        box-shadow: -4px 0 40px rgba(0,0,0,0.15);
+        z-index: 9999;
+        display: flex; flex-direction: column;
+        animation: slide-in 0.3s ease;
+    }
+    @@keyframes slide-in {
+        from { transform: translateX(100%); }
+        to { transform: translateX(0); }
+    }
+    .notif-panel-header {
+        background: linear-gradient(135deg, #0D9488, #14B8A6);
+        color: white;
+        padding: 20px 24px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .notif-panel-header h3 { margin: 0; font-size: 18px; font-weight: 700; }
+    .notif-panel-header span { font-size: 13px; opacity: 0.85; }
+    .notif-close {
+        background: rgba(255,255,255,0.2);
+        border: none; color: white;
+        width: 34px; height: 34px;
+        border-radius: 50%; cursor: pointer; font-size: 16px;
+        display: flex; align-items: center; justify-content: center;
+    }
+    .notif-close:hover { background: rgba(255,255,255,0.35); }
+    .notif-list { flex: 1; overflow-y: auto; padding: 16px; }
+    .notif-item {
+        background: #F9FAFB;
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 10px;
+        border-left: 4px solid #0D9488;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .notif-item:hover { transform: translateX(4px); background: #F0FDF9; }
+    .notif-item.urgent { border-left-color: #EF4444; background: #FFF5F5; }
+    .notif-item.unread { background: #F0FDF9; }
+    .notif-item-title {
+        font-weight: 700; color: #1F2937;
+        margin-bottom: 4px;
+        display: flex; align-items: center; gap: 6px; font-size: 14px;
+    }
+    .notif-urgent-badge {
+        background: #EF4444; color: white;
+        font-size: 10px; padding: 2px 7px;
+        border-radius: 8px; font-weight: 700;
+    }
+    .notif-item-msg { font-size: 13px; color: #4B5563; margin-bottom: 6px; }
+    .notif-item-time { font-size: 11px; color: #9CA3AF; }
+    .notif-empty { text-align: center; padding: 60px 20px; color: #9CA3AF; }
+    .notif-empty-icon { font-size: 52px; margin-bottom: 12px; display: block; }
+    .notif-footer {
+        padding: 16px 20px;
+        border-top: 1px solid #E5E7EB;
+        display: flex; gap: 10px;
+    }
+    .btn-clear {
+        flex: 1; padding: 10px;
+        border: 1px solid #E5E7EB; background: white;
+        border-radius: 10px; cursor: pointer; font-size: 13px; color: #6B7280;
+    }
+    .btn-mark-read {
+        flex: 1; padding: 10px;
+        background: #0D9488; color: white;
+        border: none; border-radius: 10px;
+        cursor: pointer; font-size: 13px; font-weight: 600;
+    }
+
+    .toast-container {
+        position: fixed; top: 20px; right: 20px;
+        z-index: 10000;
+        display: flex; flex-direction: column; gap: 10px;
+        pointer-events: none;
+    }
+    .toast {
+        background: white;
+        border-radius: 16px;
+        padding: 16px 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        border-left: 4px solid #0D9488;
+        min-width: 320px; max-width: 380px;
+        animation: toast-in 0.4s ease;
+        display: flex; align-items: flex-start; gap: 12px;
+        pointer-events: all;
+    }
+    .toast.urgent { border-left-color: #EF4444; }
+    @@keyframes toast-in {
+        from { transform: translateX(110%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    .toast-icon { font-size: 26px; }
+    .toast-title { font-weight: 700; color: #1F2937; margin-bottom: 3px; font-size: 14px; }
+    .toast-msg { font-size: 13px; color: #6B7280; line-height: 1.4; }
+
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
+    .stat-card {
+        background: white; border-radius: 24px; padding: 24px;
+        border: 1px solid rgba(13,148,136,0.1);
+        transition: all 0.3s; cursor: pointer;
+        position: relative; overflow: hidden;
     }
     .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
+        content: ''; position: absolute; top: 0; left: 0;
+        width: 100%; height: 4px;
         background: linear-gradient(90deg, #0D9488, #14B8A6);
-        transform: scaleX(0);
-        transition: transform 0.3s;
+        transform: scaleX(0); transition: transform 0.3s;
     }
     .stat-card:hover::before { transform: scaleX(1); }
     .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1); }
-    .stat-icon { 
-        width: 52px; 
-        height: 52px; 
-        border-radius: 16px; 
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        font-size: 24px; 
-        margin-bottom: 16px; 
-    }
+    .stat-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 16px; }
     .stat-icon.patients { background: rgba(13,148,136,0.12); color: #0D9488; }
     .stat-icon.today { background: rgba(245,158,11,0.12); color: #F59E0B; }
     .stat-icon.total { background: rgba(59,130,246,0.12); color: #3B82F6; }
@@ -87,15 +207,12 @@
     .stat-label { font-size: 14px; color: #6B7280; margin-bottom: 12px; }
     .stat-trend { font-size: 12px; display: flex; align-items: center; gap: 4px; }
     .stat-trend.up { color: #10B981; }
-    .stat-trend.down { color: #EF4444; }
-    
-    /* Graphique et sections */
+
     .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
     .chart-card { background: white; border-radius: 24px; padding: 24px; border: 1px solid rgba(13,148,136,0.1); }
     .chart-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #1F2937; }
     .chart-title i { color: #0D9488; }
-    
-    /* Consultations récentes */
+
     .recent-card { background: white; border-radius: 24px; border: 1px solid rgba(13,148,136,0.1); overflow: hidden; }
     .recent-header { padding: 20px 24px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center; }
     .recent-header h3 { font-size: 18px; font-weight: 700; margin: 0; }
@@ -107,57 +224,82 @@
     .consultation-date { font-size: 12px; color: #9CA3AF; }
     .consultation-diagnosis { font-size: 13px; color: #0D9488; font-weight: 600; margin-top: 4px; }
     .consultation-confidence { display: flex; align-items: center; gap: 8px; }
-    .confidence-badge { 
-        padding: 4px 12px; 
-        border-radius: 20px; 
-        font-size: 12px; 
-        font-weight: 600;
-    }
+    .confidence-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
     .confidence-high { background: #D1FAE5; color: #10B981; }
     .confidence-medium { background: #FEF3C7; color: #F59E0B; }
     .confidence-low { background: #FEE2E2; color: #EF4444; }
-    
-    /* Quick Actions */
-    .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 32px; }
-    .action-card { 
-        background: white; 
-        border-radius: 20px; 
-        padding: 24px; 
-        text-align: center; 
-        cursor: pointer; 
-        transition: all 0.3s; 
-        border: 1px solid rgba(13,148,136,0.1);
-    }
-    .action-card:hover { transform: translateY(-4px); box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1); border-color: #0D9488; }
-    .action-icon { 
-        width: 70px; 
-        height: 70px; 
-        border-radius: 20px; 
-        background: linear-gradient(135deg, rgba(13,148,136,0.12), rgba(20,184,166,0.08));
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        margin: 0 auto 16px; 
-    }
-    .action-icon i { font-size: 32px; color: #0D9488; }
-    .action-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-    .action-card p { font-size: 13px; color: #6B7280; margin: 0; }
-    
-    /* Spinner */
+
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 400px; }
     .loading-spinner { width: 60px; height: 60px; border: 4px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; }
     @@keyframes spin { to { transform: rotate(360deg); } }
-    
-    /* Empty state */
-    .empty-state { text-align: center; padding: 60px 20px; background: white; border-radius: 20px; }
+    .empty-state { text-align: center; padding: 60px 20px; }
     .empty-icon { font-size: 64px; color: #D1D5DB; margin-bottom: 16px; }
-    
+
     @@media (max-width: 1024px) {
         .stats-grid { grid-template-columns: repeat(2, 1fr); }
         .charts-grid { grid-template-columns: 1fr; }
-        .quick-actions { grid-template-columns: 1fr; }
+        .notif-panel { width: 100%; }
     }
 </style>
+
+<div class="toast-container">
+    @foreach (var t in activeToasts)
+    {
+        <div class="toast @(t.IsUrgent ? "urgent" : "")">
+            <div class="toast-icon">@(t.IsUrgent ? "🚨" : "📅")</div>
+            <div>
+                <div class="toast-title">@t.Title</div>
+                <div class="toast-msg">@t.Message</div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (showPanel)
+{
+    <div class="overlay" @onclick="ClosePanel"></div>
+    <div class="notif-panel">
+        <div class="notif-panel-header">
+            <div>
+                <h3>🔔 Notifications</h3>
+                <span>@notifications.Count notification(s)</span>
+            </div>
+            <button class="notif-close" @onclick="ClosePanel">✕</button>
+        </div>
+        <div class="notif-list">
+            @if (!notifications.Any())
+            {
+                <div class="notif-empty">
+                    <span class="notif-empty-icon">🔕</span>
+                    <p style="font-weight:600;margin-bottom:6px;">Aucune notification</p>
+                    <p style="font-size:13px;">Les nouveaux rendez-vous apparaîtront ici</p>
+                </div>
+            }
+            else
+            {
+                @foreach (var n in notifications.OrderByDescending(x => x.SentAt))
+                {
+                    <div class="notif-item @(n.IsUrgent ? "urgent" : "") @(!n.IsRead ? "unread" : "")"
+                         @onclick="() => OpenAppointment(n.AppointmentId)">
+                        <div class="notif-item-title">
+                            @(n.IsUrgent ? "🚨" : "📅") @n.Title
+                            @if (n.IsUrgent)
+                            {
+                                <span class="notif-urgent-badge">URGENT</span>
+                            }
+                        </div>
+                        <div class="notif-item-msg">@n.Message</div>
+                        <div class="notif-item-time">@n.SentAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+                    </div>
+                }
+            }
+        </div>
+        <div class="notif-footer">
+            <button class="btn-clear" @onclick="ClearAll">Tout effacer</button>
+            <button class="btn-mark-read" @onclick="MarkAllRead">Tout marquer lu</button>
+        </div>
+    </div>
+}
 
 <div class="dashboard-container">
     @if (isLoading)
@@ -166,14 +308,23 @@
     }
     else
     {
-        <!-- Welcome Banner -->
         <div class="welcome-banner">
-            <h1><i class="fas fa-waveform"></i> Bonjour, Dr. @doctorName</h1>
-            <p>Bienvenue sur votre tableau de bord médical intelligent</p>
-            <small><i class="far fa-calendar-alt"></i> @DateTime.Now.ToString("dddd dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))</small>
+            <div class="welcome-text">
+                <h1><i class="fas fa-stethoscope"></i> Bonjour, Dr. @doctorName</h1>
+                <p>Bienvenue sur votre tableau de bord médical intelligent</p>
+                <small><i class="far fa-calendar-alt"></i> @DateTime.Now.ToString("dddd dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))</small>
+            </div>
+            <div class="welcome-actions">
+                <button class="notif-btn" @onclick="TogglePanel" title="Notifications">
+                    🔔
+                    @if (unreadCount > 0)
+                    {
+                        <span class="notif-badge">@(unreadCount > 9 ? "9+" : unreadCount.ToString())</span>
+                    }
+                </button>
+            </div>
         </div>
 
-        <!-- Statistiques -->
         <div class="stats-grid">
             <div class="stat-card" @onclick="GoToPatients">
                 <div class="stat-icon patients"><i class="fas fa-users"></i></div>
@@ -205,9 +356,7 @@
             </div>
         </div>
 
-        <!-- Graphiques et statistiques -->
         <div class="charts-grid">
-            <!-- Top pathologies -->
             <div class="chart-card">
                 <div class="chart-title"><i class="fas fa-chart-pie"></i> Top pathologies</div>
                 @if (topPathologies.Any())
@@ -215,48 +364,46 @@
                     @foreach (var patho in topPathologies.Take(5))
                     {
                         var percent = totalConsultations > 0 ? (patho.Count * 100.0 / totalConsultations) : 0;
-                        <div style="margin-bottom: 16px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 13px;">
+                        <div style="margin-bottom:16px;">
+                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px;">
                                 <span>@patho.Name</span>
-                                <span style="font-weight: 600; color: #0D9488;">@patho.Count (@percent.ToString("F0")%)</span>
+                                <span style="font-weight:600;color:#0D9488;">@patho.Count (@percent.ToString("F0")%)</span>
                             </div>
-                            <div class="progress-bar" style="background: #E5E7EB; border-radius: 10px; height: 8px; overflow: hidden;">
-                                <div class="progress-fill" style="width: @percent%; background: linear-gradient(90deg, #0D9488, #14B8A6); height: 100%; border-radius: 10px;"></div>
+                            <div style="background:#E5E7EB;border-radius:10px;height:8px;overflow:hidden;">
+                                <div style="width:@percent%;background:linear-gradient(90deg,#0D9488,#14B8A6);height:100%;border-radius:10px;"></div>
                             </div>
                         </div>
                     }
                 }
                 else
                 {
-                    <div class="empty-state" style="padding: 40px;"><i class="fas fa-chart-simple empty-icon"></i><p>Aucune donnée disponible</p></div>
+                    <div class="empty-state" style="padding:40px;"><div class="empty-icon">📊</div><p>Aucune donnée disponible</p></div>
                 }
             </div>
 
-            <!-- Activité mensuelle -->
             <div class="chart-card">
                 <div class="chart-title"><i class="fas fa-chart-line"></i> Activité mensuelle</div>
                 @if (monthlyActivity.Any())
                 {
-                    <div style="display: flex; align-items: flex-end; gap: 12px; height: 200px; margin-top: 20px;">
+                    <div style="display:flex;align-items:flex-end;gap:12px;height:200px;margin-top:20px;">
                         @foreach (var month in monthlyActivity.Take(6))
                         {
-                            var height = month.Count * 8;
-                            <div style="flex: 1; text-align: center;">
-                                <div style="height: @(height)px; background: linear-gradient(180deg, #0D9488, #14B8A6); border-radius: 8px 8px 4px 4px; margin-bottom: 8px; transition: height 0.3s;"></div>
-                                <div style="font-size: 11px; color: #6B7280;">@month.Name</div>
-                                <div style="font-size: 12px; font-weight: 600;">@month.Count</div>
+                            var barHeight = Math.Min(month.Count * 8, 180);
+                            <div style="flex:1;text-align:center;">
+                                <div style="height:@(barHeight)px;background:linear-gradient(180deg,#0D9488,#14B8A6);border-radius:8px 8px 4px 4px;margin-bottom:8px;"></div>
+                                <div style="font-size:11px;color:#6B7280;">@month.Name</div>
+                                <div style="font-size:12px;font-weight:600;">@month.Count</div>
                             </div>
                         }
                     </div>
                 }
                 else
                 {
-                    <div class="empty-state" style="padding: 40px;"><i class="fas fa-chart-line empty-icon"></i><p>Aucune donnée disponible</p></div>
+                    <div class="empty-state" style="padding:40px;"><div class="empty-icon">📈</div><p>Aucune donnée disponible</p></div>
                 }
             </div>
         </div>
 
-        <!-- Consultations récentes -->
         <div class="recent-card">
             <div class="recent-header">
                 <h3><i class="fas fa-history"></i> Consultations récentes</h3>
@@ -264,143 +411,283 @@
             </div>
             @if (recentConsultations.Any())
             {
-                @foreach (var consultation in recentConsultations)
+                @foreach (var c in recentConsultations)
                 {
-                    <div class="consultation-item" @onclick="() => GoToConsultationDetail(consultation.Id)">
+                    <div class="consultation-item" @onclick="() => GoToConsultationDetail(c.Id)">
                         <div class="consultation-info">
-                            <div class="consultation-patient"><i class="fas fa-user-circle"></i> @consultation.PatientName</div>
-                            <div class="consultation-date"><i class="far fa-clock"></i> @consultation.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
-                            <div class="consultation-diagnosis">@consultation.Diagnosis</div>
+                            <div class="consultation-patient"><i class="fas fa-user-circle"></i> @c.PatientName</div>
+                            <div class="consultation-date"><i class="far fa-clock"></i> @c.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
+                            <div class="consultation-diagnosis">@c.Diagnosis</div>
                         </div>
                         <div class="consultation-confidence">
-                            <span class="confidence-badge @(consultation.ConfidenceScore >= 0.8 ? "confidence-high" : (consultation.ConfidenceScore >= 0.6 ? "confidence-medium" : "confidence-low"))">
-                                @(consultation.ConfidenceScore * 100)% confiance
+                            <span class="confidence-badge @(c.ConfidenceScore >= 0.8 ? "confidence-high" : c.ConfidenceScore >= 0.6 ? "confidence-medium" : "confidence-low")">
+                                @((c.ConfidenceScore * 100).ToString("F0"))% confiance
                             </span>
-                            <i class="fas fa-chevron-right" style="color: #9CA3AF;"></i>
+                            <i class="fas fa-chevron-right" style="color:#9CA3AF;"></i>
                         </div>
                     </div>
                 }
             }
             else
             {
-                <div class="empty-state" style="padding: 40px;"><i class="fas fa-folder-open empty-icon"></i><p>Aucune consultation récente</p></div>
+                <div class="empty-state" style="padding:40px;"><div class="empty-icon">📁</div><p>Aucune consultation récente</p></div>
             }
         </div>
-
     }
 </div>
 
 @code {
-    private string doctorName = "Médecin";
-    private int totalPatients = 0;
-    private int totalConsultations = 0;
-    private int todayConsultations = 0;
-    private int diseaseCount = 0;
-    private int patientGrowth = 0;
-    private int consultationGrowth = 0;
-    private bool isLoading = true;
-    
-    private List<PathologyStat> topPathologies = new();
-    private List<MonthlyStat> monthlyActivity = new();
+    private string doctorName         = "Médecin";
+    private int    totalPatients      = 0;
+    private int    totalConsultations = 0;
+    private int    todayConsultations = 0;
+    private int    diseaseCount       = 0;
+    private int    patientGrowth      = 0;
+    private int    consultationGrowth = 0;
+    private bool   isLoading          = true;
+
+    private List<PathologyStat>      topPathologies      = new();
+    private List<MonthlyStat>        monthlyActivity     = new();
     private List<RecentConsultation> recentConsultations = new();
+
+    private List<NotificationItem> notifications = new();
+    private List<ToastItem>        activeToasts  = new();
+    private bool                   showPanel     = false;
+    private int                    unreadCount   => notifications.Count(n => !n.IsRead);
+
+    private HubConnection? hubConnection;
+    private string         baseUrl = "";
+    private string         token   = "";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender) await LoadData();
+        if (firstRender)
+        {
+            token   = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token") ?? "";
+            baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+
+            Http.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            await LoadData();
+            await LoadNotifications();
+            await ConnectSignalR();
+        }
     }
 
-    private void GoToPatients() => Navigation.NavigateTo("/doctor/patients");
-    private void GoToConsultations() => Navigation.NavigateTo("/doctor/consultations");
-    private void GoToAIDiagnosis() => Navigation.NavigateTo("/doctor/ai-diagnosis");
-    private void GoToAppointments() => Navigation.NavigateTo("/doctor/appointments");
-    private void GoToConsultationDetail(int id) => Navigation.NavigateTo($"/doctor/consultation/{id}");
+    // ── Notifications depuis la base ──────────────────────────────────────────
+    private async Task LoadNotifications()
+    {
+        try
+        {
+            var loaded = await Http.GetFromJsonAsync<List<NotificationItem>>(
+                $"{baseUrl}/api/notifications");
+            if (loaded != null)
+            {
+                notifications = loaded;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Notifs] Erreur: {ex.Message}");
+        }
+    }
 
+    // ── SignalR ───────────────────────────────────────────────────────────────
+    private async Task ConnectSignalR()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("console.log",
+                $"[SignalR] Token: {(string.IsNullOrEmpty(token) ? "NULL/VIDE" : "OK")}");
+            await JS.InvokeVoidAsync("console.log",
+                $"[SignalR] URL: {baseUrl}/hubs/notifications");
+
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{baseUrl}/hubs/notifications", options =>
+                {
+                    options.AccessTokenProvider = () => Task.FromResult<string?>(token);
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On<System.Text.Json.JsonElement>("ReceiveNotification", async (data) =>
+            {
+                await JS.InvokeVoidAsync("console.log", "[SignalR] ✅ Notification reçue !");
+
+                var notif = new NotificationItem
+                {
+                    Id            = data.TryGetProperty("id",            out var i)  ? i.GetInt32()    : 0,
+                    Title         = data.TryGetProperty("title",         out var t)  ? t.GetString()  ?? "" : "",
+                    Message       = data.TryGetProperty("message",       out var m)  ? m.GetString()  ?? "" : "",
+                    AppointmentId = data.TryGetProperty("appointmentId", out var ai) ? ai.GetInt32()       : 0,
+                    IsUrgent      = data.TryGetProperty("isUrgent",      out var u)  && u.GetBoolean(),
+                    SentAt        = data.TryGetProperty("sentAt",        out var sa) ? sa.GetDateTime()    : DateTime.UtcNow,
+                    IsRead        = false
+                };
+
+                // Évite les doublons
+                if (!notifications.Any(n => n.Id == notif.Id && notif.Id != 0))
+                    notifications.Insert(0, notif);
+
+                await ShowToast(notif);
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await hubConnection.StartAsync();
+            await JS.InvokeVoidAsync("console.log",
+                $"[SignalR] État: {hubConnection.State}");
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error",
+                $"[SignalR] ERREUR: {ex.Message}");
+        }
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────────────────
+    private async Task ShowToast(NotificationItem notif)
+    {
+        var toast = new ToastItem { Title = notif.Title, Message = notif.Message, IsUrgent = notif.IsUrgent };
+        activeToasts.Add(toast);
+        await InvokeAsync(StateHasChanged);
+        await Task.Delay(5000);
+        activeToasts.Remove(toast);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    // ── Panneau ───────────────────────────────────────────────────────────────
+    private void TogglePanel() { showPanel = !showPanel; StateHasChanged(); }
+    private void ClosePanel()  { showPanel = false; StateHasChanged(); }
+
+    private void OpenAppointment(int id)
+    {
+        showPanel = false;
+        Navigation.NavigateTo($"/doctor/appointments/{id}");
+    }
+
+    private async Task MarkAllRead()
+    {
+        notifications.ForEach(n => n.IsRead = true);
+        StateHasChanged();
+        try
+        {
+            await Http.PatchAsync($"{baseUrl}/api/notifications/read-all", null);
+        }
+        catch { }
+    }
+
+    private async Task ClearAll()
+    {
+        notifications.Clear();
+        showPanel = false;
+        StateHasChanged();
+        try
+        {
+            await Http.DeleteAsync($"{baseUrl}/api/notifications");
+        }
+        catch { }
+    }
+
+    // ── Dashboard data ────────────────────────────────────────────────────────
     private async Task LoadData()
     {
         isLoading = true;
         try
         {
-            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
-            if (!string.IsNullOrEmpty(token))
+            var profile = await Http.GetFromJsonAsync<DoctorProfileDto>($"{baseUrl}/api/doctorprofile");
+            if (profile != null)
             {
-                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
-                
-                // Profil médecin
-                var profile = await Http.GetFromJsonAsync<DoctorProfileDto>($"{baseUrl}/api/doctorprofile");
-                if (profile != null)
+                doctorName = $"{profile.FirstName} {profile.LastName}".Trim();
+                if (string.IsNullOrWhiteSpace(doctorName)) doctorName = "Médecin";
+            }
+
+            var stats = await Http.GetFromJsonAsync<StatsDto>($"{baseUrl}/api/doctorprofile/stats");
+            if (stats != null)
+            {
+                totalPatients      = stats.totalPatients;
+                todayConsultations = stats.todayConsultations;
+                totalConsultations = stats.totalConsultations;
+                patientGrowth      = new Random().Next(5, 20);
+                consultationGrowth = new Random().Next(8, 25);
+            }
+
+            var consultations = await Http.GetFromJsonAsync<List<ConsultationFullDto>>($"{baseUrl}/api/consultations");
+            if (consultations != null && consultations.Any())
+            {
+                diseaseCount        = consultations.Select(c => c.Diagnosis).Distinct().Count();
+                recentConsultations = consultations.Take(5).Select(c => new RecentConsultation
                 {
-                    doctorName = $"{profile.FirstName} {profile.LastName}".Trim();
-                    if (string.IsNullOrWhiteSpace(doctorName)) doctorName = "Médecin";
-                }
-                
-                // Statistiques
-                var stats = await Http.GetFromJsonAsync<StatsDto>($"{baseUrl}/api/doctorprofile/stats");
-                if (stats != null)
-                {
-                    totalPatients = stats.totalPatients;
-                    todayConsultations = stats.todayConsultations;
-                    totalConsultations = stats.totalConsultations;
-                    patientGrowth = new Random().Next(5, 20);
-                    consultationGrowth = new Random().Next(8, 25);
-                }
-                
-                // Consultations
-                var consultations = await Http.GetFromJsonAsync<List<ConsultationFullDto>>($"{baseUrl}/api/consultations");
-                if (consultations != null && consultations.Any())
-                {
-                    diseaseCount = consultations.Select(c => c.Diagnosis).Distinct().Count();
-                    recentConsultations = consultations.Take(5).Select(c => new RecentConsultation
+                    Id              = c.Id,
+                    PatientName     = c.PatientName,
+                    Diagnosis       = c.Diagnosis,
+                    ConfidenceScore = c.ConfidenceScore ?? 0,
+                    CreatedAt       = c.CreatedAt
+                }).ToList();
+
+                topPathologies = consultations
+                    .Where(c => !string.IsNullOrEmpty(c.Diagnosis))
+                    .GroupBy(c => c.Diagnosis)
+                    .Select(g => new PathologyStat { Name = g.Key, Count = g.Count() })
+                    .OrderByDescending(x => x.Count).Take(5).ToList();
+
+                monthlyActivity = consultations
+                    .GroupBy(c => new { c.CreatedAt.Year, c.CreatedAt.Month })
+                    .Select(g => new MonthlyStat
                     {
-                        Id = c.Id,
-                        PatientName = c.PatientName,
-                        Diagnosis = c.Diagnosis,
-                        ConfidenceScore = c.ConfidenceScore ?? 0,
-                        CreatedAt = c.CreatedAt
-                    }).ToList();
-                    
-                    // Top pathologies
-                    topPathologies = consultations
-                        .Where(c => !string.IsNullOrEmpty(c.Diagnosis))
-                        .GroupBy(c => c.Diagnosis)
-                        .Select(g => new PathologyStat { Name = g.Key, Count = g.Count() })
-                        .OrderByDescending(x => x.Count)
-                        .Take(5)
-                        .ToList();
-                    
-                    // Activité mensuelle
-                    monthlyActivity = consultations
-                        .GroupBy(c => new { c.CreatedAt.Year, c.CreatedAt.Month })
-                        .Select(g => new MonthlyStat 
-                        { 
-                            Name = GetMonthName(g.Key.Month), 
-                            Count = g.Count(),
-                            Order = g.Key.Month
-                        })
-                        .OrderBy(x => x.Order)
-                        .ToList();
-                }
+                        Name  = GetMonthName(g.Key.Month),
+                        Count = g.Count(),
+                        Order = g.Key.Month
+                    })
+                    .OrderBy(x => x.Order).ToList();
             }
         }
-        catch (Exception ex) { Console.WriteLine($"Erreur: {ex.Message}"); }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"[Dashboard] Erreur: {ex.Message}");
+        }
         finally { isLoading = false; StateHasChanged(); }
     }
 
-    private string GetMonthName(int month)
+    private void GoToPatients()                => Navigation.NavigateTo("/doctor/patients");
+    private void GoToConsultations()           => Navigation.NavigateTo("/doctor/consultations");
+    private void GoToConsultationDetail(int id)=> Navigation.NavigateTo($"/doctor/consultation/{id}");
+
+    private string GetMonthName(int m) => m switch
     {
-        return month switch
-        {
-            1 => "Jan", 2 => "Fév", 3 => "Mar", 4 => "Avr", 5 => "Mai", 6 => "Jun",
-            7 => "Jul", 8 => "Aoû", 9 => "Sep", 10 => "Oct", 11 => "Nov", 12 => "Déc",
-            _ => ""
-        };
+        1=>"Jan",2=>"Fév",3=>"Mar",4=>"Avr",5=>"Mai",6=>"Jun",
+        7=>"Jul",8=>"Aoû",9=>"Sep",10=>"Oct",11=>"Nov",12=>"Déc",_=>""
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+            await hubConnection.DisposeAsync();
     }
 
-    // DTOs
-    public class DoctorProfileDto { public string FirstName { get; set; } = ""; public string LastName { get; set; } = ""; }
-    public class StatsDto { public int totalPatients { get; set; } public int todayConsultations { get; set; } public int totalConsultations { get; set; } }
+    // ── DTOs ──────────────────────────────────────────────────────────────────
+    public class DoctorProfileDto    { public string FirstName { get; set; } = ""; public string LastName { get; set; } = ""; }
+    public class StatsDto            { public int totalPatients { get; set; } public int todayConsultations { get; set; } public int totalConsultations { get; set; } }
     public class ConsultationFullDto { public int Id { get; set; } public string PatientName { get; set; } = ""; public string Diagnosis { get; set; } = ""; public double? ConfidenceScore { get; set; } public DateTime CreatedAt { get; set; } }
-    public class PathologyStat { public string Name { get; set; } = ""; public int Count { get; set; } }
-    public class MonthlyStat { public string Name { get; set; } = ""; public int Count { get; set; } public int Order { get; set; } }
-    public class RecentConsultation { public int Id { get; set; } public string PatientName { get; set; } = ""; public string Diagnosis { get; set; } = ""; public double ConfidenceScore { get; set; } public DateTime CreatedAt { get; set; } }
+    public class PathologyStat       { public string Name { get; set; } = ""; public int Count { get; set; } }
+    public class MonthlyStat         { public string Name { get; set; } = ""; public int Count { get; set; } public int Order { get; set; } }
+    public class RecentConsultation  { public int Id { get; set; } public string PatientName { get; set; } = ""; public string Diagnosis { get; set; } = ""; public double ConfidenceScore { get; set; } public DateTime CreatedAt { get; set; } }
+
+    public class NotificationItem
+    {
+        public int      Id            { get; set; }
+        public string   Title         { get; set; } = "";
+        public string   Message       { get; set; } = "";
+        public int      AppointmentId { get; set; }
+        public bool     IsUrgent      { get; set; }
+        public bool     IsRead        { get; set; }
+        public DateTime SentAt        { get; set; }
+    }
+    public class ToastItem
+    {
+        public string Title    { get; set; } = "";
+        public string Message  { get; set; } = "";
+        public bool   IsUrgent { get; set; }
+    }
 }

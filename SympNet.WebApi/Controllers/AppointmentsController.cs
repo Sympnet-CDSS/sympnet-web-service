@@ -1,8 +1,11 @@
+// Controllers/AppointmentsController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SympNet.WebApi.Data;
 using SympNet.WebApi.Dtos;
+using SympNet.WebApi.Hubs;
 using SympNet.WebApi.Models;
 using System.Security.Claims;
 
@@ -12,24 +15,25 @@ namespace SympNet.WebApi.Controllers;
 [Route("api/[controller]")]
 public class AppointmentsController : ControllerBase
 {
-    private readonly AppDbContext _db;
+    private readonly AppDbContext                 _db;
+    private readonly IHubContext<NotificationHub> _hub;
 
-    public AppointmentsController(AppDbContext db)
+    public AppointmentsController(AppDbContext db, IHubContext<NotificationHub> hub)
     {
-        _db = db;
+        _db  = db;
+        _hub = hub;
     }
 
     private Guid GetCurrentUserId()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        if (string.IsNullOrEmpty(userIdClaim))
-            throw new UnauthorizedAccessException();
-        return Guid.Parse(userIdClaim);
+        var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(claim)) throw new UnauthorizedAccessException();
+        return Guid.Parse(claim);
     }
 
-    // GET: api/appointments (Patient)
+    // ── GET api/appointments ──────────────────────────────────────────────────
     [HttpGet]
-    [Authorize(Roles = "Patient")]
+    [Authorize(Roles = "Patient,Doctor")]
     public async Task<IActionResult> GetMyAppointments()
     {
         var userId = GetCurrentUserId();
@@ -40,71 +44,71 @@ public class AppointmentsController : ControllerBase
             .OrderBy(a => a.DateTime)
             .Select(a => new AppointmentDto
             {
-                Id = a.Id,
-                DoctorId = a.DoctorId,
-                DoctorName = a.Doctor != null ? $"Dr. {a.Doctor.FirstName} {a.Doctor.LastName}" : "Docteur",
+                Id               = a.Id,
+                DoctorId         = a.DoctorId,
+                DoctorName       = a.Doctor != null ? $"Dr. {a.Doctor.FirstName} {a.Doctor.LastName}" : "Docteur",
                 DoctorSpeciality = a.Doctor != null ? a.Doctor.Speciality : "Généraliste",
-                DoctorAddress = a.Doctor != null ? a.Doctor.Address : "Adresse non renseignée",
-                DateTime = a.DateTime,
-                Status = a.Status,
-                Notes = a.Notes,
-                Type = a.Type,
-                IsUrgent = a.IsUrgent,
-                Reason = a.Reason
+                DoctorAddress    = a.Doctor != null ? a.Doctor.Address    : "Adresse non renseignée",
+                DateTime         = a.DateTime,
+                Status           = a.Status,
+                Notes            = a.Notes,
+                Type             = a.Type,
+                IsUrgent         = a.IsUrgent,
+                Reason           = a.Reason
             })
             .ToListAsync();
 
         return Ok(appointments);
     }
 
-    // GET: api/appointments/{id}
+    // ── GET api/appointments/{id} ─────────────────────────────────────────────
     [HttpGet("{id}")]
     [Authorize]
     public async Task<IActionResult> GetAppointmentById(int id)
     {
-        var userId = GetCurrentUserId();
-
+        var userId      = GetCurrentUserId();
         var appointment = await _db.Appointments
             .Include(a => a.Doctor)
+            .Include(a => a.Patient)
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (appointment == null)
             return NotFound(new { message = "Rendez-vous non trouvé" });
 
         var isPatient = appointment.PatientId == userId;
-        var isDoctor = await _db.Doctors.AnyAsync(d => d.UserId == userId && d.Id == appointment.DoctorId);
+        var isDoctor  = await _db.Doctors.AnyAsync(d => d.UserId == userId && d.Id == appointment.DoctorId);
 
         if (!isPatient && !isDoctor)
             return Unauthorized();
 
-        var dto = new AppointmentDto
+        return Ok(new AppointmentDto
         {
-            Id = appointment.Id,
-            DoctorId = appointment.DoctorId,
-            DoctorName = appointment.Doctor != null
-                                ? $"Dr. {appointment.Doctor.FirstName} {appointment.Doctor.LastName}"
-                                : "Docteur",
-            DoctorSpeciality = appointment.Doctor != null ? appointment.Doctor.Speciality : "Généraliste",
-            DoctorAddress = appointment.Doctor != null ? appointment.Doctor.Address : "Adresse non renseignée",
-            DateTime = appointment.DateTime,
-            Status = appointment.Status,
-            Notes = appointment.Notes,
-            Type = appointment.Type,
-            IsUrgent = appointment.IsUrgent,
-            Reason = appointment.Reason
-        };
-
-        return Ok(dto);
+            Id               = appointment.Id,
+            PatientName      = appointment.Patient?.FullName ?? "",
+            DoctorId         = appointment.DoctorId,
+            DoctorName       = appointment.Doctor != null
+                                   ? $"Dr. {appointment.Doctor.FirstName} {appointment.Doctor.LastName}"
+                                   : "Docteur",
+            DoctorSpeciality = appointment.Doctor?.Speciality ?? "Généraliste",
+            DoctorAddress    = appointment.Doctor?.Address    ?? "Adresse non renseignée",
+            DateTime         = appointment.DateTime,
+            Status           = appointment.Status,
+            Notes            = appointment.Notes,
+            Type             = appointment.Type,
+            IsUrgent         = appointment.IsUrgent,
+            Reason           = appointment.Reason,
+            CreatedAt        = appointment.CreatedAt
+        });
     }
 
-    // GET: api/appointments/doctor/{doctorId}
+    // ── GET api/appointments/doctor/{doctorId} ────────────────────────────────
     [HttpGet("doctor/{doctorId}")]
     [Authorize(Roles = "Doctor")]
     public async Task<IActionResult> GetDoctorAppointments(int doctorId)
     {
         var userId = GetCurrentUserId();
-
         var doctor = await _db.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
+
         if (doctor == null || doctor.Id != doctorId)
             return Unauthorized();
 
@@ -115,8 +119,8 @@ public class AppointmentsController : ControllerBase
             .Select(a => new
             {
                 a.Id,
-                PatientName = a.Patient != null ? a.Patient.FullName : "Patient",
-                PatientEmail = a.Patient != null ? a.Patient.Email : "Email non renseigné",
+                PatientName  = a.Patient != null ? a.Patient.FullName : "Patient",
+                PatientEmail = a.Patient != null ? a.Patient.Email    : "Email non renseigné",
                 a.DateTime,
                 a.Status,
                 a.Notes
@@ -126,54 +130,87 @@ public class AppointmentsController : ControllerBase
         return Ok(appointments);
     }
 
-    // POST: api/appointments
+    // ── POST api/appointments ─────────────────────────────────────────────────
     [HttpPost]
     [Authorize]
-
     public async Task<IActionResult> CreateAppointment([FromBody] CreateAppointmentDto dto)
     {
-        // DEBUG — afficher tous les headers reçus
-        foreach (var header in Request.Headers)
-        {
-            Console.WriteLine($"Header: {header.Key} = {header.Value}");
-        }
         var userId = GetCurrentUserId();
+        var role   = User.FindFirst(ClaimTypes.Role)?.Value;
 
-        var doctor = await _db.Doctors.FindAsync(dto.DoctorId);
-        if (doctor == null)
-            return NotFound(new { message = "Médecin non trouvé" });
-
-        var dateTimeUtc = DateTime.SpecifyKind(dto.DateTime, DateTimeKind.Utc);
-
-        var existingAppointment = await _db.Appointments
-            .FirstOrDefaultAsync(a => a.DoctorId == dto.DoctorId && a.DateTime == dateTimeUtc);
-
-        if (existingAppointment != null)
-            return BadRequest(new { message = "Ce créneau est déjà pris" });
-
-        var appointment = new Appointment
+        if (role == "Doctor")
         {
-            PatientId = userId,
-            DoctorId = dto.DoctorId,
-            DateTime = DateTime.SpecifyKind(dto.DateTime, DateTimeKind.Utc),
-            Type = dto.Type ?? "InPerson",
-            IsUrgent = dto.IsUrgent,
-            Status = "En attente",
-            Notes = dto.Notes,
-            Reason = dto.Reason,
-            CreatedAt = DateTime.UtcNow
-        };
+            var doctor = await _db.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
+            if (doctor == null) return Unauthorized();
 
-        _db.Appointments.Add(appointment);
-        await _db.SaveChangesAsync();
+            if (string.IsNullOrEmpty(dto.PatientEmail))
+                return BadRequest(new { message = "Email patient requis." });
 
-        return Ok(new { message = "Rendez-vous créé avec succès", appointmentId = appointment.Id });
+            var patientUser = await _db.Users
+                .FirstOrDefaultAsync(u => u.Email == dto.PatientEmail && u.Role == "Patient");
+
+            if (patientUser == null)
+                return BadRequest(new { message = "Patient introuvable avec cet email." });
+
+            var appointment = new Appointment
+            {
+                PatientId = patientUser.Id,
+                DoctorId  = doctor.Id,
+                DateTime  = DateTime.SpecifyKind(dto.DateTime, DateTimeKind.Utc),
+                Duration  = dto.Duration > 0 ? dto.Duration : 30,
+                Type      = dto.Type   ?? "Consultation",
+                Notes     = dto.Notes  ?? "",
+                Reason    = dto.Reason ?? "",
+                IsUrgent  = dto.IsUrgent,
+                Status    = "Confirmé",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.Appointments.Add(appointment);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { message = "Rendez-vous créé avec succès", appointmentId = appointment.Id });
+        }
+        else
+        {
+            var doctor = await _db.Doctors.FindAsync(dto.DoctorId);
+            if (doctor == null)
+                return NotFound(new { message = "Médecin non trouvé" });
+
+            var dateTimeUtc = DateTime.SpecifyKind(dto.DateTime, DateTimeKind.Utc);
+
+            var conflict = await _db.Appointments
+                .FirstOrDefaultAsync(a => a.DoctorId == dto.DoctorId && a.DateTime == dateTimeUtc);
+
+            if (conflict != null)
+                return BadRequest(new { message = "Ce créneau est déjà pris" });
+
+            var appointment = new Appointment
+            {
+                PatientId = userId,
+                DoctorId  = dto.DoctorId,
+                DateTime  = dateTimeUtc,
+                Type      = dto.Type   ?? "InPerson",
+                IsUrgent  = dto.IsUrgent,
+                Status    = "En attente",
+                Notes     = dto.Notes  ?? "",
+                Reason    = dto.Reason ?? "",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.Appointments.Add(appointment);
+            await _db.SaveChangesAsync();
+
+            await NotifyDoctorAsync(appointment, userId);
+
+            return Ok(new { message = "Rendez-vous créé avec succès", appointmentId = appointment.Id });
+        }
     }
 
-    // PUT: api/appointments/{id}
-    [HttpPut("{id}")]
-    [Authorize]
-    public async Task<IActionResult> UpdateAppointment(int id, [FromBody] UpdateAppointmentDto dto)
+    // ── PATCH api/appointments/{id}/status ───────────────────────────────────
+    [HttpPatch("{id}/status")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<IActionResult> UpdateAppointmentStatus(int id, [FromBody] UpdateAppointmentStatusDto dto)
     {
         var userId = GetCurrentUserId();
 
@@ -184,61 +221,119 @@ public class AppointmentsController : ControllerBase
         if (appointment == null)
             return NotFound(new { message = "Rendez-vous non trouvé" });
 
-        var isPatient = appointment.PatientId == userId;
-        var isDoctor = await _db.Doctors.AnyAsync(d => d.UserId == userId && d.Id == appointment.DoctorId);
+        var doctor = await _db.Doctors.FirstOrDefaultAsync(d => d.UserId == userId);
+        if (doctor == null || doctor.Id != appointment.DoctorId)
+            return Unauthorized(new { message = "Accès non autorisé" });
 
-        if (!isPatient && !isDoctor)
-            return Unauthorized();
+        var validStatuses = new[] { "Confirmé", "Annulé", "Terminé" };
+        if (!validStatuses.Contains(dto.Status))
+            return BadRequest(new { message = "Statut invalide" });
 
-        if (dto.DateTime.HasValue)
-        {
-            var existingAppointment = await _db.Appointments
-                .FirstOrDefaultAsync(a => a.DoctorId == appointment.DoctorId &&
-                                         a.DateTime == dto.DateTime.Value &&
-                                         a.Id != id);
-
-            if (existingAppointment != null)
-                return BadRequest(new { message = "Ce créneau est déjà pris" });
-
-            appointment.DateTime = dto.DateTime.Value;
-            appointment.Status = "En attente";
-        }
-
-        if (!string.IsNullOrEmpty(dto.Status))
-            appointment.Status = dto.Status;
-
+        appointment.Status = dto.Status;
         if (!string.IsNullOrEmpty(dto.Notes))
             appointment.Notes = dto.Notes;
 
-        appointment.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Rendez-vous mis à jour" });
+        try
+        {
+            var statusEmoji = dto.Status switch
+            {
+                "Confirmé" => "✅",
+                "Annulé"   => "❌",
+                "Terminé"  => "🏁",
+                _          => "📋"
+            };
+
+            var title   = $"{statusEmoji} Rendez-vous {dto.Status}";
+            var message = $"Votre rendez-vous du {appointment.DateTime:dd/MM/yyyy à HH:mm} a été {dto.Status.ToLower()} par votre médecin.";
+
+            // ✅ Sauvegarder en base
+            _db.PatientNotifications.Add(new PatientNotification
+            {
+                PatientUserId = appointment.PatientId,
+                Title         = title,
+                Message       = message,
+                AppointmentId = appointment.Id,
+                Status        = dto.Status,
+                IsRead        = false,
+                SentAt        = DateTime.UtcNow
+            });
+            await _db.SaveChangesAsync();
+
+            // ✅ Pousser via SignalR
+            await _hub.Clients
+                      .Group($"user_{appointment.PatientId}")
+                      .SendAsync("ReceiveNotification", new
+                      {
+                        title         = title,
+                        message       = message,
+                        appointmentId = appointment.Id,
+                        status        = dto.Status,
+                        sentAt        = DateTime.UtcNow
+                      });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[SignalR] Erreur: {ex.Message}");
+        }
+
+        return Ok(new
+        {
+            message       = $"Rendez-vous {dto.Status} avec succès",
+            appointmentId = appointment.Id,
+            status        = dto.Status
+        });
     }
 
-    // DELETE: api/appointments/{id}
-    [HttpDelete("{id}")]
-    [Authorize]
-    public async Task<IActionResult> CancelAppointment(int id)
+    private async Task NotifyDoctorAsync(Appointment appointment, Guid patientUserId)
+{
+    try
     {
-        var userId = GetCurrentUserId();
+        var patient     = await _db.Users.FindAsync(patientUserId);
+        var patientName = patient?.FullName ?? "Un patient";
 
-        var appointment = await _db.Appointments
-            .FirstOrDefaultAsync(a => a.Id == id);
+        var doctor = await _db.Doctors.FindAsync(appointment.DoctorId);
+        if (doctor == null) return;
 
-        if (appointment == null)
-            return NotFound(new { message = "Rendez-vous non trouvé" });
+        var title   = "Nouveau rendez-vous 📅";
+        var message = $"{patientName} a pris rendez-vous le {appointment.DateTime:dd/MM/yyyy à HH:mm}";
 
-        var isPatient = appointment.PatientId == userId;
-        var isDoctor = await _db.Doctors.AnyAsync(d => d.UserId == userId && d.Id == appointment.DoctorId);
-
-        if (!isPatient && !isDoctor)
-            return Unauthorized();
-
-        appointment.Status = "Annulé";
-        appointment.UpdatedAt = DateTime.UtcNow;
+        // ✅ Sauvegarder en base
+        var dbNotif = new DoctorNotification
+        {
+            DoctorUserId  = doctor.UserId,
+            Title         = title,
+            Message       = message,
+            AppointmentId = appointment.Id,
+            IsUrgent      = appointment.IsUrgent,
+            IsRead        = false,
+            SentAt        = DateTime.UtcNow
+        };
+        _db.DoctorNotifications.Add(dbNotif);
         await _db.SaveChangesAsync();
 
-        return Ok(new { message = "Rendez-vous annulé" });
+        // ✅ Pousser via SignalR
+        var notification = new
+        {
+            id            = dbNotif.Id,
+            type          = "NEW_APPOINTMENT",
+            title         = title,
+            message       = message,
+            appointmentId = appointment.Id,
+            isUrgent      = appointment.IsUrgent,
+            sentAt        = DateTime.UtcNow
+        };
+
+        await _hub.Clients
+                  .Group($"doctor_user_{doctor.UserId}")
+                  .SendAsync("ReceiveNotification", notification);
+
+        Console.WriteLine($"[SignalR] Notifié → doctor_user_{doctor.UserId}");
     }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[SignalR] Erreur: {ex.Message}");
+    }
+}
 }

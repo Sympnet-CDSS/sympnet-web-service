@@ -1,0 +1,576 @@
+@page "/doctor/consultations/new"
+@layout SympNet.WebDashboard.Components.Layout.DoctorLayout
+@using System.Text.Json
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject IConfiguration Config
+
+<PageTitle>SympNet — Nouvelle Consultation</PageTitle>
+
+<div class="consultation-container">
+    <div class="header-section">
+        <div class="header-title">
+            <h2><i class="fas fa-file-medical"></i> Nouvelle Consultation</h2>
+            <p>Rédigez la consultation et prescrivez les médicaments sur une seule interface.</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-secondary" @onclick="GoBack"><i class="fas fa-arrow-left"></i> Annuler</button>
+            <button class="btn-primary" @onclick="SaveAll" disabled="@isSaving"><i class="fas fa-save"></i> Enregistrer</button>
+        </div>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-state">
+            <div class="spinner"></div>
+            <p>Chargement des données...</p>
+        </div>
+    }
+    else
+    {
+        <div class="editor-grid">
+            <!-- Colonne Principale -->
+            <div class="main-column">
+                
+                <!-- 1. Informations Patient -->
+                <div class="card premium-card">
+                    <h3><i class="fas fa-user-injured"></i> Informations Patient</h3>
+                    <div class="form-group">
+                        <label>Sélectionner le patient *</label>
+                        <select class="form-control" @bind="selectedPatientId">
+                            <option value="0">-- Choisir un patient --</option>
+                            @foreach (var patient in patients)
+                            {
+                                <option value="@patient.Id">@patient.FirstName @patient.LastName</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 2. Motif et Symptômes -->
+                <div class="card premium-card">
+                    <div class="card-header-flex">
+                        <h3><i class="fas fa-stethoscope"></i> Motif & Symptômes</h3>
+                        <div class="voice-tools">
+                            <button class="btn-icon @(isRecording ? "recording" : "")" @onclick="ToggleRecording" title="Dictée vocale">
+                                <i class="fas @(isRecording ? "fa-stop" : "fa-microphone")"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Diagnostic ou Motif principal *</label>
+                        <input type="text" class="form-control" @bind="diagnosis" placeholder="Ex: Angine bactérienne" />
+                    </div>
+                    <div class="form-group">
+                        <label>Détail des symptômes et examen clinique</label>
+                        <textarea class="form-control" rows="4" @bind="symptoms" placeholder="Décrivez les symptômes, l'examen clinique..."></textarea>
+                    </div>
+                </div>
+
+                <!-- 3. Ordonnance -->
+                <div class="card premium-card">
+                    <div class="card-header-flex">
+                        <h3><i class="fas fa-pills"></i> Ordonnance</h3>
+                        <button class="btn-add" @onclick="AddMedication"><i class="fas fa-plus"></i> Ajouter</button>
+                    </div>
+
+                    @if (!medications.Any())
+                    {
+                        <div class="empty-state">
+                            <i class="fas fa-prescription-bottle-alt"></i>
+                            <p>Aucun médicament ajouté à cette ordonnance.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="medications-list">
+                            @foreach (var (med, index) in medications.Select((m, i) => (m, i)))
+                            {
+                                <div class="medication-item">
+                                    <div class="med-header">
+                                        <h4>Médicament #@(index + 1)</h4>
+                                        <button class="btn-icon-danger" @onclick="() => RemoveMedication(med)"><i class="fas fa-trash"></i></button>
+                                    </div>
+                                    <div class="med-grid">
+                                        <div class="form-group">
+                                            <label>Nom du médicament *</label>
+                                            <input type="text" class="form-control" @bind="med.Name" placeholder="Ex: Amoxicilline 1g" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Posologie *</label>
+                                            <input type="text" class="form-control" @bind="med.Dosage" placeholder="Ex: 1 comprimé" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Fréquence</label>
+                                            <input type="text" class="form-control" @bind="med.Frequency" placeholder="Ex: Matin et Soir" />
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Durée</label>
+                                            <input type="text" class="form-control" @bind="med.Duration" placeholder="Ex: 6 jours" />
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+
+            </div>
+
+            <!-- Colonne Latérale -->
+            <div class="side-column">
+                
+                <!-- Analyse IA Médicaments -->
+                <div class="card ai-card">
+                    <h3><i class="fas fa-shield-alt"></i> Sécurité Ordonnance</h3>
+                    <p class="ai-desc">L'IA détectera automatiquement les interactions dangereuses entre les médicaments saisis.</p>
+                    
+                    <button class="btn-ai-check @(isCheckingAI ? "checking" : "")" @onclick="CheckWithAI" disabled="@(isCheckingAI || !medications.Any())">
+                        @if (isCheckingAI)
+                        {
+                            <i class="fas fa-spinner fa-spin"></i> <span>Vérification...</span>
+                        }
+                        else
+                        {
+                            <i class="fas fa-search-plus"></i> <span>Vérifier interactions</span>
+                        }
+                    </button>
+
+                    @if (aiAlert != null)
+                    {
+                        <div class="ai-result @(aiAlert.HasAlerts ? "has-alerts" : "all-clear")">
+                            <div class="result-header">
+                                <i class="fas @(aiAlert.HasAlerts ? "fa-exclamation-triangle" : "fa-check-circle")"></i>
+                                <h4>@(aiAlert.HasAlerts ? "Attention" : "Ordonnance Sûre")</h4>
+                            </div>
+                            <p class="summary">@aiAlert.Summary</p>
+                            
+                            @if (aiAlert.Alerts.Any())
+                            {
+                                <ul class="alerts-list">
+                                    @foreach (var alert in aiAlert.Alerts)
+                                    {
+                                        <li class="alert-item @alert.Severity.ToLower()">
+                                            <strong>@alert.Type:</strong> @alert.Message
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="card premium-card">
+                    <h3><i class="fas fa-sticky-note"></i> Notes additionnelles</h3>
+                    <textarea class="form-control" rows="4" @bind="notes" placeholder="Conseils, repos prescrit, etc..."></textarea>
+                </div>
+                
+                <button class="btn-primary btn-block" @onclick="SaveAll" disabled="@isSaving" style="width: 100%; margin-top: 24px; padding: 16px; font-size: 16px;">
+                    @if (isSaving) { <i class="fas fa-spinner fa-spin"></i> } else { <i class="fas fa-check-double"></i> }
+                    @(isSaving ? "Enregistrement en cours..." : "Valider la Consultation")
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+<style>
+    :root {
+        --primary: #0D9488;
+        --primary-hover: #0F766E;
+        --bg-color: #F8FAFC;
+        --card-bg: #FFFFFF;
+        --text-main: #1E293B;
+        --text-muted: #64748B;
+        --border-color: #E2E8F0;
+    }
+
+    .consultation-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        font-family: 'Inter', sans-serif;
+        color: var(--text-main);
+        animation: fadeIn 0.4s ease-out;
+    }
+
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .header-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        background: var(--card-bg);
+        padding: 24px 32px;
+        border-radius: 20px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        border: 1px solid var(--border-color);
+    }
+
+    .header-title h2 {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .header-title p {
+        margin: 6px 0 0;
+        color: var(--text-muted);
+        font-size: 14px;
+    }
+
+    .header-actions { display: flex; gap: 12px; }
+
+    button {
+        font-family: inherit; font-weight: 600; font-size: 14px; border-radius: 12px; padding: 10px 20px;
+        cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 8px; border: none;
+    }
+
+    .btn-primary { background: var(--primary); color: white; box-shadow: 0 4px 12px rgba(13,148,136,0.2); }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(13,148,136,0.3); }
+    .btn-primary:disabled { background: #94A3B8; cursor: not-allowed; }
+    
+    .btn-secondary { background: #F1F5F9; color: var(--text-main); }
+    .btn-secondary:hover { background: #E2E8F0; }
+
+    .btn-icon { background: #F1F5F9; color: var(--text-main); border-radius: 50%; width: 40px; height: 40px; padding: 0; justify-content: center; }
+    .btn-icon:hover { background: #E2E8F0; }
+    .btn-icon.recording { color: white; background: #EF4444; animation: pulse 1.5s infinite; }
+    
+    @@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+    .btn-add { background: #F0FDFA; color: var(--primary); padding: 8px 16px; border: 1px dashed var(--primary); }
+    .btn-add:hover { background: #CCFBF1; }
+
+    .btn-icon-danger { background: #FEF2F2; color: #EF4444; width: 36px; height: 36px; padding: 0; justify-content: center; border-radius: 10px; }
+    .btn-icon-danger:hover { background: #EF4444; color: white; }
+
+    .editor-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+    @@media (max-width: 992px) { .editor-grid { grid-template-columns: 1fr; } }
+
+    .premium-card {
+        background: var(--card-bg);
+        border-radius: 20px;
+        padding: 28px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border: 1px solid var(--border-color);
+        margin-bottom: 24px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .premium-card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+    }
+
+    .premium-card h3 { margin: 0 0 20px; font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--text-main); }
+    .premium-card h3 i { color: var(--primary); }
+
+    .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .card-header-flex h3 { margin: 0; }
+
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+    .form-control { width: 100%; padding: 14px 16px; border: 1.5px solid var(--border-color); border-radius: 12px; background: #F8FAFC; font-size: 14px; color: var(--text-main); transition: all 0.2s; font-family: inherit; outline: none; }
+    .form-control:focus { border-color: var(--primary); background: #FFFFFF; box-shadow: 0 0 0 4px rgba(13,148,136,0.1); }
+
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text-muted); background: #F8FAFC; border-radius: 16px; border: 1px dashed var(--border-color); }
+    .empty-state i { font-size: 32px; color: #CBD5E1; margin-bottom: 12px; }
+
+    .medications-list { display: flex; flex-direction: column; gap: 16px; }
+    .medication-item { background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 16px; padding: 20px; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+    .med-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #F1F5F9; }
+    .med-header h4 { margin: 0; font-size: 15px; font-weight: 600; color: var(--primary); }
+    .med-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .ai-card { background: linear-gradient(180deg, #FFFFFF, #F0FDFA); border: 1px solid rgba(13,148,136,0.2); border-radius: 20px; padding: 28px; margin-bottom: 24px; }
+    .ai-card h3 { margin: 0 0 16px; font-size: 18px; color: var(--text-main); display: flex; align-items: center; gap: 10px; }
+    .ai-card h3 i { color: #F59E0B; }
+    .ai-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+
+    .btn-ai-check { width: 100%; background: #1E293B; color: white; justify-content: center; padding: 14px; font-size: 14px; margin-bottom: 20px; }
+    .btn-ai-check:hover:not(:disabled) { background: #0F172A; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
+    .btn-ai-check.checking { background: var(--primary); cursor: wait; }
+
+    .ai-result { padding: 16px; border-radius: 16px; animation: fadeIn 0.3s ease-out; }
+    .ai-result.has-alerts { background: #FEF2F2; border: 1px solid rgba(239,68,68,0.3); }
+    .ai-result.all-clear { background: #ECFDF5; border: 1px solid rgba(16,185,129,0.3); }
+    .result-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .result-header h4 { margin: 0; font-size: 15px; font-weight: 700; }
+    .has-alerts .result-header { color: #EF4444; }
+    .all-clear .result-header { color: #10B981; }
+    .ai-result .summary { font-size: 13px; margin: 0 0 12px; color: var(--text-main); }
+    
+    .alerts-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+    .alert-item { font-size: 12px; padding: 10px 12px; border-radius: 8px; background: white; border-left: 4px solid; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+    .alert-item.high, .alert-item.critique { border-left-color: #EF4444; }
+    .alert-item.medium, .alert-item.sévère { border-left-color: #F59E0B; }
+    .alert-item.low, .alert-item.modérée { border-left-color: #3B82F6; }
+
+    .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: var(--text-muted); }
+    .spinner { width: 40px; height: 40px; border: 3px solid #E2E8F0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+@code {
+    [SupplyParameterFromQuery]
+    public int? patientId { get; set; }
+
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private bool isRecording = false;
+    private bool isCheckingAI = false;
+
+    private int selectedPatientId = 0;
+    private string diagnosis = "";
+    private string symptoms = "";
+    private string notes = "";
+    
+    private List<PatientDto> patients = new();
+    private List<MedicationDto> medications = new();
+    private AIAlertResult? aiAlert = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                var pts = await Http.GetFromJsonAsync<List<PatientDto>>($"{baseUrl}/api/doctorpatients");
+                
+                if (pts != null) 
+                {
+                    patients = pts;
+                    if (patientId.HasValue && patients.Any(p => p.Id == patientId.Value))
+                    {
+                        selectedPatientId = patientId.Value;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur chargement: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JS.InvokeVoidAsync("initAudioRecorder");
+        }
+    }
+
+    private void AddMedication()
+    {
+        medications.Add(new MedicationDto());
+        aiAlert = null; // Reset AI check
+    }
+
+    private void RemoveMedication(MedicationDto med)
+    {
+        medications.Remove(med);
+        aiAlert = null;
+    }
+
+    private async Task ToggleRecording()
+    {
+        if (isRecording)
+        {
+            await JS.InvokeVoidAsync("stopRecording");
+            isRecording = false;
+            var transcribedText = await JS.InvokeAsync<string>("getTranscribedText");
+            if (!string.IsNullOrEmpty(transcribedText))
+            {
+                symptoms += (string.IsNullOrEmpty(symptoms) ? "" : "\n") + transcribedText;
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("startRecording");
+            isRecording = true;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CheckWithAI()
+    {
+        if (!medications.Any()) return;
+        
+        isCheckingAI = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = new
+            {
+                PatientId = selectedPatientId.ToString(),
+                Diagnosis = diagnosis,
+                Medications = medications
+            };
+
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var response = await Http.PostAsJsonAsync($"{baseUrl}/api/ai/ordonnance/check", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                aiAlert = await response.Content.ReadFromJsonAsync<AIAlertResult>();
+            }
+            else
+            {
+                aiAlert = new AIAlertResult
+                {
+                    HasAlerts = true,
+                    Summary = "Erreur du service IA.",
+                    Alerts = new List<AlertItem> { new AlertItem { Type = "Réseau", Severity = "high", Message = "Service MS1 injoignable." } }
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            aiAlert = new AIAlertResult
+            {
+                HasAlerts = true,
+                Summary = "Erreur de connexion.",
+                Alerts = new List<AlertItem> { new AlertItem { Type = "Erreur", Severity = "high", Message = ex.Message } }
+            };
+        }
+        finally
+        {
+            isCheckingAI = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SaveAll()
+    {
+        if (selectedPatientId == 0 || string.IsNullOrWhiteSpace(diagnosis))
+        {
+            await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un patient et saisir un diagnostic.");
+            return;
+        }
+
+        var selectedPatient = patients.FirstOrDefault(p => p.Id == selectedPatientId);
+        if (selectedPatient == null) return;
+
+        isSaving = true;
+        StateHasChanged();
+
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            // 1. Sauvegarder la Consultation
+            var consultationReq = new
+            {
+                patientName = $"{selectedPatient.FirstName} {selectedPatient.LastName}",
+                patientEmail = selectedPatient.Email,
+                symptoms = symptoms,
+                diagnosis = diagnosis,
+                recommendations = "Saisie manuelle",
+                confidenceScore = 1.0
+            };
+            
+            var consResponse = await Http.PostAsJsonAsync($"{baseUrl}/api/consultations", consultationReq);
+            if (!consResponse.IsSuccessStatusCode)
+            {
+                await JS.InvokeVoidAsync("alert", "Erreur lors de l'enregistrement de la consultation.");
+                return;
+            }
+
+            var createdCons = await consResponse.Content.ReadFromJsonAsync<ConsultationResultDto>();
+
+            // 2. Sauvegarder l'Ordonnance si des médicaments sont présents
+            if (medications.Any() && createdCons != null)
+            {
+                var ordReq = new
+                {
+                    PatientId = selectedPatientId,
+                    ConsultationId = createdCons.ConsultationId,
+                    Diagnosis = diagnosis,
+                    MedicationsJson = JsonSerializer.Serialize(medications),
+                    Notes = notes,
+                    HasAIAlerts = aiAlert?.HasAlerts ?? false,
+                    AIAlertsJson = aiAlert != null ? JsonSerializer.Serialize(aiAlert) : null
+                };
+
+                var ordResponse = await Http.PostAsJsonAsync($"{baseUrl}/api/ordonnances", ordReq);
+                if (!ordResponse.IsSuccessStatusCode)
+                {
+                    await JS.InvokeVoidAsync("alert", "Consultation sauvegardée mais erreur pour l'ordonnance.");
+                    return;
+                }
+            }
+
+            // Rediriger vers la liste des consultations
+            await JS.InvokeVoidAsync("alert", "Consultation et ordonnance enregistrées avec succès !");
+            Navigation.NavigateTo("/doctor/consultations");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", "Une erreur est survenue lors de l'enregistrement.");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/doctor/dashboard");
+    }
+
+    public class PatientDto
+    {
+        public int Id { get; set; }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+    }
+
+    public class MedicationDto
+    {
+        public string Name { get; set; } = "";
+        public string Dosage { get; set; } = "";
+        public string Frequency { get; set; } = "";
+        public string Duration { get; set; } = "";
+    }
+
+    public class AIAlertResult
+    {
+        public bool HasAlerts { get; set; }
+        public string Summary { get; set; } = "";
+        public List<AlertItem> Alerts { get; set; } = new();
+    }
+
+    public class AlertItem
+    {
+        public string Type { get; set; } = "";
+        public string Severity { get; set; } = "";
+        public string Message { get; set; } = "";
+    }
+
+    public class ConsultationResultDto
+    {
+        public int ConsultationId { get; set; }
+    }
+}

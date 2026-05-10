@@ -20,14 +20,15 @@ public class WorkingHoursController : ControllerBase
         _db = db;
     }
 
-    private Guid GetCurrentDoctorId()
+    private int GetCurrentDoctorId()
     {
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (string.IsNullOrEmpty(userIdClaim))
             throw new UnauthorizedAccessException();
-        
+
         var doctor = _db.Doctors.FirstOrDefault(d => d.UserId == Guid.Parse(userIdClaim));
-        return doctor?.UserId ?? Guid.Parse(userIdClaim);
+        if (doctor == null) throw new UnauthorizedAccessException("Doctor profile not found.");
+        return doctor.Id;
     }
 
     // GET: api/workinghours
@@ -35,21 +36,39 @@ public class WorkingHoursController : ControllerBase
     public async Task<IActionResult> GetWorkingHours()
     {
         var doctorId = GetCurrentDoctorId();
-        
-        var workingHours = await _db.Set<WorkingHours>()
+
+        // FIX: matérialise d'abord en mémoire, PUIS applique GetDayName (méthode C# non traduisible en SQL)
+        var raw = await _db.Set<WorkingHours>()
             .Where(w => w.DoctorId == doctorId)
             .OrderBy(w => w.DayOfWeek)
-            .Select(w => new WorkingHoursDto
-            {
-                Id = w.Id,
-                DayOfWeek = (int)w.DayOfWeek,
-                DayName = GetDayName(w.DayOfWeek),
-                StartTime = w.StartTime.ToString(),
-                EndTime = w.EndTime.ToString(),
-                SlotDuration = w.SlotDuration,
-                IsActive = w.IsActive
-            })
             .ToListAsync();
+
+        if (!raw.Any())
+        {
+            var defaultHours = Enumerable.Range(1, 5).Select(i => new
+            {
+                Id = 0,
+                DayOfWeek = i,
+                DayName = GetDayName(i),
+                StartTime = "09:00",
+                EndTime = "17:00",
+                SlotDuration = 30,
+                IsActive = true
+            }).ToList<object>();
+
+            return Ok(defaultHours);
+        }
+
+        var workingHours = raw.Select(w => new
+        {
+            w.Id,
+            DayOfWeek = (int)w.DayOfWeek,
+            DayName = GetDayName((int)w.DayOfWeek),
+            StartTime = w.StartTime.ToString(@"HH\:mm"),
+            EndTime = w.EndTime.ToString(@"HH\:mm"),
+            w.SlotDuration,
+            w.IsActive
+        }).ToList();
 
         return Ok(workingHours);
     }
@@ -59,13 +78,21 @@ public class WorkingHoursController : ControllerBase
     public async Task<IActionResult> CreateWorkingHours([FromBody] CreateWorkingHoursDto dto)
     {
         var doctorId = GetCurrentDoctorId();
-        
-        // Vérifier si déjà existant
+
         var existing = await _db.Set<WorkingHours>()
             .FirstOrDefaultAsync(w => w.DoctorId == doctorId && w.DayOfWeek == (DayOfWeek)dto.DayOfWeek);
-        
+
         if (existing != null)
-            return BadRequest(new { message = "Les horaires pour ce jour existent déjà" });
+        {
+            // Mettre à jour plutôt que rejeter
+            existing.StartTime = TimeOnly.Parse(dto.StartTime);
+            existing.EndTime = TimeOnly.Parse(dto.EndTime);
+            existing.SlotDuration = dto.SlotDuration;
+            existing.IsActive = true;
+            existing.UpdatedAt = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+            return Ok(new { message = "Horaires mis à jour avec succès" });
+        }
 
         var workingHours = new WorkingHours
         {
@@ -91,7 +118,7 @@ public class WorkingHoursController : ControllerBase
         var doctorId = GetCurrentDoctorId();
         var workingHours = await _db.Set<WorkingHours>()
             .FirstOrDefaultAsync(w => w.Id == id && w.DoctorId == doctorId);
-        
+
         if (workingHours == null)
             return NotFound(new { message = "Horaires non trouvés" });
 
@@ -103,7 +130,7 @@ public class WorkingHoursController : ControllerBase
             workingHours.SlotDuration = dto.SlotDuration.Value;
         if (dto.IsActive.HasValue)
             workingHours.IsActive = dto.IsActive.Value;
-        
+
         workingHours.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
 
@@ -117,7 +144,7 @@ public class WorkingHoursController : ControllerBase
         var doctorId = GetCurrentDoctorId();
         var workingHours = await _db.Set<WorkingHours>()
             .FirstOrDefaultAsync(w => w.Id == id && w.DoctorId == doctorId);
-        
+
         if (workingHours == null)
             return NotFound(new { message = "Horaires non trouvés" });
 
@@ -127,17 +154,18 @@ public class WorkingHoursController : ControllerBase
         return Ok(new { message = "Horaires supprimés" });
     }
 
-    private string GetDayName(DayOfWeek day)
+    // FIX: static + paramètre int (pas DayOfWeek) pour correspondre aux deux appels
+    private static string GetDayName(int dayOfWeek)
     {
-        return day switch
+        return dayOfWeek switch
         {
-            DayOfWeek.Monday => "Lundi",
-            DayOfWeek.Tuesday => "Mardi",
-            DayOfWeek.Wednesday => "Mercredi",
-            DayOfWeek.Thursday => "Jeudi",
-            DayOfWeek.Friday => "Vendredi",
-            DayOfWeek.Saturday => "Samedi",
-            DayOfWeek.Sunday => "Dimanche",
+            1 => "Lundi",
+            2 => "Mardi",
+            3 => "Mercredi",
+            4 => "Jeudi",
+            5 => "Vendredi",
+            6 => "Samedi",
+            7 => "Dimanche",
             _ => ""
         };
     }

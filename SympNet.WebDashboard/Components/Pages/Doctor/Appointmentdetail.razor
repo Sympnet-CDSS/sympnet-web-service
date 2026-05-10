@@ -1,0 +1,382 @@
+@page "/doctor/appointments/{Id:int}"
+@layout DoctorLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+@inject IConfiguration Config
+
+<PageTitle>Détail du rendez-vous — SympNet</PageTitle>
+
+<style>
+    .detail-container { max-width: 800px; margin: 0 auto; padding: 24px; }
+
+    .page-header { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+    .btn-back {
+        background: white; border: 1px solid #E5E7EB;
+        border-radius: 12px; padding: 10px 14px;
+        cursor: pointer; font-size: 16px;
+        display: flex; align-items: center; gap: 8px;
+        color: #6B7280; transition: all 0.2s;
+    }
+    .btn-back:hover { background: #F9FAFB; border-color: #0D9488; color: #0D9488; }
+    .page-title { font-size: 24px; font-weight: 800; color: #1F2937; }
+
+    .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; }
+    .status-attente  { background: #FEF3C7; color: #D97706; }
+    .status-confirme { background: #D1FAE5; color: #059669; }
+    .status-annule   { background: #FEE2E2; color: #DC2626; }
+    .status-termine  { background: #E5E7EB; color: #6B7280; }
+
+    .card { background: white; border-radius: 20px; border: 1px solid rgba(13,148,136,0.1); padding: 24px; margin-bottom: 20px; }
+    .card-title { font-size: 14px; font-weight: 700; color: #0D9488; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 20px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .info-item label { display: block; font-size: 11px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .info-item span { font-size: 15px; color: #1F2937; font-weight: 600; }
+    .info-item.full { grid-column: 1 / -1; }
+
+    .urgent-banner { background: #FEF2F2; border: 1px solid #FECACA; border-radius: 12px; padding: 12px 16px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; color: #DC2626; font-weight: 600; }
+
+    .actions-card { background: white; border-radius: 20px; border: 1px solid rgba(13,148,136,0.1); padding: 24px; }
+    .actions-title { font-size: 14px; font-weight: 700; color: #0D9488; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 20px; }
+    .actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .btn-confirm {
+        padding: 14px; border: none; border-radius: 14px;
+        background: linear-gradient(135deg, #0D9488, #14B8A6);
+        color: white; font-size: 15px; font-weight: 700;
+        cursor: pointer; transition: all 0.2s;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(13,148,136,0.3); }
+    .btn-confirm:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .btn-cancel {
+        padding: 14px; border: 2px solid #EF4444; border-radius: 14px;
+        background: white; color: #EF4444;
+        font-size: 15px; font-weight: 700;
+        cursor: pointer; transition: all 0.2s;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-cancel:hover { background: #FEF2F2; transform: translateY(-2px); }
+    .btn-cancel:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .btn-complete {
+        padding: 14px; border: none; border-radius: 14px;
+        background: #6B7280; color: white;
+        font-size: 15px; font-weight: 700;
+        cursor: pointer; transition: all 0.2s;
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        grid-column: 1 / -1;
+    }
+    .btn-complete:hover { background: #4B5563; transform: translateY(-2px); }
+    .btn-complete:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .notes-area {
+        width: 100%; border: 1.5px solid #E5E7EB;
+        border-radius: 12px; padding: 12px;
+        font-size: 14px; color: #1F2937;
+        resize: vertical; min-height: 100px;
+        font-family: inherit; margin-bottom: 12px;
+        box-sizing: border-box;
+    }
+    .notes-area:focus { outline: none; border-color: #0D9488; }
+
+    .toast-msg {
+        position: fixed; bottom: 24px; left: 50%;
+        transform: translateX(-50%);
+        color: white; padding: 12px 24px;
+        border-radius: 12px; font-size: 14px; font-weight: 600;
+        z-index: 9999; animation: fadein 0.3s ease;
+    }
+    .toast-msg.success { background: #059669; }
+    .toast-msg.error   { background: #DC2626; }
+    @@keyframes fadein {
+        from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+        to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 400px; }
+    .loading-spinner { width: 50px; height: 50px; border: 4px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+@if (!string.IsNullOrEmpty(toastMessage))
+{
+    <div class="toast-msg @toastClass">@toastMessage</div>
+}
+
+<div class="detail-container">
+
+    <div class="page-header">
+        <button class="btn-back" @onclick="GoBack">← Retour</button>
+        <span class="page-title">Détail du rendez-vous</span>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="loading-container"><div class="loading-spinner"></div></div>
+    }
+    else if (appointment == null)
+    {
+        <div style="text-align:center;padding:80px 20px;color:#9CA3AF;">
+            <div style="font-size:64px;margin-bottom:16px;">📭</div>
+            <p style="font-size:18px;font-weight:700;margin-bottom:8px;">Rendez-vous introuvable</p>
+            <p>Ce rendez-vous n'existe pas ou vous n'y avez pas accès.</p>
+        </div>
+    }
+    else
+    {
+        @if (appointment.IsUrgent)
+        {
+            <div class="urgent-banner">🚨 Rendez-vous URGENT</div>
+        }
+
+        <!-- Statut -->
+        <div class="card">
+            <div class="card-title">📋 Statut</div>
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+                <span class="status-badge @GetStatusClass(appointment.Status)">
+                    @GetStatusIcon(appointment.Status) @appointment.Status
+                </span>
+                <span style="color:#9CA3AF;font-size:13px;">#RDV-@appointment.Id</span>
+                @if (appointment.IsUrgent)
+                {
+                    <span class="status-badge" style="background:#FEE2E2;color:#DC2626;">🚨 URGENT</span>
+                }
+            </div>
+        </div>
+
+        <!-- Patient -->
+        <div class="card">
+            <div class="card-title">👤 Patient</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Nom</label>
+                    <span>@(string.IsNullOrEmpty(appointment.PatientName) ? "Non renseigné" : appointment.PatientName)</span>
+                </div>
+                <div class="info-item">
+                    <label>Type</label>
+                    <span>@(appointment.Type == "InPerson" ? "🏥 En cabinet" : "💻 Téléconsultation")</span>
+                </div>
+                @if (!string.IsNullOrEmpty(appointment.Reason))
+                {
+                    <div class="info-item full">
+                        <label>Motif</label>
+                        <span>@appointment.Reason</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Date -->
+        <div class="card">
+            <div class="card-title">📅 Date et heure</div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <label>Date</label>
+                    <span>@appointment.DateTime.ToLocalTime().ToString("dddd dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))</span>
+                </div>
+                <div class="info-item">
+                    <label>Heure</label>
+                    <span>@appointment.DateTime.ToLocalTime().ToString("HH:mm")</span>
+                </div>
+                <div class="info-item">
+                    <label>Créé le</label>
+                    <span>@appointment.CreatedAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</span>
+                </div>
+                <div class="info-item">
+                    <label>Priorité</label>
+                    <span>@(appointment.IsUrgent ? "🚨 Urgent" : "✅ Normal")</span>
+                </div>
+                @if (!string.IsNullOrEmpty(appointment.Notes))
+                {
+                    <div class="info-item full">
+                        <label>Notes</label>
+                        <span>@appointment.Notes</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Actions -->
+        @if (appointment.Status == "En attente")
+        {
+            <div class="actions-card">
+                <div class="actions-title">⚡ Actions</div>
+                <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">
+                    Notes du médecin (optionnel)
+                </label>
+                <textarea class="notes-area" @bind="doctorNotes"
+                          placeholder="Instructions, préparations requises..."></textarea>
+                <div class="actions-grid">
+                    <button class="btn-confirm" @onclick="ConfirmAppointment" disabled="@isSubmitting">
+                        @if (isSubmitting && currentAction == "confirm") { <span>⏳ Confirmation...</span> }
+                        else { <span>✅ Confirmer le RDV</span> }
+                    </button>
+                    <button class="btn-cancel" @onclick="CancelAppointment" disabled="@isSubmitting">
+                        @if (isSubmitting && currentAction == "cancel") { <span>⏳ Annulation...</span> }
+                        else { <span>❌ Annuler le RDV</span> }
+                    </button>
+                </div>
+            </div>
+        }
+        else if (appointment.Status == "Confirmé")
+        {
+            <div class="actions-card">
+                <div class="actions-title">⚡ Actions</div>
+                <div class="actions-grid">
+                    <button class="btn-complete" @onclick="CompleteAppointment" disabled="@isSubmitting">
+                        @if (isSubmitting) { <span>⏳ Traitement...</span> }
+                        else { <span>🏁 Marquer comme terminé</span> }
+                    </button>
+                    <button class="btn-cancel" @onclick="CancelAppointment" disabled="@isSubmitting">
+                        ❌ Annuler
+                    </button>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card" style="text-align:center;color:#6B7280;padding:32px;">
+                <div style="font-size:40px;margin-bottom:12px;">
+                    @(appointment.Status == "Terminé" ? "✅" : "❌")
+                </div>
+                <p style="font-weight:600;font-size:16px;">Ce rendez-vous est @appointment.Status.ToLower()</p>
+                <p style="font-size:13px;">Aucune action disponible.</p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private AppointmentDetailDto? appointment;
+    private bool   isLoading     = true;
+    private bool   isSubmitting  = false;
+    private string doctorNotes   = "";
+    private string currentAction = "";
+    private string toastMessage  = "";
+    private string toastClass    = "";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await LoadAppointment();
+    }
+
+    private async Task LoadAppointment()
+    {
+        isLoading = true;
+        try
+        {
+            var token   = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            Http.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            appointment = await Http.GetFromJsonAsync<AppointmentDetailDto>(
+                $"{baseUrl}/api/appointments/{Id}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Detail] Erreur: {ex.Message}");
+            appointment = null;
+        }
+        finally { isLoading = false; StateHasChanged(); }
+    }
+
+    private async Task ConfirmAppointment() => await UpdateStatus("Confirmé", "confirm");
+    private async Task CancelAppointment()  => await UpdateStatus("Annulé",   "cancel");
+    private async Task CompleteAppointment()=> await UpdateStatus("Terminé",  "complete");
+
+    private async Task UpdateStatus(string newStatus, string action)
+    {
+        isSubmitting  = true;
+        currentAction = action;
+        StateHasChanged();
+        try
+        {
+            var token   = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            Http.DefaultRequestHeaders.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
+            var body = new UpdateStatusDto
+            {
+                Status = newStatus,
+                Notes  = doctorNotes.Trim().Length > 0 ? doctorNotes.Trim() : null
+            };
+
+            var response = await Http.PatchAsJsonAsync(
+                $"{baseUrl}/api/appointments/{Id}/status", body);
+
+            if (response.IsSuccessStatusCode)
+            {
+                appointment!.Status = newStatus;
+                if (!string.IsNullOrEmpty(doctorNotes))
+                    appointment.Notes = doctorNotes;
+                string emoji = newStatus switch
+                {
+                    "Confirmé" => "✅", "Annulé" => "❌", "Terminé" => "🏁", _ => "✅"
+                };
+                await ShowToast($"{emoji} Rendez-vous {newStatus.ToLower()} avec succès", "success");
+            }
+            else
+            {
+                await ShowToast("❌ Erreur lors de la mise à jour", "error");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[UpdateStatus] {ex.Message}");
+            await ShowToast("❌ Erreur réseau", "error");
+        }
+        finally { isSubmitting = false; currentAction = ""; StateHasChanged(); }
+    }
+
+    private async Task ShowToast(string message, string css)
+    {
+        toastMessage = message; toastClass = css; StateHasChanged();
+        await Task.Delay(3000);
+        toastMessage = ""; StateHasChanged();
+    }
+
+    private void GoBack() => Navigation.NavigateTo("/doctor/appointments");
+
+    private string GetStatusClass(string s) => s switch
+    {
+        "En attente" => "status-attente",
+        "Confirmé"   => "status-confirme",
+        "Annulé"     => "status-annule",
+        "Terminé"    => "status-termine",
+        _            => "status-attente"
+    };
+
+    private string GetStatusIcon(string s) => s switch
+    {
+        "En attente" => "⏳", "Confirmé" => "✅",
+        "Annulé"     => "❌", "Terminé"  => "🏁", _ => "📋"
+    };
+
+    public class AppointmentDetailDto
+    {
+        public int      Id               { get; set; }
+        public string   PatientName      { get; set; } = "";
+        public int      DoctorId         { get; set; }
+        public string   DoctorName       { get; set; } = "";
+        public string   DoctorSpeciality { get; set; } = "";
+        public string   DoctorAddress    { get; set; } = "";
+        public DateTime DateTime         { get; set; }
+        public DateTime CreatedAt        { get; set; }
+        public string   Status           { get; set; } = "";
+        public string   Type             { get; set; } = "";
+        public string?  Reason           { get; set; }
+        public string?  Notes            { get; set; }
+        public bool     IsUrgent         { get; set; }
+    }
+
+    public class UpdateStatusDto
+    {
+        public string  Status { get; set; } = "";
+        public string? Notes  { get; set; }
+    }
+}

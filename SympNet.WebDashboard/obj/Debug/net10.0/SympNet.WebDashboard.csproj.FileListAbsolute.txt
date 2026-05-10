@@ -32,8 +32,6 @@ C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Deb
 C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\scopedcss\Components\Layout\ReconnectModal.razor.rz.scp.css
 C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\scopedcss\bundle\SympNet.WebDashboard.styles.css
 C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\scopedcss\projectbundle\SympNet.WebDashboard.bundle.scp.css
-C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\blsrp4t24o-{0}-khy4lop6wu-khy4lop6wu.gz
-C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\tnns54p17u-{0}-epqj1x95p0-epqj1x95p0.gz
 C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\7o86ujzemu-{0}-t1cqhe9u97-t1cqhe9u97.gz
 C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\nwk3yw08eh-{0}-c2jlpeoesf-c2jlpeoesf.gz
 C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\3n0grq9ukt-{0}-sejl45xvog-sejl45xvog.gz
@@ -94,3 +92,11 @@ C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Deb
 C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\SympNet.WebDashboard.pdb
 C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\SympNet.WebDashboard.genruntimeconfig.cache
 C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\ref\SympNet.WebDashboard.dll
+C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\bin\Debug\net10.0\Microsoft.AspNetCore.Http.Connections.Client.dll
+C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\bin\Debug\net10.0\Microsoft.AspNetCore.SignalR.Client.dll
+C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\bin\Debug\net10.0\Microsoft.AspNetCore.SignalR.Client.Core.dll
+C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\blsrp4t24o-{0}-5g1s5tmek4-5g1s5tmek4.gz
+C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\tnns54p17u-{0}-n14ge2sliy-n14ge2sliy.gz
+C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\t2h0zp13t8-{0}-ped898yf3t-ped898yf3t.gz
+C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\26y46dvbh5-{0}-x9814wmmfx-x9814wmmfx.gz
+C:\Users\Yasmine\Documents\Symp\sympnet-web-service\SympNet.WebDashboard\obj\Debug\net10.0\compressed\zpoioqvix1-{0}-wcng5d4tlv-wcng5d4tlv.gz

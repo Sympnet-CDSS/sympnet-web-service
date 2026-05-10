@@ -1,32 +1,21 @@
 {
   "version": 2,
-  "dgSpecHash": "gftbMsmW4z0=",
+  "dgSpecHash": "DAuR9sZYecY=",
   "success": true,
   "projectFilePath": "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.6\\microsoft.aspnetcore.app.internal.assets.10.0.6.nupkg.sha512",
     "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\10.0.6\\microsoft.aspnetcore.authentication.jwtbearer.10.0.6.nupkg.sha512",
+    "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.aspnetcore.http.connections.client\\10.0.7\\microsoft.aspnetcore.http.connections.client.10.0.7.nupkg.sha512",
+    "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.aspnetcore.signalr.client\\10.0.7\\microsoft.aspnetcore.signalr.client.10.0.7.nupkg.sha512",
+    "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.aspnetcore.signalr.client.core\\10.0.7\\microsoft.aspnetcore.signalr.client.core.10.0.7.nupkg.sha512",
     "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.identitymodel.abstractions\\8.0.1\\microsoft.identitymodel.abstractions.8.0.1.nupkg.sha512",
     "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.identitymodel.jsonwebtokens\\8.0.1\\microsoft.identitymodel.jsonwebtokens.8.0.1.nupkg.sha512",
     "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.identitymodel.logging\\8.0.1\\microsoft.identitymodel.logging.8.0.1.nupkg.sha512",
     "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.identitymodel.protocols\\8.0.1\\microsoft.identitymodel.protocols.8.0.1.nupkg.sha512",
     "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.identitymodel.protocols.openidconnect\\8.0.1\\microsoft.identitymodel.protocols.openidconnect.8.0.1.nupkg.sha512",
     "C:\\Users\\Yasmine\\.nuget\\packages\\microsoft.identitymodel.tokens\\8.0.1\\microsoft.identitymodel.tokens.8.0.1.nupkg.sha512",
-    "C:\\Users\\Yasmine\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.0.1\\system.identitymodel.tokens.jwt.8.0.1.nupkg.sha512",
-    "C:\\Users\\Yasmine\\.nuget\\packages\\system.net.http.json\\10.0.6\\system.net.http.json.10.0.6.nupkg.sha512"
+    "C:\\Users\\Yasmine\\.nuget\\packages\\system.identitymodel.tokens.jwt\\8.0.1\\system.identitymodel.tokens.jwt.8.0.1.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1510",
-      "level": "Warning",
-      "message": "Le PackageReference System.Net.Http.Json ne sera pas supprimé. Envisagez de retirer ce package de vos dépendances, car il est probablement inutile.",
-      "projectPath": "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
-      "warningLevel": 1,
-      "filePath": "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
-      "libraryId": "System.Net.Http.Json",
-      "targetGraphs": [
-        "net10.0"
-      ]
-    }
-  ]
+  "logs": []
 }

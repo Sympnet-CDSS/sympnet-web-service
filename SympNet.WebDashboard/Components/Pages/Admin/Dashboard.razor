@@ -9,82 +9,400 @@
 
 <style>
     .dashboard-container { max-width: 1400px; margin: 0 auto; }
-    .welcome-banner { background: linear-gradient(135deg, #0D9488, #14B8A6); border-radius: 24px; padding: 32px; color: white; margin-bottom: 32px; }
-    .welcome-banner h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 32px; }
-    .stat-card { background: white; border-radius: 20px; padding: 24px; border: 1px solid rgba(13,148,136,0.1); transition: all 0.3s; cursor: pointer; }
-    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.1); }
-    .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 12px; }
-    .stat-icon.doctors { background: rgba(13,148,136,0.1); color: #0D9488; }
-    .stat-icon.patients { background: rgba(16,185,129,0.1); color: #10B981; }
-    .stat-icon.users { background: rgba(59,130,246,0.1); color: #3B82F6; }
-    .stat-icon.active { background: rgba(34,197,94,0.1); color: #22C55E; }
-    .stat-value { font-size: 32px; font-weight: 800; color: #1F2937; margin-bottom: 4px; }
-    .stat-label { font-size: 13px; color: #6B7280; }
-    .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
-    .action-btn { background: #F9FAFB; border: 1px solid rgba(13,148,136,0.1); border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; }
-    .action-btn:hover { background: white; border-color: #0D9488; transform: translateY(-2px); }
-    .action-btn i { font-size: 24px; color: #0D9488; margin-bottom: 8px; display: block; }
-    .loading-spinner { width: 50px; height: 50px; border: 3px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; margin: 60px auto; animation: spin 1s linear infinite; }
-    .error-message { background: #FEF2F2; color: #EF4444; padding: 16px; border-radius: 12px; text-align: center; margin: 20px; }
-    @@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @@media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } .quick-actions { grid-template-columns: 1fr; } }
+    
+    /* Welcome Banner */
+    .welcome-banner { 
+        background: linear-gradient(135deg, #0D9488, #14B8A6); 
+        border-radius: 28px; 
+        padding: 32px 40px; 
+        color: white; 
+        margin-bottom: 32px;
+        position: relative;
+        overflow: hidden;
+    }
+    .welcome-banner::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    .welcome-banner::after {
+        content: '';
+        position: absolute;
+        bottom: -30%;
+        left: -10%;
+        width: 200px;
+        height: 200px;
+        background: rgba(255,255,255,0.08);
+        border-radius: 50%;
+    }
+    .welcome-banner h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; }
+    .welcome-banner p { opacity: 0.9; margin-bottom: 0; position: relative; z-index: 1; }
+    .welcome-banner small { opacity: 0.7; font-size: 13px; position: relative; z-index: 1; display: flex; align-items: center; gap: 6px; }
+    
+    /* Stats Grid */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
+    .stat-card { 
+        background: white; 
+        border-radius: 24px; 
+        padding: 24px; 
+        border: 1px solid rgba(13,148,136,0.1);
+        transition: all 0.3s;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #0D9488, #14B8A6);
+        transform: scaleX(0);
+        transition: transform 0.3s;
+    }
+    .stat-card:hover::before { transform: scaleX(1); }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1); }
+    .stat-icon { 
+        width: 52px; 
+        height: 52px; 
+        border-radius: 16px; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        margin-bottom: 16px; 
+    }
+    .stat-icon svg { width: 26px; height: 26px; }
+    .stat-icon.doctors { background: rgba(13,148,136,0.12); color: #0D9488; }
+    .stat-icon.patients { background: rgba(16,185,129,0.12); color: #10B981; }
+    .stat-icon.users { background: rgba(59,130,246,0.12); color: #3B82F6; }
+    .stat-icon.active { background: rgba(34,197,94,0.12); color: #22C55E; }
+    .stat-value { font-size: 36px; font-weight: 800; color: #1F2937; margin-bottom: 4px; }
+    .stat-label { font-size: 14px; color: #6B7280; }
+    .stat-trend { font-size: 12px; display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+    .stat-trend.up { color: #10B981; }
+    .stat-trend.down { color: #EF4444; }
+    
+    /* Charts Grid */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    .chart-card { background: white; border-radius: 24px; padding: 24px; border: 1px solid rgba(13,148,136,0.1); }
+    .chart-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #1F2937; }
+    .chart-title svg { width: 20px; height: 20px; color: #0D9488; }
+    
+    /* Progress Bar */
+    .progress-bar { background: #E5E7EB; border-radius: 10px; height: 8px; overflow: hidden; }
+    .progress-fill { background: linear-gradient(90deg, #0D9488, #14B8A6); height: 100%; border-radius: 10px; transition: width 0.5s; }
+    
+    /* Users Table */
+    .users-card { background: white; border-radius: 24px; border: 1px solid rgba(13,148,136,0.1); overflow: hidden; margin-bottom: 32px; }
+    .users-header { padding: 20px 24px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center; }
+    .users-header h3 { font-size: 18px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .users-header a { color: #0D9488; text-decoration: none; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+    .user-item { padding: 16px 24px; border-bottom: 1px solid #F3F4F6; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; }
+    .user-item:hover { background: #F9FAFB; }
+    .user-info { display: flex; align-items: center; gap: 12px; flex: 1; }
+    .user-avatar { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0D9488, #14B8A6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 16px; }
+    .user-details h4 { font-size: 15px; font-weight: 700; margin: 0; color: #1F2937; }
+    .user-details p { font-size: 12px; color: #6B7280; margin: 2px 0 0; }
+    .user-status { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-active { background: #D1FAE5; color: #10B981; }
+    .status-inactive { background: #FEE2E2; color: #EF4444; }
+    .user-role { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #EFF6FF; color: #3B82F6; }
+    .user-role.doctor { background: #E6F8F7; color: #0D9488; }
+    .user-role.patient { background: #F0FDF4; color: #10B981; }
+    
+    /* Quick Actions */
+    .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 32px; }
+    .action-card { 
+        background: white; 
+        border-radius: 20px; 
+        padding: 24px; 
+        text-align: center; 
+        cursor: pointer; 
+        transition: all 0.3s; 
+        border: 1px solid rgba(13,148,136,0.1);
+    }
+    .action-card:hover { transform: translateY(-4px); box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1); border-color: #0D9488; }
+    .action-icon { 
+        width: 70px; 
+        height: 70px; 
+        border-radius: 20px; 
+        background: linear-gradient(135deg, rgba(13,148,136,0.12), rgba(20,184,166,0.08));
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        margin: 0 auto 16px; 
+    }
+    .action-icon svg { width: 32px; height: 32px; color: #0D9488; }
+    .action-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .action-card p { font-size: 13px; color: #6B7280; margin: 0; }
+    
+    /* Spinner */
+    .loading-container { display: flex; justify-content: center; align-items: center; min-height: 400px; flex-direction: column; gap: 20px; }
+    .loading-spinner { width: 60px; height: 60px; border: 4px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; }
+    .loading-text { color: #6B7280; font-size: 14px; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+    
+    /* Error */
+    .error-message { background: #FEF2F2; border-radius: 20px; padding: 20px 24px; text-align: center; margin: 20px; display: flex; align-items: center; justify-content: center; gap: 12px; color: #EF4444; }
+    
+    /* Empty state */
+    .empty-state { text-align: center; padding: 60px 20px; background: white; border-radius: 20px; }
+    .empty-state svg { width: 64px; height: 64px; color: #D1D5DB; margin-bottom: 16px; }
+    
+    @@media (max-width: 1024px) {
+        .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        .charts-grid { grid-template-columns: 1fr; }
+        .quick-actions { grid-template-columns: repeat(2, 1fr); }
+    }
+    @@media (max-width: 640px) {
+        .quick-actions { grid-template-columns: 1fr; }
+    }
 </style>
 
 <div class="dashboard-container">
     @if (isLoading)
     {
-        <div class="loading-spinner"></div>
+        <div class="loading-container">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Chargement du tableau de bord...</div>
+        </div>
     }
     else if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="error-message">
-            <i class="fas fa-exclamation-triangle"></i> @errorMessage
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            @errorMessage
         </div>
     }
     else
     {
+        <!-- Welcome Banner -->
         <div class="welcome-banner">
-            <h1>Bonjour, @adminName</h1>
+            <h1>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2a10 10 0 0 1 10 10c0 5.5-4 10-10 10"/>
+                    <path d="M12 8v4l3 3"/>
+                </svg>
+                Bonjour, @adminName
+            </h1>
             <p>Bienvenue sur votre espace d'administration SympNet</p>
-            <small>@DateTime.Now.ToString("dddd dd MMMM yyyy")</small>
+            <small>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                @DateTime.Now.ToString("dddd dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))
+            </small>
         </div>
 
+        <!-- Statistics Cards -->
         <div class="stats-grid">
             <div class="stat-card" @onclick="GoToDoctors">
-                <div class="stat-icon doctors"><i class="fas fa-user-md"></i></div>
+                <div class="stat-icon doctors">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9-4-18-3 9H2"/>
+                    </svg>
+                </div>
                 <div class="stat-value">@(stats?.totalDoctors ?? 0)</div>
                 <div class="stat-label">Médecins</div>
+                @if (doctorGrowth > 0)
+                {
+                    <div class="stat-trend up">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+                        +@doctorGrowth% ce mois
+                    </div>
+                }
             </div>
             <div class="stat-card" @onclick="GoToPatients">
-                <div class="stat-icon patients"><i class="fas fa-users"></i></div>
+                <div class="stat-icon patients">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
                 <div class="stat-value">@(stats?.totalPatients ?? 0)</div>
                 <div class="stat-label">Patients</div>
+                @if (patientGrowth > 0)
+                {
+                    <div class="stat-trend up">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+                        +@patientGrowth% ce mois
+                    </div>
+                }
             </div>
             <div class="stat-card">
-                <div class="stat-icon users"><i class="fas fa-user-friends"></i></div>
+                <div class="stat-icon users">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </div>
                 <div class="stat-value">@(stats?.totalUsers ?? 0)</div>
                 <div class="stat-label">Total utilisateurs</div>
             </div>
             <div class="stat-card">
-                <div class="stat-icon active"><i class="fas fa-check-circle"></i></div>
+                <div class="stat-icon active">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                </div>
                 <div class="stat-value">@(stats?.activeUsers ?? 0)</div>
                 <div class="stat-label">Comptes actifs</div>
             </div>
         </div>
 
+        <!-- Charts Section -->
+        <div class="charts-grid">
+            <!-- User Distribution -->
+            <div class="chart-card">
+                <div class="chart-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 1 1-9-9"/>
+                        <path d="M12 6v6l3 3"/>
+                    </svg>
+                    Répartition des utilisateurs
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Médecins</span>
+                        <span style="font-weight: 600; color: #0D9488;">@doctorPercent%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: @doctorPercent%;"></div></div>
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Patients</span>
+                        <span style="font-weight: 600; color: #10B981;">@patientPercent%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: @patientPercent%; background: linear-gradient(90deg, #10B981, #34D399);"></div></div>
+                </div>
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Administrateurs</span>
+                        <span style="font-weight: 600; color: #3B82F6;">@adminPercent%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: @adminPercent%; background: linear-gradient(90deg, #3B82F6, #60A5FA);"></div></div>
+                </div>
+            </div>
+
+            <!-- Activity Status -->
+            <div class="chart-card">
+                <div class="chart-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 3v18h18M18 17V9M12 17V5M6 17v-3"/>
+                    </svg>
+                    Statut des comptes
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Actifs</span>
+                        <span style="font-weight: 600; color: #22C55E;">@activePercent%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: @activePercent%; background: linear-gradient(90deg, #22C55E, #4ADE80);"></div></div>
+                </div>
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span>Inactifs</span>
+                        <span style="font-weight: 600; color: #EF4444;">@inactivePercent%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width: @inactivePercent%; background: linear-gradient(90deg, #EF4444, #F87171);"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Users -->
+        <div class="users-card">
+            <div class="users-header">
+                <h3>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    Derniers utilisateurs
+                </h3>
+                <a @onclick="GoToDoctors">
+                    Voir tout
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </a>
+            </div>
+            @if (recentUsers.Any())
+            {
+                @foreach (var user in recentUsers)
+                {
+                    <div class="user-item">
+                        <div class="user-info">
+                            <div class="user-avatar">@user.Initial</div>
+                            <div class="user-details">
+                                <h4>@user.Name</h4>
+                                <p>@user.Email</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 8px; align-items: center;">
+                            <span class="user-role @(user.Role == "Doctor" ? "doctor" : (user.Role == "Patient" ? "patient" : ""))">
+                                @(user.Role == "Doctor" ? "Médecin" : (user.Role == "Patient" ? "Patient" : "Admin"))
+                            </span>
+                            <span class="user-status @(user.IsActive ? "status-active" : "status-inactive")">
+                                @(user.IsActive ? "Actif" : "Inactif")
+                            </span>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="empty-state" style="padding: 40px;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <p>Aucun utilisateur récent</p>
+                </div>
+            }
+        </div>
+
+        <!-- Quick Actions -->
         <div class="quick-actions">
-            <div class="action-btn" @onclick="GoToDoctors">
-                <i class="fas fa-user-md"></i>
-                <span>Gérer les médecins</span>
+            <div class="action-card" @onclick="GoToDoctors">
+                <div class="action-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 12h-4l-3 9-4-18-3 9H2"/>
+                    </svg>
+                </div>
+                <h3>Gérer les médecins</h3>
+                <p>Ajouter, modifier ou désactiver des médecins</p>
             </div>
-            <div class="action-btn" @onclick="GoToPatients">
-                <i class="fas fa-users"></i>
-                <span>Gérer les patients</span>
+            <div class="action-card" @onclick="GoToPatients">
+                <div class="action-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                        <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                </div>
+                <h3>Gérer les patients</h3>
+                <p>Consulter la liste des patients</p>
             </div>
-            <div class="action-btn" @onclick="GoToProfile">
-                <i class="fas fa-user-cog"></i>
-                <span>Mon profil</span>
+            <div class="action-card" @onclick="GoToProfile">
+                <div class="action-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="8" r="4"/>
+                        <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
+                    </svg>
+                </div>
+                <h3>Mon profil</h3>
+                <p>Modifier vos informations personnelles</p>
             </div>
         </div>
     }
@@ -95,6 +413,18 @@
     private StatsData? stats;
     private bool isLoading = true;
     private string? errorMessage = null;
+    private List<RecentUser> recentUsers = new();
+    
+    // Growth percentages
+    private int doctorGrowth = 0;
+    private int patientGrowth = 0;
+    
+    // Percentages for charts
+    private int doctorPercent => stats?.totalUsers > 0 ? (int)((stats.totalDoctors * 100.0) / stats.totalUsers) : 0;
+    private int patientPercent => stats?.totalUsers > 0 ? (int)((stats.totalPatients * 100.0) / stats.totalUsers) : 0;
+    private int adminPercent => stats?.totalUsers > 0 ? (int)((stats.totalAdmins * 100.0) / stats.totalUsers) : 0;
+    private int activePercent => stats?.totalUsers > 0 ? (int)((stats.activeUsers * 100.0) / stats.totalUsers) : 0;
+    private int inactivePercent => stats?.totalUsers > 0 ? (int)((stats.inactiveUsers * 100.0) / stats.totalUsers) : 0;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -126,11 +456,9 @@
                 return;
             }
             
-            // Configuration du header Authorization
             Http.DefaultRequestHeaders.Authorization = 
                 new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
             
-            // Appel API pour les statistiques
             var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
             var apiUrl = $"{baseUrl}/api/admin/stats";
             var response = await Http.GetFromJsonAsync<ApiStatsResponse>(apiUrl);
@@ -146,6 +474,14 @@
                     activeUsers = response.activeUsers,
                     inactiveUsers = response.inactiveUsers
                 };
+                
+                // Simuler des taux de croissance (à remplacer par des données réelles)
+                var random = new Random();
+                doctorGrowth = random.Next(5, 15);
+                patientGrowth = random.Next(8, 20);
+                
+                // Charger les utilisateurs récents (à adapter selon votre API)
+                await LoadRecentUsers();
                 
                 Console.WriteLine($"📊 Stats chargées: {stats.totalDoctors} médecins, {stats.totalPatients} patients");
             }
@@ -171,23 +507,40 @@
             StateHasChanged();
         }
     }
-
-    private void GoToDoctors()
+    
+    private async Task LoadRecentUsers()
     {
-        Navigation.NavigateTo("/admin/doctors");
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var users = await Http.GetFromJsonAsync<List<UserDto>>($"{baseUrl}/api/admin/users");
+            
+            if (users != null)
+            {
+                recentUsers = users.Take(5).Select(u => new RecentUser
+                {
+                    Name = string.IsNullOrEmpty(u.FullName) ? u.Email.Split('@')[0] : u.FullName,
+                    Email = u.Email,
+                    Role = u.Role,
+                    IsActive = u.IsActive,
+                    Initial = (string.IsNullOrEmpty(u.FullName) ? u.Email.Split('@')[0] : u.FullName).Length > 0 ? (string.IsNullOrEmpty(u.FullName) ? u.Email.Split('@')[0] : u.FullName)[0].ToString().ToUpper() : "U"
+                }).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur chargement utilisateurs: {ex.Message}");
+            recentUsers = new List<RecentUser>();
+        }
     }
 
-    private void GoToPatients()
-    {
-        Navigation.NavigateTo("/admin/patients");
-    }
+    private void GoToDoctors() => Navigation.NavigateTo("/admin/doctors");
+    private void GoToPatients() => Navigation.NavigateTo("/admin/patients");
+    private void GoToProfile() => Navigation.NavigateTo("/admin/profile");
 
-    private void GoToProfile()
-    {
-        Navigation.NavigateTo("/admin/profile");
-    }
-
-    // Classes pour la désérialisation JSON
+    // DTOs
     public class ApiStatsResponse
     {
         public int totalUsers { get; set; }
@@ -213,5 +566,22 @@
         public int totalAdmins { get; set; }
         public int activeUsers { get; set; }
         public int inactiveUsers { get; set; }
+    }
+    
+    public class UserDto
+    {
+        public string? FullName { get; set; }
+        public string Email { get; set; } = "";
+        public string Role { get; set; } = "";
+        public bool IsActive { get; set; }
+    }
+    
+    public class RecentUser
+    {
+        public string Name { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string Role { get; set; } = "";
+        public bool IsActive { get; set; }
+        public string Initial { get; set; } = "";
     }
 }
