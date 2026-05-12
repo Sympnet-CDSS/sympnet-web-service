@@ -17,11 +17,16 @@ public class AppointmentsController : ControllerBase
 {
     private readonly AppDbContext                 _db;
     private readonly IHubContext<NotificationHub> _hub;
+    private readonly IHubContext<ChatHub>         _chatHub; // ✅ ajouté
 
-    public AppointmentsController(AppDbContext db, IHubContext<NotificationHub> hub)
+    public AppointmentsController(
+        AppDbContext db,
+        IHubContext<NotificationHub> hub,
+        IHubContext<ChatHub> chatHub) // ✅ ajouté
     {
-        _db  = db;
-        _hub = hub;
+        _db      = db;
+        _hub     = hub;
+        _chatHub = chatHub; // ✅ ajouté
     }
 
     private Guid GetCurrentUserId()
@@ -52,7 +57,7 @@ public class AppointmentsController : ControllerBase
                 DateTime         = a.DateTime,
                 Status           = a.Status,
                 Notes            = a.Notes,
-                Type             = a.Type,
+                Type             = a.Type ?? "Consultation",
                 IsUrgent         = a.IsUrgent,
                 Reason           = a.Reason
             })
@@ -94,7 +99,7 @@ public class AppointmentsController : ControllerBase
             DateTime         = appointment.DateTime,
             Status           = appointment.Status,
             Notes            = appointment.Notes,
-            Type             = appointment.Type,
+            Type             = appointment.Type ?? "Consultation",
             IsUrgent         = appointment.IsUrgent,
             Reason           = appointment.Reason,
             CreatedAt        = appointment.CreatedAt
@@ -125,6 +130,23 @@ public class AppointmentsController : ControllerBase
                 a.Status,
                 a.Notes
             })
+            .ToListAsync();
+
+        return Ok(appointments);
+    }
+
+    // ── GET api/appointments/confirmed ───────────────────────────────────────
+    // ✅ Vérifie si un rendez-vous confirmé existe entre patient et docteur
+    [HttpGet("confirmed")]
+    [Authorize]
+    public async Task<IActionResult> GetConfirmedAppointments(
+        [FromQuery] Guid patientId,
+        [FromQuery] int doctorId)
+    {
+        var appointments = await _db.Appointments
+            .Where(a => a.PatientId == patientId
+                     && a.DoctorId  == doctorId
+                     && a.Status    == "Confirmé")
             .ToListAsync();
 
         return Ok(appointments);
@@ -169,6 +191,9 @@ public class AppointmentsController : ControllerBase
             _db.Appointments.Add(appointment);
             await _db.SaveChangesAsync();
 
+            // ✅ Créer conversation automatiquement quand docteur crée le RDV
+            await CreateConversationIfNotExists(appointment);
+
             return Ok(new { message = "Rendez-vous créé avec succès", appointmentId = appointment.Id });
         }
         else
@@ -210,12 +235,14 @@ public class AppointmentsController : ControllerBase
     // ── PATCH api/appointments/{id}/status ───────────────────────────────────
     [HttpPatch("{id}/status")]
     [Authorize(Roles = "Doctor")]
-    public async Task<IActionResult> UpdateAppointmentStatus(int id, [FromBody] UpdateAppointmentStatusDto dto)
+    public async Task<IActionResult> UpdateAppointmentStatus(
+        int id, [FromBody] UpdateAppointmentStatusDto dto)
     {
         var userId = GetCurrentUserId();
 
         var appointment = await _db.Appointments
             .Include(a => a.Patient)
+            .Include(a => a.Doctor) // ✅ ajouté pour accéder au nom du docteur
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (appointment == null)
@@ -235,6 +262,12 @@ public class AppointmentsController : ControllerBase
 
         await _db.SaveChangesAsync();
 
+        // ✅ Créer la conversation automatiquement si le RDV est confirmé
+        if (dto.Status == "Confirmé")
+        {
+            await CreateConversationIfNotExists(appointment);
+        }
+
         try
         {
             var statusEmoji = dto.Status switch
@@ -248,7 +281,6 @@ public class AppointmentsController : ControllerBase
             var title   = $"{statusEmoji} Rendez-vous {dto.Status}";
             var message = $"Votre rendez-vous du {appointment.DateTime:dd/MM/yyyy à HH:mm} a été {dto.Status.ToLower()} par votre médecin.";
 
-            // ✅ Sauvegarder en base
             _db.PatientNotifications.Add(new PatientNotification
             {
                 PatientUserId = appointment.PatientId,
@@ -261,21 +293,20 @@ public class AppointmentsController : ControllerBase
             });
             await _db.SaveChangesAsync();
 
-            // ✅ Pousser via SignalR
             await _hub.Clients
                       .Group($"user_{appointment.PatientId}")
                       .SendAsync("ReceiveNotification", new
                       {
-                        title         = title,
-                        message       = message,
-                        appointmentId = appointment.Id,
-                        status        = dto.Status,
-                        sentAt        = DateTime.UtcNow
+                          title,
+                          message,
+                          appointmentId = appointment.Id,
+                          status        = dto.Status,
+                          sentAt        = DateTime.UtcNow
                       });
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[SignalR] Erreur: {ex.Message}");
+            Console.WriteLine($"[SignalR] Erreur notification: {ex.Message}");
         }
 
         return Ok(new
@@ -286,54 +317,111 @@ public class AppointmentsController : ControllerBase
         });
     }
 
+    // ── Méthode privée — crée conversation + message bienvenue ───────────────
+    private async Task CreateConversationIfNotExists(Appointment appointment)
+    {
+        try
+        {
+            // Recharger avec Doctor et Patient si pas déjà chargés
+            if (appointment.Doctor == null || appointment.Patient == null)
+            {
+                appointment = await _db.Appointments
+                    .Include(a => a.Doctor)
+                    .Include(a => a.Patient)
+                    .FirstAsync(a => a.Id == appointment.Id);
+            }
+
+            var doctorUserId = appointment.Doctor?.UserId ?? Guid.Empty;
+
+            var existingConv = await _db.Conversations
+                .FirstOrDefaultAsync(c =>
+                    c.DoctorId  == doctorUserId &&
+                    c.PatientId == appointment.PatientId);
+
+            if (existingConv != null) return; // déjà créée
+
+            var conversation = new Conversation
+            {
+                DoctorId      = doctorUserId,
+                PatientId     = appointment.PatientId,
+                CreatedAt     = DateTime.UtcNow,
+                LastMessageAt = DateTime.UtcNow
+            };
+            _db.Conversations.Add(conversation);
+            await _db.SaveChangesAsync(); // ✅ SaveChanges avant d'utiliser conversation.Id
+
+            var doctorName = appointment.Doctor != null
+                ? $"Dr. {appointment.Doctor.FirstName} {appointment.Doctor.LastName}"
+                : "Votre médecin";
+
+            var welcomeMessage = new ChatMessage
+            {
+                ConversationId = conversation.Id,
+                SenderId       = doctorUserId,
+                SenderRole     = "doctor",
+                Content        = $"Bonjour, votre rendez-vous du {appointment.DateTime:dd/MM/yyyy à HH:mm} est confirmé. N'hésitez pas à me contacter.",
+                SentAt         = DateTime.UtcNow
+            };
+            _db.ChatMessages.Add(welcomeMessage);
+            await _db.SaveChangesAsync();
+
+            // ✅ Notifier le patient via SignalR
+            await _chatHub.Clients
+                .User(appointment.PatientId.ToString())
+                .SendAsync("ConversationCreated",
+                    doctorName,
+                    appointment.DateTime.ToString("dd/MM/yyyy"));
+
+            Console.WriteLine($"[Chat] Conversation créée entre docteur {appointment.DoctorId} et patient {appointment.PatientId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Chat] Erreur création conversation: {ex.Message}");
+        }
+    }
+
     private async Task NotifyDoctorAsync(Appointment appointment, Guid patientUserId)
-{
-    try
     {
-        var patient     = await _db.Users.FindAsync(patientUserId);
-        var patientName = patient?.FullName ?? "Un patient";
-
-        var doctor = await _db.Doctors.FindAsync(appointment.DoctorId);
-        if (doctor == null) return;
-
-        var title   = "Nouveau rendez-vous 📅";
-        var message = $"{patientName} a pris rendez-vous le {appointment.DateTime:dd/MM/yyyy à HH:mm}";
-
-        // ✅ Sauvegarder en base
-        var dbNotif = new DoctorNotification
+        try
         {
-            DoctorUserId  = doctor.UserId,
-            Title         = title,
-            Message       = message,
-            AppointmentId = appointment.Id,
-            IsUrgent      = appointment.IsUrgent,
-            IsRead        = false,
-            SentAt        = DateTime.UtcNow
-        };
-        _db.DoctorNotifications.Add(dbNotif);
-        await _db.SaveChangesAsync();
+            var patient     = await _db.Users.FindAsync(patientUserId);
+            var patientName = patient?.FullName ?? "Un patient";
 
-        // ✅ Pousser via SignalR
-        var notification = new
+            var doctor = await _db.Doctors.FindAsync(appointment.DoctorId);
+            if (doctor == null) return;
+
+            var title   = "Nouveau rendez-vous 📅";
+            var message = $"{patientName} a pris rendez-vous le {appointment.DateTime:dd/MM/yyyy à HH:mm}";
+
+            var dbNotif = new DoctorNotification
+            {
+                DoctorUserId  = doctor.UserId,
+                Title         = title,
+                Message       = message,
+                AppointmentId = appointment.Id,
+                IsUrgent      = appointment.IsUrgent,
+                IsRead        = false,
+                SentAt        = DateTime.UtcNow
+            };
+            _db.DoctorNotifications.Add(dbNotif);
+            await _db.SaveChangesAsync();
+
+            await _hub.Clients
+                      .Group($"doctor_user_{doctor.UserId}")
+                      .SendAsync("ReceiveNotification", new
+                      {
+                          id            = dbNotif.Id,
+                          type          = "NEW_APPOINTMENT",
+                          title,
+                          message,
+                          appointmentId = appointment.Id,
+                          isUrgent      = appointment.IsUrgent,
+                          sentAt        = DateTime.UtcNow
+                      });
+        }
+        catch (Exception ex)
         {
-            id            = dbNotif.Id,
-            type          = "NEW_APPOINTMENT",
-            title         = title,
-            message       = message,
-            appointmentId = appointment.Id,
-            isUrgent      = appointment.IsUrgent,
-            sentAt        = DateTime.UtcNow
-        };
-
-        await _hub.Clients
-                  .Group($"doctor_user_{doctor.UserId}")
-                  .SendAsync("ReceiveNotification", notification);
-
-        Console.WriteLine($"[SignalR] Notifié → doctor_user_{doctor.UserId}");
+            Console.WriteLine($"[SignalR] Erreur: {ex.Message}");
+        }
     }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"[SignalR] Erreur: {ex.Message}");
-    }
-}
 }

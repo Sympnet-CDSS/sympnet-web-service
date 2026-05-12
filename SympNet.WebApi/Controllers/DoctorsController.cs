@@ -76,8 +76,8 @@ public class DoctorsController : ControllerBase
             FirstName = dto.FirstName,
             LastName = dto.LastName,
             Speciality = dto.Speciality,
-            LicenseNumber = dto.LicenseNumber,
-            Address = dto.Address,
+            LicenseNumber = dto.LicenseNumber ?? string.Empty,
+            Address = dto.Address ?? string.Empty,
             Latitude = dto.Latitude,
             Longitude = dto.Longitude,
             CreatedAt = DateTime.UtcNow

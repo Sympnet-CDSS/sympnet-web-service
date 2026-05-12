@@ -242,7 +242,7 @@ private async Task InitializeSignalR(string token)
     {
         var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
         _hubConnection = new HubConnectionBuilder()
-            .WithUrl($"{baseUrl}/hubs/notification", options =>
+            .WithUrl($"{baseUrl}/hubs/notifications", options =>
             {
                 options.AccessTokenProvider = () => Task.FromResult(token)!;
             })
@@ -273,8 +273,8 @@ private async Task LoadUnreadCount()
     
     try
     {
-        var result = await Http.GetFromJsonAsync<dynamic>($"{baseUrl}/api/chat/unread-count");
-        unreadCount = result?.unreadCount ?? 0;
+        var result = await Http.GetFromJsonAsync<JsonElement>($"{baseUrl}/api/chat/unread-count");
+        unreadCount = result.TryGetProperty("unreadCount", out var prop) ? prop.GetInt32() : 0;
         
         // Optionnel: Log de succès en mode développement
         #if DEBUG

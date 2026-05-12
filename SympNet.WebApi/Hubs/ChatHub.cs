@@ -9,8 +9,12 @@ public class ChatHub : Hub
 {
     public override async Task OnConnectedAsync()
     {
+        var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        Console.WriteLine($" SignalR connected: {userId}");
         await base.OnConnectedAsync();
     }
+
+    //  Consultation rooms 
 
     public async Task JoinConsultation(string consultationId)
     {
@@ -22,74 +26,88 @@ public class ChatHub : Hub
     public async Task LeaveConsultation(string consultationId)
     {
         await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"consultation_{consultationId}");
+        await Clients.Group($"consultation_{consultationId}")
+            .SendAsync("UserLeft", Context.UserIdentifier);
     }
+
+    //  Chat 
 
     public async Task SendMessage(string consultationId, string message, bool isVoice = false)
     {
-        var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var senderId   = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var senderName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
         var senderRole = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
 
+        //  Paramètres séparés — pas d'objet anonyme
+        // Android : hubConnection.on("ReceiveMessage", ..., String, String, String, String, Boolean, String)
         await Clients.Group($"consultation_{consultationId}")
-            .SendAsync("ReceiveMessage", new
-            {
+            .SendAsync("ReceiveMessage",
                 senderId,
                 senderName,
                 senderRole,
-                content = message,
+                message,
                 isVoice,
-                sentAt = DateTime.UtcNow,
-            });
+                DateTime.UtcNow.ToString("o"));
     }
 
     public async Task SendTyping(string consultationId, bool isTyping)
     {
         var senderName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
+
+        //  Paramètres séparés
+        // Android : hubConnection.on("UserTyping", ..., String, Boolean)
         await Clients.OthersInGroup($"consultation_{consultationId}")
-            .SendAsync("UserTyping", new { senderName, isTyping });
+            .SendAsync("UserTyping", senderName, isTyping);
     }
 
-    // --- WebRTC Signaling ---
+    //  WebRTC Signaling 
+
     public async Task SendOffer(string targetUserId, string sdp)
     {
-        var callerId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var callerId   = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var callerName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
-        
-        await Clients.User(targetUserId).SendAsync("ReceiveOffer", callerId, sdp);
-        await Clients.User(targetUserId).SendAsync("IncomingCall", new 
-        { 
-            SessionId = Guid.NewGuid(), 
-            CallerId = callerId, 
-            CallerName = callerName 
-        });
+        var sessionId  = Guid.NewGuid().ToString();
+
+        //  Un seul événement avec paramètres séparés
+        // Android : hubConnection.on("IncomingCall", ..., String, String, String, String)
+        await Clients.User(targetUserId)
+            .SendAsync("IncomingCall", sessionId, callerId, callerName, sdp);
     }
 
     public async Task SendAnswer(string targetUserId, string sdp)
     {
         var answererId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        await Clients.User(targetUserId).SendAsync("ReceiveAnswer", answererId, sdp);
+
+        //  Notifie le caller (targetUserId) que l'appel est accepté + SDP answer
+        // Android : hubConnection.on("CallAccepted", ..., String, String)
+        await Clients.User(targetUserId)
+            .SendAsync("CallAccepted", answererId, sdp);
     }
 
-    public async Task SendIceCandidate(string targetUserId, string candidate, string sdpMid, int sdpMLineIndex)
+    public async Task SendIceCandidate(string targetUserId, string candidate,
+                                       string sdpMid, int sdpMLineIndex)
     {
         var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        await Clients.User(targetUserId).SendAsync("ReceiveIceCandidate", senderId, candidate, sdpMid, sdpMLineIndex);
+
+        // Android : hubConnection.on("ReceiveIceCandidate", ..., String, String, String, Integer)
+        await Clients.User(targetUserId)
+            .SendAsync("ReceiveIceCandidate", senderId, candidate, sdpMid, sdpMLineIndex);
     }
 
-    public async Task AcceptCall(string sessionId)
+    public async Task RejectCall(string targetUserId, string sessionId)
     {
-        // Broadcast to caller that call is accepted
-        // Here we just broadcast to the other user assuming 1-1 mappings
-        await Clients.Caller.SendAsync("CallAccepted", sessionId);
+        //  Notifie le caller (targetUserId), pas le Caller lui-même
+        // Android : hubConnection.on("CallRejected", ..., String)
+        await Clients.User(targetUserId)
+            .SendAsync("CallRejected", sessionId);
     }
 
-    public async Task RejectCall(string sessionId)
+    public async Task EndCall(string targetUserId, string sessionId)
     {
-        await Clients.Caller.SendAsync("CallRejected", sessionId);
+        //  Notifie uniquement l'autre participant
+        // Android : hubConnection.on("CallEnded", ..., String)
+        await Clients.User(targetUserId)
+            .SendAsync("CallEnded", sessionId);
     }
-
-    public async Task EndCall()
-    {
-        await Clients.Others.SendAsync("CallEnded", new { SessionId = Guid.NewGuid(), Duration = 0 });
-    }
+    
 }

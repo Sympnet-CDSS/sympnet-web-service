@@ -14,6 +14,8 @@ builder.Configuration.AddJsonFile("appsettings.json", optional: false, reloadOnC
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddSignalR();
+
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
@@ -52,6 +54,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddScoped<JwtService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddSignalR();
+builder.Services.AddHttpContextAccessor();
 
 // ✅ CORS corrigé — AllowCredentials() requis par SignalR
 builder.Services.AddCors(options =>
@@ -116,9 +119,10 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-app.MapHub<ChatHub>("/chatHub");
+app.MapHub<ChatHub>("/hubs/chat");
 
 // ✅ LIGNE MANQUANTE — hub de notifications
 app.MapHub<NotificationHub>("/hubs/notifications");
+
 
 app.Run();

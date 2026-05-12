@@ -97,7 +97,7 @@ public class PatientsController : ControllerBase
             UserId = user.Id,
             FirstName = dto.FirstName,
             LastName = dto.LastName,
-            PhoneNumber = dto.PhoneNumber,
+            PhoneNumber = dto.PhoneNumber ?? string.Empty,
             DateOfBirth = dto.DateOfBirth,
             Gender = dto.Gender,
             ConsultationCount = 0
