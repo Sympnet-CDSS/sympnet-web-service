@@ -631,15 +631,15 @@
                 .WithAutomaticReconnect()
                 .Build();
 
-            hubConnection.On<dynamic>("ReceiveMessage", async (message) =>
+            hubConnection.On<string, string, string, string, bool, string>("ReceiveMessage", async (senderId, senderName, senderRole, content, isVoice, sentAt) =>
             {
-                if (selectedConversation?.OtherUserId.ToString() == message.senderId.ToString())
+                if (selectedConversation?.OtherUserId.ToString() == senderId)
                 {
                     messages.Add(new MessageDto
                     {
-                        Id = message.id,
-                        Content = message.content,
-                        SentAt = message.sentAt,
+                        Id = "",
+                        Content = content,
+                        SentAt = DateTime.TryParse(sentAt, out var date) ? date : DateTime.UtcNow,
                         IsMine = false,
                         IsRead = false
                     });
@@ -742,6 +742,10 @@
             
             if (response != null)
             {
+                foreach (var msg in response)
+                {
+                    msg.IsMine = (msg.SenderId != conversation.OtherUserId);
+                }
                 messages = response;
             }
             else
@@ -928,7 +932,8 @@
 
     private class MessageDto
     {
-        public long Id { get; set; }
+        public string Id { get; set; } = "";
+        public Guid SenderId { get; set; }
         public string Content { get; set; } = "";
         public DateTime SentAt { get; set; }
         public bool IsMine { get; set; }

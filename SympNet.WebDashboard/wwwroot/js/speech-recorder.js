@@ -17,36 +17,36 @@ class SpeechRecorder {
     async startRecording() {
         try {
             // Demander l'accès au microphone
-            const stream = await navigator.mediaDevices.getUserMedia({ 
+            const stream = await navigator.mediaDevices.getUserMedia({
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
                     autoGainControl: true
-                } 
+                }
             });
-            
+
             this.mediaRecorder = new MediaRecorder(stream);
             this.audioChunks = [];
             this.recordingStartTime = Date.now();
-            
+
             this.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     this.audioChunks.push(event.data);
                 }
             };
-            
+
             this.mediaRecorder.onstop = async () => {
                 await this.processAudio();
                 stream.getTracks().forEach(track => track.stop());
             };
-            
+
             this.mediaRecorder.start(100); // Collecter des chunks toutes les 100ms
             this.isRecording = true;
-            
+
             this.showUIState('recording');
             console.log("🎙️ Enregistrement démarré");
             return true;
-            
+
         } catch (error) {
             console.error(" Erreur accès microphone:", error);
             this.showError("Impossible d'accéder au microphone. Vérifiez les permissions.");
@@ -69,10 +69,10 @@ class SpeechRecorder {
         try {
             // Créer le blob audio
             const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
-            
+
             // Convertir en base64
             const base64 = await this.blobToBase64(audioBlob);
-            
+
             // Envoyer au backend
             const response = await fetch(`${this.apiBaseUrl}/api/speech/transcribe`, {
                 method: 'POST',
@@ -82,25 +82,25 @@ class SpeechRecorder {
                 },
                 body: JSON.stringify({ audio: base64 })
             });
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
             }
-            
+
             const result = await response.json();
-            
+
             if (result.success && result.text) {
                 this.transcribedText = result.text;
                 this.updateTextarea(result.text);
                 console.log(" Texte transcrit:", result.text);
                 this.showUIState('success');
-                
+
                 // Notification optionnelle
                 this.showNotification("Transcription terminée!", "success");
             } else {
                 throw new Error(result.error || "Erreur de transcription");
             }
-            
+
         } catch (error) {
             console.error("Erreur traitement audio:", error);
             this.showError("Erreur lors de la transcription: " + error.message);
@@ -147,8 +147,8 @@ class SpeechRecorder {
     showUIState(state) {
         const btn = document.getElementById('btnDictation');
         if (!btn) return;
-        
-        switch(state) {
+
+        switch (state) {
             case 'recording':
                 btn.style.animation = 'pulse 1s infinite';
                 btn.style.backgroundColor = '#ff4444';
@@ -187,7 +187,7 @@ class SpeechRecorder {
             success: '#10B981',
             error: '#EF4444'
         };
-        
+
         const notification = document.createElement('div');
         notification.style.cssText = `
             position: fixed;

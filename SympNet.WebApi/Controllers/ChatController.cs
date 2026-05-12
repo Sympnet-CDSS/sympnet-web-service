@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using SympNet.WebApi.Data;
 using SympNet.WebApi.Models;
@@ -16,13 +17,18 @@ namespace SympNet.WebApi.Controllers
     public class ChatController : ControllerBase
     {
         private readonly AppDbContext _db;
-        public ChatController(AppDbContext db) => _db = db;
+        private readonly IHubContext<SympNet.WebApi.Hubs.ChatHub> _hub;
+
+        public ChatController(AppDbContext db, IHubContext<SympNet.WebApi.Hubs.ChatHub> hub) 
+        {
+            _db = db;
+            _hub = hub;
+        }
 
         private Guid CurrentUserId =>
             Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
                      ?? User.FindFirstValue("sub")
                      ?? throw new UnauthorizedAccessException());
-[AllowAnonymous]
         // GET: api/chat/conversations
         [HttpGet("conversations")]
         public async Task<IActionResult> GetConversations()
@@ -34,7 +40,7 @@ namespace SympNet.WebApi.Controllers
                 .Select(c => new
                 {
                     OtherUserId = c.DoctorId == userId ? c.PatientId : c.DoctorId,
-                    LastMessage = c.Messages.OrderByDescending(m => m.SentAt).FirstOrDefault().Content,
+                    LastMessage = c.Messages.OrderByDescending(m => m.SentAt).Select(m => m.Content).FirstOrDefault(),
                     LastMessageAt = c.LastMessageAt ?? c.CreatedAt,
                     UnreadCount = c.Messages.Count(m => m.SenderId != userId && !m.IsRead)
                 })
@@ -44,7 +50,6 @@ namespace SympNet.WebApi.Controllers
             foreach (var conv in conversations)
             {
                 var otherUser = await _db.Users.FindAsync(conv.OtherUserId);
-var userName = otherUser?.FullName ?? "Utilisateur";
                 result.Add(new
                 {
                     conv.OtherUserId,
@@ -77,22 +82,21 @@ var userName = otherUser?.FullName ?? "Utilisateur";
 
             _db.Conversations.Add(conv);
             await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetMessages), new { conversationId = conv.Id }, conv);
+            return CreatedAtAction(nameof(GetMessages), new { otherUserId = dto.PatientId == CurrentUserId ? dto.DoctorId : dto.PatientId }, conv);
         }
 
-        // GET: api/chat/conversations/{conversationId}/messages
-        [HttpGet("conversations/{conversationId}/messages")]
-        public async Task<IActionResult> GetMessages(Guid conversationId, int page = 1, int pageSize = 30)
+        // GET: api/chat/conversations/{otherUserId}/messages
+        [HttpGet("conversations/{otherUserId}/messages")]
+        public async Task<IActionResult> GetMessages(Guid otherUserId, int page = 1, int pageSize = 30)
         {
             var userId = CurrentUserId;
-            var conv = await _db.Conversations.FindAsync(conversationId);
+            var conv = await _db.Conversations
+                .FirstOrDefaultAsync(c => (c.DoctorId == userId && c.PatientId == otherUserId) || 
+                                          (c.DoctorId == otherUserId && c.PatientId == userId));
             if (conv == null) return NotFound();
 
-            if (conv.DoctorId != userId && conv.PatientId != userId)
-                return Forbid();
-
             var messages = await _db.ChatMessages
-                .Where(m => m.ConversationId == conversationId)
+                .Where(m => m.ConversationId == conv.Id)
                 .OrderByDescending(m => m.SentAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -113,7 +117,7 @@ var userName = otherUser?.FullName ?? "Utilisateur";
 
             return Ok(messages);
         }
-[AllowAnonymous]
+
         // POST: api/chat/messages
         [HttpPost("messages")]
         public async Task<IActionResult> SendMessage([FromBody] SendMessageDto dto)
@@ -141,6 +145,8 @@ var userName = otherUser?.FullName ?? "Utilisateur";
                 await _db.SaveChangesAsync();
             }
             
+            var senderUser = await _db.Users.FindAsync(senderId);
+
             var message = new ChatMessage
             {
                 ConversationId = conversation.Id,
@@ -154,6 +160,16 @@ var userName = otherUser?.FullName ?? "Utilisateur";
             conversation.LastMessageAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             
+            // Broadcast via SignalR directly to ReceiverId
+            await _hub.Clients.User(dto.ReceiverId.ToString())
+                .SendAsync("ReceiveMessage",
+                    senderId.ToString(),
+                    senderUser?.FullName ?? "Utilisateur",
+                    message.SenderRole,
+                    message.Content,
+                    false, // isVoice
+                    message.SentAt.ToString("o"));
+            
             return Ok(new
             {
                 message.Id,
@@ -162,6 +178,22 @@ var userName = otherUser?.FullName ?? "Utilisateur";
                 IsMine = true,
                 IsRead = false
             });
+        }
+
+        // GET: api/chat/unread-count
+        [HttpGet("unread-count")]
+        public async Task<IActionResult> GetUnreadCount()
+        {
+            var userId = CurrentUserId;
+            var unreadCount = await _db.ChatMessages
+                .Include(m => m.Conversation)
+                .Where(m => m.Conversation != null 
+                         && (m.Conversation.DoctorId == userId || m.Conversation.PatientId == userId)
+                         && m.SenderId != userId
+                         && !m.IsRead)
+                .CountAsync();
+
+            return Ok(new { unreadCount });
         }
 
         // GET: api/chat/calls/history

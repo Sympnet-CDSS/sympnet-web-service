@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<VideoCallSession> VideoCallSessions => Set<VideoCallSession>();
     public DbSet<Ordonnance> Ordonnances => Set<Ordonnance>();
+    public DbSet<DoctorNotification> DoctorNotifications => Set<DoctorNotification>();
+    public DbSet<PatientNotification> PatientNotifications { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
