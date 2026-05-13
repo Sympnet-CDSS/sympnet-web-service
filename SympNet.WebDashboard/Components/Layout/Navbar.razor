@@ -113,7 +113,12 @@
         border-radius: 12px; background: #F9FAFB; font-family: inherit; font-size: 14px;
         color: #1F2937; transition: all 0.2s;
     }
-    .navbar-search input:focus { outline: none; border-color: #0D9488; background: white; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+    .navbar-search input:focus { 
+        outline: none; 
+        border-color: #0D9488; 
+        background: white; 
+        box-shadow: 0 0 0 4px rgba(13,148,136,0.12); 
+    }
 
     .navbar-actions { display: flex; align-items: center; gap: 24px; }
     .notification-container { position: relative; }
@@ -124,7 +129,12 @@
         font-size: 18px; cursor: pointer; position: relative; transition: all 0.2s;
     }
     .notification-icon:hover { transform: translateY(-1px); border-color: #0D9488; background: #F0FDFA; }
-    .notification-icon.active { background: #0D9488; color: white; border-color: #0D9488; }
+    .notification-icon.active { 
+        background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); 
+        color: white; 
+        border-color: #0D9488; 
+        box-shadow: 0 4px 12px rgba(13,148,136,0.3);
+    }
     
     .notification-badge {
         position: absolute; top: -5px; right: -5px; background: #EF4444; color: white;

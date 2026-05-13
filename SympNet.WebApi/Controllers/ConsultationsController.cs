@@ -82,6 +82,26 @@ public class ConsultationsController : ControllerBase
         return Ok(new { message = "Consultation supprimée avec succès" });
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateConsultation(int id, [FromBody] UpdateConsultationRequest request)
+    {
+        var doctorId = GetCurrentUserId();
+        var consultation = await _db.Consultations
+            .Where(c => c.Id == id && c.DoctorId == doctorId)
+            .FirstOrDefaultAsync();
+
+        if (consultation == null)
+            return NotFound(new { message = "Consultation non trouvée" });
+
+        consultation.Diagnosis = request.Diagnosis ?? consultation.Diagnosis;
+        consultation.Recommendations = request.Recommendations ?? consultation.Recommendations;
+        consultation.Symptoms = request.Symptoms ?? consultation.Symptoms;
+        
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Consultation mise à jour avec succès" });
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateConsultation([FromBody] CreateConsultationRequest request)
     {
@@ -163,6 +183,13 @@ public class ConsultationsController : ControllerBase
             patientCreated = patient != null 
         });
     }
+}
+
+public class UpdateConsultationRequest
+{
+    public string? Diagnosis { get; set; }
+    public string? Recommendations { get; set; }
+    public string? Symptoms { get; set; }
 }
 
 public class CreateConsultationRequest
