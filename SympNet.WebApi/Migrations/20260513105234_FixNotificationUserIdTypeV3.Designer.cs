@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using SympNet.WebApi.Data;
@@ -11,9 +12,11 @@ using SympNet.WebApi.Data;
 namespace SympNet.WebApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260513105234_FixNotificationUserIdTypeV3")]
+    partial class FixNotificationUserIdTypeV3
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -483,29 +486,6 @@ namespace SympNet.WebApi.Migrations
                     b.ToTable("Message");
                 });
 
-            modelBuilder.Entity("SympNet.WebApi.Models.NewsletterSubscriber", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<DateTime>("SubscribedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("NewsletterSubscribers");
-                });
-
             modelBuilder.Entity("SympNet.WebApi.Models.Notification", b =>
                 {
                     b.Property<int>("Id")
@@ -633,19 +613,11 @@ namespace SympNet.WebApi.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("ChronicDiseases")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.Property<int>("ConsultationCount")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("CurrentMedications")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("timestamp with time zone");

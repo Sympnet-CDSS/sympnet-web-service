@@ -2,6 +2,8 @@
 @layout SympNet.WebDashboard.Components.Layout.EmptyLayout
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject IConfiguration Config
+@inject HttpClient Http
 
 <PageTitle>SympNet - Contact Us</PageTitle>
 
@@ -172,54 +174,49 @@
         background: #0F766E;
         transform: translateY(-2px);
     }
-    
-    /* Newsletter */
-    .newsletter-section {
+
+    /* Success Message */
+    .success-container {
         text-align: center;
-        margin-bottom: 60px;
-    }
-    
-    .newsletter-section h3 {
-        font-family: 'Bricolage Grotesque', sans-serif;
-        font-size: 20px;
-        margin-bottom: 20px;
-        color: #111827;
-    }
-    
-    .newsletter-input-group {
-        display: flex;
-        max-width: 400px;
-        margin: 0 auto;
+        padding: 60px 20px;
         background: white;
-        border-radius: 30px;
-        overflow: hidden;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border-radius: 24px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        border: 1px solid #E5E7EB;
+        animation: fadeIn 0.5s ease-out;
     }
     
-    .newsletter-input-group input {
-        border: none;
-        padding: 14px 24px;
-        background: none;
-        border-radius: 0;
-    }
-    .newsletter-input-group input:focus {
-        box-shadow: none;
+    .success-icon {
+        width: 80px;
+        height: 80px;
+        background: #DCFCE7;
+        color: #059669;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 40px;
+        margin: 0 auto 24px;
     }
     
-    .newsletter-input-group button {
-        background: #0D9488;
-        color: white;
-        border: none;
-        padding: 0 24px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: 0.2s;
+    .success-container h2 {
+        font-family: 'Bricolage Grotesque', sans-serif;
+        font-size: 32px;
+        color: #111827;
+        margin-bottom: 16px;
     }
-    .newsletter-input-group button:hover {
-        background: #0F766E;
+    
+    .success-container p {
+        color: #4B5563;
+        font-size: 18px;
+        max-width: 500px;
+        margin: 0 auto 32px;
     }
 
-
+    @@keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
 </style>
 
 <header>
@@ -245,67 +242,75 @@
 
 <main>
     <section class="contact-section">
-        <div class="contact-header">
-            <h4>Entrons en Contact</h4>
-            <h1>Contactez-nous</h1>
-            <p>N'hésitez pas à nous contacter pour toute question ou demande.</p>
-        </div>
-        
-        <form @onsubmit="SubmitContact">
-            <div class="form-row">
-                <div>
-                    <label>Prénom</label>
-                    <input type="text" placeholder="Entrez votre prénom" @bind="firstName" required />
+        @if (!isSubmitted)
+        {
+            <div class="contact-header">
+                <h4>Entrons en Contact</h4>
+                <h1>Contactez-nous</h1>
+                <p>N'hésitez pas à nous contacter pour toute question ou demande.</p>
+            </div>
+            
+            <form @onsubmit="SubmitContact">
+                <div class="form-row">
+                    <div>
+                        <label>Prénom</label>
+                        <input type="text" placeholder="Entrez votre prénom" @bind="firstName" required />
+                    </div>
+                    <div>
+                        <label>Nom</label>
+                        <input type="text" placeholder="Entrez votre nom" @bind="lastName" required />
+                    </div>
                 </div>
-                <div>
-                    <label>Nom</label>
-                    <input type="text" placeholder="Entrez votre nom" @bind="lastName" required />
+                
+                <div class="form-row">
+                    <div>
+                        <label>Email</label>
+                        <input type="email" placeholder="Entrez votre email" @bind="email" required />
+                    </div>
+                    <div>
+                        <label>Numéro de téléphone</label>
+                        <input type="tel" placeholder="Entrez votre numéro de téléphone" @bind="phone" />
+                    </div>
                 </div>
-            </div>
-            
-            <div class="form-row">
-                <div>
-                    <label>Email</label>
-                    <input type="email" placeholder="Entrez votre email" @bind="email" required />
+                
+                <div class="form-group">
+                    <label>Choisissez un sujet</label>
+                    <select @bind="topic">
+                        <option value="">Sélectionnez le domaine...</option>
+                        <option value="support">Support Technique</option>
+                        <option value="billing">Facturation & Abonnements</option>
+                        <option value="partnership">Partenariat</option>
+                        <option value="other">Autre</option>
+                    </select>
                 </div>
-                <div>
-                    <label>Numéro de téléphone</label>
-                    <input type="tel" placeholder="Entrez votre numéro de téléphone" @bind="phone" />
+                
+                <div class="form-group">
+                    <label>Message</label>
+                    <textarea rows="5" placeholder="Tapez votre message..." @bind="message" required></textarea>
                 </div>
+                
+                <div class="checkbox-group">
+                    <input type="checkbox" id="terms" @bind="acceptTerms" required />
+                    <label for="terms">J'accepte les conditions</label>
+                </div>
+                
+                <button type="submit" class="submit-btn">Envoyer</button>
+            </form>
+        }
+        else
+        {
+            <div class="success-container">
+                <div class="success-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h2>Merci @firstName !</h2>
+                <p>Votre message a été envoyé avec succès. Notre équipe va vous contacter très bientôt.</p>
+                <button class="btn-primary" style="margin: 0 auto;" @onclick="() => isSubmitted = false">Envoyer un autre message</button>
             </div>
-            
-            <div class="form-group">
-                <label>Choisissez un sujet</label>
-                <select @bind="topic">
-                    <option value="">Sélectionnez le domaine...</option>
-                    <option value="support">Support Technique</option>
-                    <option value="billing">Facturation & Abonnements</option>
-                    <option value="partnership">Partenariat</option>
-                    <option value="other">Autre</option>
-                </select>
-            </div>
-            
-            <div class="form-group">
-                <label>Message</label>
-                <textarea rows="5" placeholder="Tapez votre message..." @bind="message" required></textarea>
-            </div>
-            
-            <div class="checkbox-group">
-                <input type="checkbox" id="terms" @bind="acceptTerms" required />
-                <label for="terms">J'accepte les conditions</label>
-            </div>
-            
-            <button type="submit" class="submit-btn">Envoyer</button>
-        </form>
+        }
     </section>
 
-    <section class="newsletter-section">
-        <h3>Abonnez-vous à notre newsletter !</h3>
-        <div class="newsletter-input-group">
-            <input type="email" placeholder="Entrez votre email" @bind="newsletterEmail" />
-            <button @onclick="SubscribeNewsletter">S'abonner</button>
-        </div>
-    </section>
+    <NewsletterSection />
 </main>
 
 <Footer />
@@ -318,14 +323,12 @@
     private string topic = "";
     private string message = "";
     private bool acceptTerms = false;
-    private string newsletterEmail = "";
+    private bool isSubmitted = false;
 
     private void GoToLogin()
     {
         Navigation.NavigateTo("/login");
     }
-
-    [Inject] private HttpClient Http { get; set; } = default!;
 
     private async Task SubmitContact()
     {
@@ -343,12 +346,13 @@
                     Message = message
                 };
 
-                var response = await Http.PostAsJsonAsync("api/ContactMessages", payload);
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                var response = await Http.PostAsJsonAsync($"{baseUrl}/api/ContactMessages", payload);
                 if (response.IsSuccessStatusCode)
                 {
-                    await JSRuntime.InvokeVoidAsync("alert", $"Merci {firstName} ! Votre message a été envoyé avec succès. Notre équipe vous répondra bientôt.");
-                    // Reset form
-                    firstName = ""; lastName = ""; email = ""; phone = ""; topic = ""; message = ""; acceptTerms = false;
+                    isSubmitted = true;
+                    // Reset form (except firstName for the success message)
+                    lastName = ""; email = ""; phone = ""; topic = ""; message = ""; acceptTerms = false;
                 }
                 else
                 {
@@ -359,19 +363,6 @@
             {
                 await JSRuntime.InvokeVoidAsync("alert", "Erreur de connexion au serveur.");
             }
-        }
-    }
-
-    private async Task SubscribeNewsletter()
-    {
-        if (!string.IsNullOrWhiteSpace(newsletterEmail))
-        {
-            await JSRuntime.InvokeVoidAsync("alert", $"Abonnement réussi avec {newsletterEmail} !");
-            newsletterEmail = "";
-        }
-        else
-        {
-            await JSRuntime.InvokeVoidAsync("alert", "Veuillez entrer une adresse email valide.");
         }
     }
 }

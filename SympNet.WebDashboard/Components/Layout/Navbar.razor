@@ -1,0 +1,448 @@
+@inject NavigationManager Navigation
+@inject HttpClient Http
+@inject IConfiguration Config
+@inject IJSRuntime JS
+
+<div class="navbar-container">
+    <div class="navbar-search">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="@SearchPlaceholder" @bind="searchQuery" @bind:event="oninput" />
+    </div>
+
+    <div class="navbar-actions">
+        <div class="notification-container">
+            <div class="notification-icon @(showNotifications ? "active" : "")" @onclick="ToggleNotifications">
+                <i class="fas fa-bell"></i>
+                @if (unreadNotifications > 0)
+                {
+                    <span class="notification-badge">@unreadNotifications</span>
+                }
+            </div>
+
+            @if (showNotifications)
+            {
+                <div class="notification-dropdown">
+                    <div class="notification-header">
+                        <h4>Notifications</h4>
+                        <div class="notification-actions">
+                            <span class="mark-all-read" @onclick="MarkAllAsRead">Tout marquer comme lu</span>
+                        </div>
+                    </div>
+                    <div class="notification-tabs">
+                        <button class="notif-tab @(filter == "all" ? "active" : "")" @onclick='() => filter = "all"'>Toutes</button>
+                        <button class="notif-tab @(filter == "unread" ? "active" : "")" @onclick='() => filter = "unread"'>Non lues</button>
+                    </div>
+                    @if (notifications.Any())
+                    {
+                        <div class="notification-search">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="Rechercher une notification..." @bind="notifSearchQuery" @bind:event="oninput" />
+                        </div>
+                    }
+                    <div class="notification-list">
+                        @foreach (var notif in FilteredNotifications)
+                        {
+                            <div class="notification-item @(notif.IsRead ? "read" : "unread")" @onclick="() => HandleNotificationClick(notif)">
+                                <div class="notification-icon-wrapper type-@notif.Type">
+                                    <i class="@GetNotificationIcon(notif.Type)"></i>
+                                </div>
+                                <div class="notification-content">
+                                    <p class="notification-title">@notif.Title</p>
+                                    <p class="notification-desc">@notif.Message</p>
+                                    <span class="notification-time">@GetTimeAgo(notif.CreatedAt)</span>
+                                    
+                                    @if (!IsAdmin && notif.Type == 1 && !notif.IsRead) // Type 1 could be Appointment in Doctor context
+                                    {
+                                        <div class="appointment-actions">
+                                            <button class="btn-accept" @onclick:stopPropagation="true" @onclick="() => AcceptAction(notif)"><i class="fas fa-check"></i> Accepter</button>
+                                            <button class="btn-decline" @onclick:stopPropagation="true" @onclick="() => DeclineAction(notif)"><i class="fas fa-times"></i> Refuser</button>
+                                        </div>
+                                    }
+                                </div>
+                                @if (!notif.IsRead)
+                                {
+                                    <div class="notification-dot" @onclick:stopPropagation="true" @onclick="() => MarkAsRead(notif)" title="Marquer comme lu"></div>
+                                }
+                            </div>
+                        }
+                        @if (!FilteredNotifications.Any())
+                        {
+                            <div class="notification-empty">
+                                <i class="far fa-bell-slash"></i>
+                                <p>Aucune notification trouvée.</p>
+                            </div>
+                        }
+                    </div>
+                    <div class="notification-footer" @onclick="GoToAllNotifications">
+                        Voir toutes les notifications <i class="fas fa-arrow-right"></i>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="user-profile" @onclick="OnProfileClick">
+            <div class="user-avatar">@UserInitial</div>
+            <div class="user-info">
+                <span class="user-name">@UserName</span>
+                <span class="user-role">@UserSubtitle</span>
+            </div>
+            <i class="fas fa-chevron-down profile-chevron"></i>
+        </div>
+    </div>
+</div>
+
+<style>
+    .navbar-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 32px;
+        background: white;
+        border-bottom: 1px solid rgba(13,148,136,0.1);
+        position: sticky;
+        top: 0;
+        z-index: 90;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+        font-family: 'Instrument Sans', sans-serif;
+    }
+
+    .navbar-search { position: relative; width: 400px; }
+    .navbar-search i { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #9CA3AF; }
+    .navbar-search input {
+        width: 100%; padding: 12px 16px 12px 40px; border: 1px solid #E5E7EB;
+        border-radius: 12px; background: #F9FAFB; font-family: inherit; font-size: 14px;
+        color: #1F2937; transition: all 0.2s;
+    }
+    .navbar-search input:focus { outline: none; border-color: #0D9488; background: white; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+
+    .navbar-actions { display: flex; align-items: center; gap: 24px; }
+    .notification-container { position: relative; }
+    .notification-icon {
+        width: 42px; height: 42px; border-radius: 12px; background: white;
+        border: 1.5px solid #F3F4F6;
+        display: flex; align-items: center; justify-content: center; color: #0D9488;
+        font-size: 18px; cursor: pointer; position: relative; transition: all 0.2s;
+    }
+    .notification-icon:hover { transform: translateY(-1px); border-color: #0D9488; background: #F0FDFA; }
+    .notification-icon.active { background: #0D9488; color: white; border-color: #0D9488; }
+    
+    .notification-badge {
+        position: absolute; top: -5px; right: -5px; background: #EF4444; color: white;
+        font-size: 10px; font-weight: 700; width: 18px; height: 18px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center; border: 2px solid white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .notification-dropdown {
+        position: absolute; top: calc(100% + 12px); right: -80px; width: 380px;
+        background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        border: 1px solid #E5E7EB; overflow: hidden; animation: slideDown 0.2s ease-out;
+    }
+    @@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .notification-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid #E5E7EB; }
+    .notification-header h4 { margin: 0; font-size: 16px; font-weight: 700; color: #1F2937; }
+    .mark-all-read { font-size: 12px; color: #0D9488; cursor: pointer; font-weight: 600; }
+    .notification-tabs { display: flex; padding: 0 20px; border-bottom: 1px solid #E5E7EB; background: #F9FAFB; }
+    .notif-tab { background: none; border: none; padding: 12px 16px; font-size: 13px; font-weight: 600; color: #6B7280; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .notif-tab.active { color: #0D9488; border-bottom-color: #0D9488; }
+
+    .notification-search { padding: 10px 20px; border-bottom: 1px solid #E5E7EB; background: #F9FAFB; position: relative; }
+    .notification-search i { position: absolute; left: 32px; top: 50%; transform: translateY(-50%); color: #9CA3AF; font-size: 12px; }
+    .notification-search input { width: 100%; padding: 8px 12px 8px 32px; border: 1px solid #E5E7EB; border-radius: 8px; font-size: 12px; }
+
+    .notification-list { max-height: 400px; overflow-y: auto; }
+    .notification-item { display: flex; gap: 16px; padding: 16px 20px; border-bottom: 1px solid #F3F4F6; position: relative; transition: background 0.2s; cursor: pointer; }
+    .notification-item:hover { background: #F9FAFB; }
+    .notification-item.unread { background: rgba(13,148,136,0.03); }
+    .notification-icon-wrapper { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    
+    /* Notification Types colors */
+    .type-0 { background: rgba(59,130,246,0.1); color: #3B82F6; } /* General / System */
+    .type-1 { background: rgba(16,185,129,0.1); color: #10B981; } /* Success / Appointment */
+    .type-2 { background: rgba(245,158,11,0.1); color: #F59E0B; } /* Warning */
+    .type-3 { background: rgba(239,68,68,0.1); color: #EF4444; }   /* Urgent / Danger */
+
+    .notification-content { flex: 1; }
+    .notification-title { font-size: 14px; font-weight: 600; color: #1F2937; margin: 0 0 4px 0; }
+    .notification-desc { font-size: 12px; color: #6B7280; margin: 0 0 8px 0; line-height: 1.4; }
+    .notification-time { font-size: 11px; color: #9CA3AF; }
+    .notification-dot { width: 8px; height: 8px; border-radius: 50%; background: #0D9488; position: absolute; right: 20px; top: 20px; }
+    
+    .appointment-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .appointment-actions button { padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; border: none; cursor: pointer; transition: 0.2s; }
+    .btn-accept { background: #0D9488; color: white; }
+    .btn-decline { background: #F3F4F6; color: #6B7280; }
+
+    .notification-empty { padding: 40px 20px; text-align: center; color: #9CA3AF; }
+    .notification-footer { padding: 12px; text-align: center; background: #F9FAFB; border-top: 1px solid #E5E7EB; font-size: 13px; font-weight: 600; color: #0D9488; cursor: pointer; }
+
+    .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px; border-radius: 12px; transition: background 0.2s; }
+    .user-profile:hover { background: #F3F4F6; }
+    .user-avatar { width: 40px; height: 40px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: white; box-shadow: 0 4px 10px rgba(13,148,136,0.2); }
+    .user-info { display: flex; flex-direction: column; }
+    .user-name { font-size: 14px; font-weight: 600; color: #1F2937; }
+    .user-role { font-size: 12px; color: #6B7280; }
+    .profile-chevron { font-size: 12px; color: #9CA3AF; margin-left: 4px; }
+
+    @@media (max-width: 768px) {
+        .navbar-search { display: none; }
+        .user-info, .profile-chevron { display: none; }
+        .notification-dropdown { right: -20px; width: 320px; }
+    }
+</style>
+
+@using Microsoft.AspNetCore.SignalR.Client
+@implements IAsyncDisposable
+
+@code {
+    [Parameter] public string UserName { get; set; } = "Utilisateur";
+    [Parameter] public string UserInitial { get; set; } = "U";
+    [Parameter] public string UserSubtitle { get; set; } = "";
+    [Parameter] public bool IsAdmin { get; set; } = false;
+    [Parameter] public string SearchPlaceholder { get; set; } = "Rechercher...";
+    [Parameter] public EventCallback OnProfileClick { get; set; }
+
+    private string searchQuery = "";
+    private string notifSearchQuery = "";
+    private bool showNotifications = false;
+    private string filter = "all";
+    private List<UnifiedNotification> notifications = new();
+    private HubConnection? hubConnection;
+
+    private IEnumerable<UnifiedNotification> FilteredNotifications => 
+        notifications.Where(n => 
+            (filter == "all" || (filter == "unread" && !n.IsRead)) &&
+            (string.IsNullOrWhiteSpace(notifSearchQuery) || 
+             n.Title.Contains(notifSearchQuery, StringComparison.OrdinalIgnoreCase) || 
+             n.Message.Contains(notifSearchQuery, StringComparison.OrdinalIgnoreCase))
+        ).OrderByDescending(n => n.CreatedAt);
+
+    private int unreadNotifications => notifications.Count(n => !n.IsRead);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadNotifications();
+            await InitializeSignalR();
+            StateHasChanged();
+        }
+    }
+
+    private async Task InitializeSignalR()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (string.IsNullOrEmpty(token)) return;
+
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{baseUrl}/hubs/notifications", options => {
+                    options.AccessTokenProvider = () => Task.FromResult(token)!;
+                })
+                .WithAutomaticReconnect()
+                .Build();
+
+            hubConnection.On("ReceiveNotification", async () => {
+                await LoadNotifications();
+                await InvokeAsync(StateHasChanged);
+            });
+
+            await hubConnection.StartAsync();
+        }
+        catch (Exception ex) { Console.WriteLine($"SignalR Error in Navbar: {ex.Message}"); }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection is not null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+
+    private async Task LoadNotifications()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (string.IsNullOrEmpty(token)) return;
+
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            
+            if (IsAdmin)
+            {
+                var result = await Http.GetFromJsonAsync<List<AdminNotification>>($"{baseUrl}/api/admin/notifications");
+                if (result != null)
+                {
+                    notifications = result.Select(n => new UnifiedNotification {
+                        Id = n.Id,
+                        Title = n.Title,
+                        Message = n.Message,
+                        CreatedAt = n.CreatedAt,
+                        IsRead = n.IsRead,
+                        ActionUrl = n.ActionUrl,
+                        Type = n.Type
+                    }).ToList();
+                }
+            }
+            else
+            {
+                var result = await Http.GetFromJsonAsync<List<DoctorNotification>>($"{baseUrl}/api/notifications");
+                if (result != null)
+                {
+                    notifications = result.Select(n => new UnifiedNotification {
+                        Id = n.Id,
+                        Title = n.Title,
+                        Message = n.Message,
+                        CreatedAt = n.SentAt,
+                        IsRead = n.IsRead,
+                        Type = n.AppointmentId > 0 ? 1 : 0,
+                        AppointmentId = n.AppointmentId
+                    }).ToList();
+                }
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Error loading notifications: {ex.Message}"); }
+    }
+
+    private async Task ToggleNotifications()
+    {
+        showNotifications = !showNotifications;
+        if (showNotifications) await LoadNotifications();
+    }
+
+    private async Task MarkAllAsRead()
+    {
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            string endpoint = IsAdmin ? "api/admin/notifications/read-all" : "api/notifications/read-all";
+            // Check if endpoint exists, for admin we might need to implement it if not exists
+            await Http.PatchAsync($"{baseUrl}/{endpoint}", null);
+            foreach (var n in notifications) n.IsRead = true;
+            StateHasChanged();
+        }
+        catch (Exception ex) { Console.WriteLine(ex.Message); }
+    }
+
+    private async Task MarkAsRead(UnifiedNotification notif)
+    {
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            string endpoint = IsAdmin ? $"api/admin/notifications/{notif.Id}/read" : $"api/notifications/{notif.Id}/read";
+            await Http.PatchAsync($"{baseUrl}/{endpoint}", null);
+            notif.IsRead = true;
+            StateHasChanged();
+        }
+        catch (Exception ex) { Console.WriteLine(ex.Message); }
+    }
+
+    private void HandleNotificationClick(UnifiedNotification notif)
+    {
+        if (IsAdmin)
+        {
+            var t = notif.Title.ToLower();
+            if (t.Contains("newsletter"))
+            {
+                Navigation.NavigateTo($"/admin/notifications/{notif.Id}");
+            }
+            else if (t.Contains("rendez-vous") || t.Contains("rdv") || t.Contains("appointment"))
+            {
+                Navigation.NavigateTo("/admin/notifications");
+            }
+            else if (t.Contains("message") || t.Contains("contact") || notif.Type == 7)
+            {
+                Navigation.NavigateTo("/admin/notifications");
+            }
+            else if (!string.IsNullOrEmpty(notif.ActionUrl))
+            {
+                Navigation.NavigateTo(notif.ActionUrl);
+            }
+            
+            showNotifications = false;
+        }
+        else // Doctor context
+        {
+            if (notif.AppointmentId > 0) Navigation.NavigateTo($"/doctor/appointments/{notif.AppointmentId}");
+            else Navigation.NavigateTo("/doctor/notifications");
+            showNotifications = false;
+        }
+    }
+
+    private void AcceptAction(UnifiedNotification notif) { /* To be implemented */ }
+    private void DeclineAction(UnifiedNotification notif) { /* To be implemented */ }
+
+    private void GoToAllNotifications() 
+    { 
+        showNotifications = false; 
+        Navigation.NavigateTo(IsAdmin ? "/admin/notifications" : "/doctor/notifications"); 
+    }
+
+    private string GetTimeAgo(DateTime dateTime)
+    {
+        var diff = DateTime.UtcNow - dateTime;
+        if (diff.TotalDays >= 1) return $"Il y a {Math.Floor(diff.TotalDays)} j";
+        if (diff.TotalHours >= 1) return $"Il y a {Math.Floor(diff.TotalHours)} h";
+        if (diff.TotalMinutes >= 1) return $"Il y a {Math.Floor(diff.TotalMinutes)} m";
+        return "À l'instant";
+    }
+
+    private string GetNotificationIcon(int type) 
+    {
+        if (IsAdmin)
+        {
+            // Based on NotificationType enum in WebApi
+            return type switch {
+                0 or 1 or 2 => "far fa-calendar-check", // Appointments
+                3 or 4 => "fas fa-file-medical",        // Ordonnance
+                5 or 6 => "fas fa-stethoscope",       // Consultation
+                7 => "far fa-comment-dots",           // NewMessage
+                8 => "fas fa-brain",                  // AIAlert
+                _ => "fas fa-info-circle"
+            };
+        }
+        else
+        {
+            return type switch {
+                1 => "far fa-calendar-check",
+                _ => "fas fa-info-circle"
+            };
+        }
+    }
+
+    public class UnifiedNotification
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+        public bool IsRead { get; set; }
+        public string? ActionUrl { get; set; }
+        public int Type { get; set; }
+        public int AppointmentId { get; set; }
+    }
+
+    public class AdminNotification {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string ActionUrl { get; set; } = "";
+        public bool IsRead { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public int Type { get; set; }
+    }
+
+    public class DoctorNotification {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public int AppointmentId { get; set; }
+        public bool IsRead { get; set; }
+        public DateTime SentAt { get; set; }
+    }
+}

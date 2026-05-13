@@ -3,68 +3,159 @@
 @using SympNet.WebDashboard.Services
 @inject ApiService Api
 
-<h1 style="margin-bottom: 16px;">👥 Gestion des utilisateurs</h1>
+@inject IJSRuntime JS
 
-<div style="margin-bottom: 24px;">
-    <button class="btn-primary" @onclick="ShowCreateModal">+ Nouvel utilisateur</button>
-</div>
+<div class="users-page">
+    <DashboardHeader UserName="@adminName" UserEmail="@adminEmail" IsAdmin="true" />
 
-@if (users == null)
-{
-    <div>Chargement...</div>
-}
-else
-{
-    <table style="width: 100%; background: white; border-radius: 16px; border-collapse: collapse; overflow: hidden;">
-        <thead><tr style="background: #F4FAFA;"><th style="padding: 16px;">Email</th><th>Nom</th><th>Rôle</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-            @foreach (var user in users)
-            {
-                <tr style="border-bottom: 1px solid #DFF0EF;">
-                    <td style="padding: 16px;">@user.Email</td>
-                    <td style="padding: 16px;">@user.FullName</td>
-                    <td style="padding: 16px;">@user.Role</td>
-                    <td style="padding: 16px;">
-                        <span style="padding: 4px 12px; border-radius: 20px; font-size: 12px; background: @(user.IsActive ? "#F0FDF4" : "#FEF2F2"); color: @(user.IsActive ? "#22C55E" : "#EF4444");">
-                            @(user.IsActive ? "Actif" : "Inactif")
-                        </span>
-                    </td>
-                    <td style="padding: 16px;">
-                        <button class="action-btn" @onclick="() => ToggleActive(user)">🔄</button>
-                        <button class="action-btn delete" @onclick="() => DeleteUser(user)">🗑️</button>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+    <div class="page-header">
+        <h1><i class="fas fa-users-cog"></i> Gestion des utilisateurs</h1>
+        <button class="btn-primary" @onclick="ShowCreateModal">
+            <i class="fas fa-plus"></i> Nouvel utilisateur
+        </button>
+    </div>
 
-@if (showModal)
-{
-    <div class="modal">
-        <div class="modal-content">
-            <h2>Créer un utilisateur</h2>
-            <input type="email" @bind="newEmail" placeholder="Email" />
-            <input type="password" @bind="newPassword" placeholder="Mot de passe" />
-            <select @bind="newRole"><option value="Patient">Patient</option><option value="Doctor">Médecin</option></select>
-            <input type="text" @bind="newFullName" placeholder="Nom complet" />
-            <div class="modal-actions">
-                <button class="btn-secondary" @onclick="CloseModal">Annuler</button>
-                <button class="btn-primary" @onclick="CreateUser">Créer</button>
+    @if (users == null)
+    {
+        <div class="loading-spinner"><div class="spinner"></div><p>Chargement des utilisateurs...</p></div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Email</th>
+                        <th>Nom complet</th>
+                        <th>Rôle</th>
+                        <th>Status</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var user in users)
+                    {
+                        <tr>
+                            <td style="font-weight: 600;">@user.Email</td>
+                            <td>@user.FullName</td>
+                            <td>
+                                <span class="role-badge @user.Role.ToLower()">@user.Role</span>
+                            </td>
+                            <td>
+                                <span class="status-badge @(user.IsActive ? "active" : "inactive")">
+                                    @(user.IsActive ? "Actif" : "Inactif")
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                                    <button class="action-btn toggle" @onclick="() => ToggleActive(user)" title="Changer le statut">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                    <button class="action-btn delete" @onclick="() => DeleteUser(user)" title="Supprimer">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (showModal)
+    {
+        <div class="modal-overlay" @onclick="CloseModal">
+            <div class="modal-content" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-plus"></i> Créer un utilisateur</h3>
+                    <button class="close-btn" @onclick="CloseModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Nom complet</label>
+                        <input type="text" @bind="newFullName" placeholder="Ex: Jean Dupont" />
+                    </div>
+                    <div class="form-group">
+                        <label>Adresse email</label>
+                        <input type="email" @bind="newEmail" placeholder="email@exemple.com" />
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Mot de passe</label>
+                            <input type="password" @bind="newPassword" placeholder="••••••••" />
+                        </div>
+                        <div class="form-group">
+                            <label>Rôle</label>
+                            <select @bind="newRole">
+                                <option value="Patient">Patient</option>
+                                <option value="Doctor">Médecin</option>
+                                <option value="Admin">Administrateur</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-secondary" @onclick="CloseModal">Annuler</button>
+                    <button class="btn-primary" @onclick="CreateUser">Créer l'utilisateur</button>
+                </div>
             </div>
         </div>
-    </div>
-}
+    }
+</div>
 
 <style>
-    .btn-primary { background: linear-gradient(135deg, #0D6E6A, #3ABFB8); color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; }
-    .btn-secondary { background: #F4FAFA; border: 1px solid #DFF0EF; padding: 10px 20px; border-radius: 10px; cursor: pointer; }
-    .action-btn { background: none; border: none; cursor: pointer; padding: 6px; font-size: 16px; border-radius: 8px; }
-    .action-btn:hover { background: #F4FAFA; }
-    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-    .modal-content { background: white; border-radius: 20px; padding: 28px; width: 400px; }
-    .modal-content input, .modal-content select { width: 100%; padding: 12px; margin: 12px 0; border: 1.5px solid #DFF0EF; border-radius: 10px; }
-    .modal-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; }
+    .users-page { font-family: 'Bricolage Grotesque', sans-serif; padding: 0 24px 24px; max-width: 1200px; margin: 0 auto; }
+    
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .page-header h1 { font-size: 24px; font-weight: 800; color: #111827; margin: 0; }
+    .page-header h1 i { color: #0D9488; margin-right: 12px; }
+
+    .btn-primary { 
+        background: linear-gradient(135deg, #0D9488, #14B8A6); 
+        color: white; border: none; padding: 12px 24px; border-radius: 12px; 
+        font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;
+        transition: 0.2s;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(13,148,136,0.2); }
+
+    .btn-secondary { background: #F3F4F6; color: #4B5563; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+
+    .table-container { background: white; border-radius: 20px; border: 1px solid #F3F4F6; box-shadow: 0 4px 20px rgba(0,0,0,0.02); overflow: hidden; }
+    .users-table { width: 100%; border-collapse: collapse; }
+    .users-table th { text-align: left; padding: 16px 20px; background: #F9FAFB; font-size: 13px; font-weight: 700; color: #6B7280; border-bottom: 1px solid #E5E7EB; }
+    .users-table td { padding: 16px 20px; font-size: 14px; border-bottom: 1px solid #F9FAFB; }
+    
+    .role-badge { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    .role-badge.admin { background: #EFF6FF; color: #3B82F6; }
+    .role-badge.doctor { background: #F5F3FF; color: #8B5CF6; }
+    .role-badge.patient { background: #FDF2F8; color: #DB2777; }
+
+    .status-badge { padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+    .status-badge.active { background: #D1FAE5; color: #10B981; }
+    .status-badge.inactive { background: #FEE2E2; color: #EF4444; }
+
+    .action-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid #E5E7EB; background: white; cursor: pointer; color: #9CA3AF; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+    .action-btn.toggle:hover { color: #0D9488; border-color: #0D9488; background: #F0FDFA; }
+    .action-btn.delete:hover { color: #EF4444; border-color: #FECACA; background: #FEF2F2; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+    .modal-content { background: white; border-radius: 24px; width: 480px; max-width: 90%; }
+    .modal-header { padding: 24px 28px; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { font-size: 20px; font-weight: 800; margin: 0; }
+    .close-btn { font-size: 24px; background: none; border: none; cursor: pointer; color: #9CA3AF; }
+    
+    .modal-body { padding: 24px 28px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 8px; color: #374151; }
+    .form-group input, .form-group select { width: 100%; padding: 12px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-family: inherit; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .modal-footer { padding: 20px 28px 28px; display: flex; gap: 12px; justify-content: flex-end; }
+
+    .loading-spinner { text-align: center; padding: 60px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
 @code {
@@ -74,8 +165,29 @@ else
     private string newPassword = "";
     private string newRole = "Patient";
     private string newFullName = "";
+    private string adminName = "";
+    private string adminEmail = "";
 
-    protected override async Task OnInitializedAsync() => await LoadUsers();
+    protected override async Task OnAfterRenderAsync(bool firstRender) 
+    { 
+        if (firstRender)
+        {
+            adminEmail = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_email") ?? "";
+            adminName = await JS.InvokeAsync<string>("localStorage.getItem", "admin_name") ?? "";
+
+            if (string.IsNullOrEmpty(adminName) && !string.IsNullOrEmpty(adminEmail))
+            {
+                adminName = adminEmail.Split('@')[0];
+            }
+            else if (string.IsNullOrEmpty(adminName))
+            {
+                adminName = "Administrateur";
+            }
+            
+            await LoadUsers(); 
+        }
+    }
+
     private async Task LoadUsers() { users = await Api.GetAllUsersAsync(); StateHasChanged(); }
     private void ShowCreateModal() => showModal = true;
     private void CloseModal() => showModal = false;

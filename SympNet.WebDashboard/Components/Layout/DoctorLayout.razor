@@ -124,12 +124,14 @@
         </div>
     </aside>
     <div class="doctor-main-content">
-        <DoctorNavbar 
-            DoctorName="@doctorName" 
-            DoctorInitial="@doctorInitial" 
-            DoctorSpeciality="@doctorSpeciality" 
+        <Navbar 
+            UserName="@doctorName" 
+            UserInitial="@doctorInitial" 
+            UserSubtitle="@doctorSpeciality" 
+            IsAdmin="false"
+            SearchPlaceholder="Rechercher une fonctionnalité, un patient..."
             OnProfileClick="GoToProfile" />
-        <div style="padding: 24px 32px;">
+        <div style="padding: 0 32px 32px;">
             @Body
         </div>
     </div>

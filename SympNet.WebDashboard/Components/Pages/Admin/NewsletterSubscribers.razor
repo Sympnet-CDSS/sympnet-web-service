@@ -1,0 +1,267 @@
+@page "/admin/newsletter"
+@layout AdminLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject IConfiguration Config
+@inject NavigationManager Navigation
+
+<PageTitle>Newsletter — SympNet Admin</PageTitle>
+
+<style>
+    .newsletter-page { font-family: 'Bricolage Grotesque', sans-serif; }
+    
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+    .stat-card { background: white; border-radius: 20px; padding: 20px 24px; border: 1px solid rgba(13,148,136,0.1); transition: all 0.3s; }
+    .stat-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.05); }
+    .stat-number { font-size: 32px; font-weight: 800; color: #0D9488; }
+    .stat-label { font-size: 13px; color: #6B7280; margin-top: 4px; }
+    
+    .search-bar { background: white; border-radius: 16px; padding: 16px 20px; margin-bottom: 24px; border: 1px solid rgba(13,148,136,0.1); display: flex; align-items: center; gap: 12px; }
+    .search-bar i { color: #9CA3AF; }
+    .search-bar input { flex: 1; border: none; outline: none; font-size: 14px; padding: 8px 0; }
+    
+    .filter-bar { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+    .filter-btn { padding: 8px 20px; border-radius: 12px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; background: white; border: 1px solid rgba(13,148,136,0.2); color: #6B7280; }
+    .filter-btn:hover { border-color: #0D9488; color: #0D9488; }
+    .filter-btn.active { background: #0D9488; color: white; border-color: #0D9488; }
+    
+    .table-container { background: white; border-radius: 20px; border: 1px solid rgba(13,148,136,0.1); overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+    .newsletter-table { width: 100%; border-collapse: collapse; }
+    .newsletter-table th { text-align: left; padding: 16px 20px; background: #F9FAFB; font-size: 13px; font-weight: 600; color: #6B7280; border-bottom: 1px solid #E5E7EB; }
+    .newsletter-table td { padding: 16px 20px; font-size: 14px; color: #1F2937; border-bottom: 1px solid #F3F4F6; }
+    .newsletter-table tr:hover { background: #F9FAFB; }
+    
+    .avatar-sm { width: 36px; height: 36px; background: linear-gradient(135deg, #0D9488, #14B8A6); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: white; }
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 100px; font-size: 12px; font-weight: 600; }
+    .status-active { background: #D1FAE5; color: #10B981; }
+    .status-inactive { background: #F3F4F6; color: #4B5563; }
+    
+    .btn-action-delete { background: none; border: none; color: #D1D5DB; cursor: pointer; transition: 0.2s; font-size: 16px; padding: 8px; border-radius: 8px; }
+    .btn-action-delete:hover { background: #FEF2F2; color: #EF4444; transform: scale(1.1); }
+    
+    .loading-spinner { text-align: center; padding: 60px; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; margin: 0 auto 20px; animation: spin 1s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty-state { text-align: center; padding: 60px 20px; color: #9CA3AF; }
+    .empty-state i { font-size: 48px; margin-bottom: 16px; color: #E5E7EB; }
+</style>
+
+<div class="newsletter-page">
+    <DashboardHeader UserName="@adminName" UserEmail="@adminEmail" IsAdmin="true" />
+    
+    <div class="stats-row">
+        <div class="stat-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div class="stat-number">@subscribers.Count</div>
+                    <div class="stat-label">Total abonnés</div>
+                </div>
+                <div style="background: rgba(13,148,136,0.1); color: #0D9488; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div class="stat-number">@subscribers.Count(s => s.IsActive)</div>
+                    <div class="stat-label">Abonnés actifs</div>
+                </div>
+                <div style="background: rgba(16,185,129,0.1); color: #10B981; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <div class="stat-number">@subscribers.Count(s => !s.IsActive)</div>
+                    <div class="stat-label">Désactivés</div>
+                </div>
+                <div style="background: rgba(239,68,68,0.1); color: #EF4444; width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                    <i class="fas fa-user-slash"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" placeholder="Rechercher un email..." @bind="searchQuery" @bind:event="oninput" />
+    </div>
+    
+    <div class="filter-bar">
+        <button class="filter-btn @(filterActive == null ? "active" : "")" @onclick="() => SetFilter(null)">Tous</button>
+        <button class="filter-btn @(filterActive == true ? "active" : "")" @onclick="() => SetFilter(true)">Actifs</button>
+        <button class="filter-btn @(filterActive == false ? "active" : "")" @onclick="() => SetFilter(false)">Désactivés</button>
+    </div>
+
+    @if (loading)
+    {
+        <div class="loading-spinner"><div class="spinner"></div><p>Chargement...</p></div>
+    }
+    else if (!FilteredSubscribers.Any())
+    {
+        <div class="empty-state">
+            <i class="fas fa-users-slash"></i>
+            <h3>Aucun résultat</h3>
+            <p>Aucun abonné ne correspond à vos critères.</p>
+        </div>
+    }
+    else
+    {
+        <div class="table-container">
+            <table class="newsletter-table">
+                <thead>
+                    <tr>
+                        <th>Abonné</th>
+                        <th>Date d'inscription</th>
+                        <th>Statut</th>
+                        <th style="text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var sub in FilteredSubscribers)
+                    {
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div class="avatar-sm">@sub.Email[0].ToString().ToUpper()</div>
+                                    <div style="font-weight: 600;">@sub.Email</div>
+                                </div>
+                            </td>
+                            <td style="color: #6B7280;">@sub.SubscribedAt.ToString("dd MMM yyyy, HH:mm")</td>
+                            <td>
+                                <span class="status-badge @(sub.IsActive ? "status-active" : "status-inactive")">
+                                    @(sub.IsActive ? "Actif" : "Désactivé")
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <button class="btn-action-delete" @onclick="() => ConfirmDelete(sub.Id)" title="Supprimer">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>
+
+<ConfirmModal 
+    IsVisible="@showConfirmModal" 
+    Title="Supprimer l'abonné" 
+    Message="Êtes-vous sûr de vouloir supprimer cet abonné ? Il ne recevra plus de newsletters."
+    OnConfirm="DeleteSubscriber" 
+    OnCancel="() => showConfirmModal = false" />
+
+<ToastNotification 
+    IsVisible="@showToast" 
+    Message="@toastMessage" 
+    Success="@toastSuccess" />
+
+@code {
+    private List<Subscriber> subscribers = new();
+    private bool loading = true;
+    private string searchQuery = "";
+    private bool? filterActive = null;
+    private string adminName = "";
+    private string adminEmail = "";
+
+    private IEnumerable<Subscriber> FilteredSubscribers => subscribers
+        .Where(s => string.IsNullOrEmpty(searchQuery) || s.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+        .Where(s => filterActive == null || s.IsActive == filterActive);
+
+    // Modal & Toast
+    private bool showConfirmModal = false;
+    private int? subToDeleteId;
+    private bool showToast = false;
+    private string toastMessage = "";
+    private bool toastSuccess = true;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            adminEmail = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_email") ?? "";
+            adminName = await JS.InvokeAsync<string>("localStorage.getItem", "admin_name") ?? "";
+            
+            if (string.IsNullOrEmpty(adminName) && !string.IsNullOrEmpty(adminEmail))
+            {
+                adminName = adminEmail.Split('@')[0];
+            }
+            else if (string.IsNullOrEmpty(adminName))
+            {
+                adminName = "Administrateur";
+            }
+            
+            await LoadSubscribers();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadSubscribers()
+    {
+        loading = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                subscribers = await Http.GetFromJsonAsync<List<Subscriber>>($"{baseUrl}/api/newsletter/admin/list") ?? new();
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+        finally { loading = false; }
+    }
+
+    private void SetFilter(bool? active) => filterActive = active;
+
+    private void ConfirmDelete(int id)
+    {
+        subToDeleteId = id;
+        showConfirmModal = true;
+    }
+
+    private async Task DeleteSubscriber()
+    {
+        if (subToDeleteId == null) return;
+        showConfirmModal = false;
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var response = await Http.DeleteAsync($"{baseUrl}/api/newsletter/admin/{subToDeleteId}");
+            if (response.IsSuccessStatusCode)
+            {
+                subscribers.RemoveAll(s => s.Id == subToDeleteId);
+                ShowToast("Abonné supprimé avec succès", true);
+            }
+        }
+        catch (Exception ex) { ShowToast("Erreur lors de la suppression", false); }
+    }
+
+    private void ShowToast(string message, bool success)
+    {
+        toastMessage = message;
+        toastSuccess = success;
+        showToast = true;
+        StateHasChanged();
+        Task.Run(async () => {
+            await Task.Delay(3000);
+            showToast = false;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    public class Subscriber
+    {
+        public int Id { get; set; }
+        public string Email { get; set; } = "";
+        public DateTime SubscribedAt { get; set; }
+        public bool IsActive { get; set; }
+    }
+}

@@ -19,9 +19,10 @@ public class AdminNotificationsController : ControllerBase
         _context = context;
     }
 
-    private string GetCurrentUserId()
+    private Guid GetCurrentUserId()
     {
-        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? string.Empty;
+        var idStr = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(idStr, out var guid) ? guid : Guid.Empty;
     }
 
     [HttpGet]
@@ -32,6 +33,56 @@ public class AdminNotificationsController : ControllerBase
             .Where(n => n.UserId == userId)
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync();
+    }
+
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetNotification(int id)
+    {
+        var userId = GetCurrentUserId();
+        var notification = await _context.Notifications
+            .Include(n => n.Patient)
+            .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
+
+        if (notification == null) return NotFound();
+
+        // If it's a contact message notification, try to find the contact message
+        ContactMessage? contactMessage = null;
+        if (notification.Title.Contains("message de contact") && !string.IsNullOrEmpty(notification.ActionUrl))
+        {
+            // Try to extract ID from ActionUrl like "/admin/notifications/12"
+            var parts = notification.ActionUrl.Split('/');
+            if (parts.Length > 0 && int.TryParse(parts.Last(), out var contactId))
+            {
+                contactMessage = await _context.ContactMessages.FindAsync(contactId);
+            }
+        }
+
+        return Ok(new {
+            notification.Id,
+            notification.Title,
+            notification.Message,
+            notification.CreatedAt,
+            notification.IsRead,
+            notification.ActionUrl,
+            notification.Type,
+            Patient = notification.Patient != null ? new {
+                notification.Patient.FirstName,
+                notification.Patient.LastName,
+                notification.Patient.PhoneNumber,
+                notification.Patient.DateOfBirth,
+                notification.Patient.Address,
+                notification.Patient.MedicalHistory
+            } : null,
+            ContactMessage = contactMessage != null ? new {
+                contactMessage.FirstName,
+                contactMessage.LastName,
+                contactMessage.Email,
+                contactMessage.Phone,
+                contactMessage.Topic,
+                contactMessage.Message
+            } : null,
+            NewsletterEmail = notification.Title.ToLower().Contains("newsletter") ? notification.Message.Split(' ').LastOrDefault(s => s.Contains("@")) : null
+        });
     }
 
     [HttpPatch("{id}/read")]

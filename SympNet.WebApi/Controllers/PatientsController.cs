@@ -195,28 +195,4 @@ public class PatientsController : ControllerBase
         return Ok(new { message = "Patient désactivé" });
     }
     
-    [HttpPut("{id}/medical-background")]
-    [Authorize(Roles = "Admin,Doctor")]
-    public async Task<IActionResult> UpdateMedicalBackground(int id, [FromBody] MedicalBackgroundUpdateDto dto)
-    {
-        var patient = await _db.Patients.FindAsync(id);
-        if (patient == null)
-            return NotFound(new { message = "Patient non trouvé" });
-
-        patient.MedicalHistory = dto.MedicalHistory ?? patient.MedicalHistory;
-        patient.Allergies = dto.Allergies ?? patient.Allergies;
-        patient.ChronicDiseases = dto.ChronicDiseases ?? patient.ChronicDiseases;
-        patient.CurrentMedications = dto.CurrentMedications ?? patient.CurrentMedications;
-
-        await _db.SaveChangesAsync();
-        return Ok(new { message = "Dossier médical mis à jour" });
-    }
 }
-
-public class MedicalBackgroundUpdateDto
-{
-    public string? MedicalHistory { get; set; }
-    public string? Allergies { get; set; }
-    public string? ChronicDiseases { get; set; }
-    public string? CurrentMedications { get; set; }
-}
