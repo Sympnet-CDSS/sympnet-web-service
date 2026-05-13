@@ -14,14 +14,27 @@
             Retour à la liste
         </button>
         <div class="header-actions">
-            <button class="btn-outline">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                Modifier
-            </button>
-            <button class="btn-primary" @onclick="ValidateDiagnosis">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-                Valider le diagnostic
-            </button>
+            @if (isEditing)
+            {
+                <button class="btn-outline" @onclick="() => isEditing = false">
+                    Annuler
+                </button>
+                <button class="btn-primary" @onclick="SaveDiagnostic">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                    Sauvegarder
+                </button>
+            }
+            else
+            {
+                <button class="btn-outline" @onclick="() => isEditing = true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                    Modifier
+                </button>
+                <button class="btn-primary" @onclick="ValidateDiagnosis">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    Valider le diagnostic
+                </button>
+            }
         </div>
     </div>
 
@@ -62,19 +75,33 @@
             <div class="diag-body">
                 <div class="info-section">
                     <h3>Symptômes analysés</h3>
-                    <div class="symptoms-list">
-                        @foreach (var symptom in GetSymptomsList(diagnostic.Symptoms))
-                        {
-                            <span class="symptom-tag">@symptom</span>
-                        }
-                    </div>
+                    @if (isEditing)
+                    {
+                        <textarea class="form-control" @bind="diagnostic.Symptoms" rows="3"></textarea>
+                    }
+                    else
+                    {
+                        <div class="symptoms-list">
+                            @foreach (var symptom in GetSymptomsList(diagnostic.Symptoms))
+                            {
+                                <span class="symptom-tag">@symptom</span>
+                            }
+                        </div>
+                    }
                 </div>
 
                 <div class="prediction-section">
                     <h3>Résultat de l'Intelligence Artificielle</h3>
                     <div class="main-prediction">
                         <div class="pred-title">Diagnostic Principal</div>
-                        <div class="pred-value">@(!string.IsNullOrEmpty(diagnostic.Diagnosis) ? diagnostic.Diagnosis : "Non spécifié")</div>
+                        @if (isEditing)
+                        {
+                            <input type="text" class="form-control mt-2" @bind="diagnostic.Diagnosis" style="font-size: 18px; font-weight: 700;" />
+                        }
+                        else
+                        {
+                            <div class="pred-value">@(!string.IsNullOrEmpty(diagnostic.Diagnosis) ? diagnostic.Diagnosis : "Non spécifié")</div>
+                        }
                         
                         <div class="score-container mt-3">
                             <div class="score-label">
@@ -87,38 +114,55 @@
                         </div>
                     </div>
 
-                    <div class="shap-section">
-                        <h4>Analyse d'explicabilité (SHAP Values)</h4>
-                        <p class="text-muted">Impact des symptômes sur le diagnostic généré :</p>
-                        <div class="shap-bar">
-                            <div class="shap-item" style="width: 60%; background: #0D9488;">
-                                <span>Symptôme Primaire (+60%)</span>
-                            </div>
-                            <div class="shap-item" style="width: 25%; background: #14B8A6;">
-                                <span>Facteur B (+25%)</span>
-                            </div>
-                            <div class="shap-item" style="width: 15%; background: #94A3B8;">
-                                <span>Autres (+15%)</span>
+                    @if (!isEditing)
+                    {
+                        <div class="shap-section">
+                            <h4>Analyse d'explicabilité (SHAP Values)</h4>
+                            <p class="text-muted">Impact des symptômes sur le diagnostic généré :</p>
+                            <div class="shap-bar">
+                                <div class="shap-item" style="width: 60%; background: #0D9488;">
+                                    <span>Symptôme Primaire (+60%)</span>
+                                </div>
+                                <div class="shap-item" style="width: 25%; background: #14B8A6;">
+                                    <span>Facteur B (+25%)</span>
+                                </div>
+                                <div class="shap-item" style="width: 15%; background: #94A3B8;">
+                                    <span>Autres (+15%)</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    }
                 </div>
                 
-                @if (!string.IsNullOrEmpty(diagnostic.Recommendations))
-                {
-                    <div class="info-section mt-4">
-                        <h3>Recommandations suggérées</h3>
-                        <div class="recommendations-box">
-                            @diagnostic.Recommendations
-                        </div>
-                    </div>
-                }
+                <div class="info-section mt-4">
+                    <h3>Recommandations suggérées</h3>
+                    @if (isEditing)
+                    {
+                        <textarea class="form-control" @bind="diagnostic.Recommendations" rows="5"></textarea>
+                    }
+                    else
+                    {
+                        @if (!string.IsNullOrEmpty(diagnostic.Recommendations))
+                        {
+                            <div class="recommendations-box">
+                                @diagnostic.Recommendations
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="empty-recommendations">Aucune recommandation suggérée.</div>
+                        }
+                    }
+                </div>
             </div>
         </div>
     }
 </div>
 
 <style>
+    .form-control { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #D1D5DB; font-family: inherit; font-size: 14px; transition: border-color 0.2s; }
+    .form-control:focus { border-color: #0D9488; outline: none; box-shadow: 0 0 0 3px rgba(13,148,136,0.1); }
+    .empty-recommendations { padding: 20px; background: #F9FAFB; border-radius: 12px; border: 1px dashed #D1D5DB; color: #6B7280; font-size: 14px; text-align: center; }
     .page-container { padding: 24px; max-width: 900px; margin: 0 auto; animation: fadeIn 0.4s ease; }
     
     .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
@@ -192,10 +236,43 @@
 
     private ConsultationDetailDto? diagnostic;
     private bool isLoading = true;
+    private bool isEditing = false;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadDiagnosticDetail();
+    }
+
+    private async Task SaveDiagnostic()
+    {
+        if (diagnostic == null) return;
+        
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                
+                var updateRequest = new {
+                    Diagnosis = diagnostic.Diagnosis,
+                    Recommendations = diagnostic.Recommendations,
+                    Symptoms = diagnostic.Symptoms
+                };
+                
+                var response = await Http.PutAsJsonAsync($"{baseUrl}/api/consultations/{Id}", updateRequest);
+                if (response.IsSuccessStatusCode)
+                {
+                    isEditing = false;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur lors de la sauvegarde: {ex.Message}");
+        }
     }
 
     private async Task LoadDiagnosticDetail()

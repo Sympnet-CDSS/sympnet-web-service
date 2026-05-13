@@ -25,7 +25,16 @@
                 <div class="status-badge"><i class="fas fa-check-circle"></i> Terminée le @consultation.CreatedAt.ToString("dd/MM/yyyy à HH:mm")</div>
             </div>
             <div class="header-actions">
-                <button class="btn-secondary"><i class="fas fa-print"></i> Imprimer</button>
+                @if (isEditing)
+                {
+                    <button class="btn-secondary" @onclick="() => isEditing = false">Annuler</button>
+                    <button class="btn-primary" @onclick="SaveConsultation"><i class="fas fa-save"></i> Enregistrer</button>
+                }
+                else
+                {
+                    <button class="btn-secondary" @onclick="() => isEditing = true"><i class="fas fa-edit"></i> Modifier</button>
+                    <button class="btn-secondary"><i class="fas fa-print"></i> Imprimer</button>
+                }
             </div>
         </div>
 
@@ -49,27 +58,52 @@
                     <h3><i class="fas fa-stethoscope"></i> Diagnostic & Symptômes</h3>
                     <div class="diagnostic-box">
                         <div class="d-label">Diagnostic retenu</div>
-                        <div class="d-value">@(!string.IsNullOrEmpty(consultation.Diagnosis) ? consultation.Diagnosis : "Non spécifié")</div>
+                        @if (isEditing)
+                        {
+                            <input type="text" class="form-control mt-2" @bind="consultation.Diagnosis" />
+                        }
+                        else
+                        {
+                            <div class="d-value">@(!string.IsNullOrEmpty(consultation.Diagnosis) ? consultation.Diagnosis : "Non spécifié")</div>
+                        }
                     </div>
                     
                     <div class="symptoms-box mt-4">
                         <span class="info-label mb-2 d-block">Symptômes et examen clinique :</span>
-                        <p class="symptoms-text">@(string.IsNullOrEmpty(consultation.Symptoms) ? "Aucune note" : consultation.Symptoms)</p>
+                        @if (isEditing)
+                        {
+                            <textarea class="form-control" @bind="consultation.Symptoms" rows="4"></textarea>
+                        }
+                        else
+                        {
+                            <p class="symptoms-text">@(string.IsNullOrEmpty(consultation.Symptoms) ? "Aucune note" : consultation.Symptoms)</p>
+                        }
                     </div>
                 </div>
 
-                @if (!string.IsNullOrEmpty(consultation.Recommendations))
-                {
-                    <div class="card premium-card">
-                        <h3><i class="fas fa-list-check"></i> Recommandations</h3>
-                        <div class="recommendations-list">
-                            @foreach (var rec in consultation.Recommendations.Split('\n', StringSplitOptions.RemoveEmptyEntries))
-                            {
-                                <div class="rec-item"><i class="fas fa-angle-right"></i> @rec</div>
-                            }
-                        </div>
-                    </div>
-                }
+                <div class="card premium-card">
+                    <h3><i class="fas fa-list-check"></i> Recommandations</h3>
+                    @if (isEditing)
+                    {
+                        <textarea class="form-control" @bind="consultation.Recommendations" rows="5" placeholder="Saisissez vos recommandations ici..."></textarea>
+                    }
+                    else
+                    {
+                        @if (!string.IsNullOrEmpty(consultation.Recommendations))
+                        {
+                            <div class="recommendations-list">
+                                @foreach (var rec in consultation.Recommendations.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    <div class="rec-item"><i class="fas fa-angle-right"></i> @rec</div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-muted">Aucune recommandation enregistrée.</p>
+                        }
+                    }
+                </div>
             </div>
 
             <div class="side-column">
@@ -207,12 +241,45 @@
     private ConsultationDetailDto? consultation;
     private OrdonnanceDto? ordonnance;
     private bool isLoading = true;
+    private bool isEditing = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await LoadData();
+        }
+    }
+
+    private async Task SaveConsultation()
+    {
+        if (consultation == null) return;
+        
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                
+                var updateRequest = new {
+                    Diagnosis = consultation.Diagnosis,
+                    Recommendations = consultation.Recommendations,
+                    Symptoms = consultation.Symptoms
+                };
+                
+                var response = await Http.PutAsJsonAsync($"{baseUrl}/api/consultations/{Id}", updateRequest);
+                if (response.IsSuccessStatusCode)
+                {
+                    isEditing = false;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur lors de la sauvegarde: {ex.Message}");
         }
     }
 

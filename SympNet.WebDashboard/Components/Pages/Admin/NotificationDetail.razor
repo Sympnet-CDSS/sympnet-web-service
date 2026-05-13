@@ -63,10 +63,6 @@
                         <div class="info-grid">
                             <div class="info-item">
                                 <div class="item-icon icon-blue"><i class="fas fa-user"></i></div>
-                                <div class="item-text">
-                                    <label>Âge</label>
-                                    <span>@(message.Patient != null ? CalculateAge(message.Patient.DateOfBirth).ToString() : "--") ans</span>
-                                </div>
                             </div>
                             <div class="info-item">
                                 <div class="item-icon icon-green"><i class="fas fa-phone-alt"></i></div>
@@ -93,10 +89,6 @@
                             </div>
                             <div class="info-item">
                                 <div class="item-icon icon-orange"><i class="fas fa-map-marker-alt"></i></div>
-                                <div class="item-text">
-                                    <label>Localisation</label>
-                                    <span>@(string.IsNullOrEmpty(message.Patient?.Address) ? "Non renseignée" : message.Patient.Address)</span>
-                                </div>
                             </div>
                             <div class="info-item">
                                 <div class="item-icon icon-teal"><i class="far fa-clock"></i></div>

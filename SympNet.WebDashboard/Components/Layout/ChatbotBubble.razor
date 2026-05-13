@@ -396,12 +396,12 @@
         StateHasChanged();
     }
 
-    private void ToggleChat()
+    private async Task ToggleChat()
     {
         isOpen = !isOpen;
         if (isOpen)
         {
-            ScrollToBottom();
+            await ScrollToBottom();
         }
     }
 
