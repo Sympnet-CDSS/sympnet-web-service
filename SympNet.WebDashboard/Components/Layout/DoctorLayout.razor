@@ -81,15 +81,15 @@
                 <i class="fas fa-chart-line"></i><span>Tableau de bord</span>
             </div>
             <div class="doctor-nav-label">Consultations</div>
-            <div class="doctor-nav-item @(IsActive("/doctor/ai-diagnostics") ? "active" : "")" @onclick="GoToAIDiagnostics">
+            <!-- <div class="doctor-nav-item @(IsActive("/doctor/ai-diagnostics") ? "active" : "")" @onclick="GoToAIDiagnostics">
                 <i class="fas fa-brain"></i><span>Diagnostics IA</span>
-            </div>
+            </div> -->
             <div class="doctor-nav-item @(IsActive("/doctor/consultations") ? "active" : "")" @onclick="GoToConsultations">
                 <i class="fas fa-stethoscope"></i><span>Mes consultations</span>
             </div>
-            <div class="doctor-nav-item @(IsActive("/doctor/prescriptions") ? "active" : "")" @onclick="GoToPrescriptions">
+            <!-- <div class="doctor-nav-item @(IsActive("/doctor/prescriptions") ? "active" : "")" @onclick="GoToPrescriptions">
                 <i class="fas fa-file-prescription"></i><span>Mes ordonnances</span>
-            </div>
+            </div> -->
             <div class="doctor-nav-label">Communication</div>
 <div class="doctor-nav-item @(IsActive("/doctor/chat") ? "active" : "")" @onclick="GoToChat">
     <i class="fas fa-comments"></i><span>Messagerie</span>

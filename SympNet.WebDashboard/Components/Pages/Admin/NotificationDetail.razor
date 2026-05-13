@@ -62,13 +62,6 @@
                         </h2>
                         <div class="info-grid">
                             <div class="info-item">
-                                <div class="item-icon icon-blue"><i class="fas fa-user"></i></div>
-                                <div class="item-text">
-                                    <label>Âge</label>
-                                    <span>@(message.Patient != null ? CalculateAge(message.Patient.DateOfBirth).ToString() : "--") ans</span>
-                                </div>
-                            </div>
-                            <div class="info-item">
                                 <div class="item-icon icon-green"><i class="fas fa-phone-alt"></i></div>
                                 <div class="item-text">
                                     <label>Téléphone</label>
@@ -90,21 +83,15 @@
                                         else { @message.Email }
                                     </span>
                                 </div>
-                            </div>
-                            <div class="info-item">
-                                <div class="item-icon icon-orange"><i class="fas fa-map-marker-alt"></i></div>
-                                <div class="item-text">
-                                    <label>Localisation</label>
-                                    <span>@(string.IsNullOrEmpty(message.Patient?.Address) ? "Non renseignée" : message.Patient.Address)</span>
-                                </div>
-                            </div>
-                            <div class="info-item">
+                                <div class="info-item">
                                 <div class="item-icon icon-teal"><i class="far fa-clock"></i></div>
                                 <div class="item-text">
                                     <label>Dernière visite</label>
                                     <span>12 Avril 2026</span>
                                 </div>
                             </div>
+                            </div>
+                            
                         </div>
                         <div class="conditions-row">
                             <span class="label">Conditions:</span>
@@ -133,24 +120,6 @@
                     <div class="alert-title-group">
                         <h3>@message.Title</h3>
                         <p>@message.Message</p>
-                    </div>
-                </div>
-                <div class="alert-details-grid">
-                    <div class="detail-cell">
-                        <label>Niveau d'urgence:</label>
-                        <strong>ÉLEVÉ</strong>
-                    </div>
-                    <div class="detail-cell">
-                        <label>Symptômes:</label>
-                        <strong>Tension artérielle élevée</strong>
-                    </div>
-                    <div class="detail-cell">
-                        <label>Score IA:</label>
-                        <strong class="status-rouge">Rouge</strong>
-                    </div>
-                    <div class="detail-cell">
-                        <label>Action requise:</label>
-                        <strong>Consultation immédiate</strong>
                     </div>
                 </div>
             </div>
