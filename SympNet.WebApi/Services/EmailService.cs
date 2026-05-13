@@ -133,6 +133,114 @@ public class EmailService
         await SendEmailAsync(toEmail, "Code de réinitialisation SympNet", body);
     }
 
+    public async Task SendContactReplyEmailAsync(string toEmail, string firstName, string originalMessage, string replyMessage)
+    {
+        var body = $@"
+<div style='font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; background: #fff; border-radius: 16px; border: 1px solid #DFF0EF; overflow: hidden;'>
+    <div style='background: linear-gradient(135deg, #084E4B, #1A9E97); padding: 32px 40px; text-align: center;'>
+        <h1 style='color: #fff; font-size: 24px; margin: 0;'>SympNet</h1>
+        <p style='color: rgba(255,255,255,0.7); font-size: 12px; margin: 5px 0 0;'>Réponse à votre message</p>
+    </div>
+    <div style='padding: 32px 40px;'>
+        <h2 style='color: #0B2D2C; font-size: 20px; margin: 0 0 12px;'>Bonjour {firstName} !</h2>
+        <p style='color: #5E8584; font-size: 14px; line-height: 1.6; margin: 0 0 20px;'>
+            L'équipe SympNet a bien reçu votre message et voici notre réponse :
+        </p>
+        <div style='background: #F0FBFA; border-radius: 12px; padding: 20px; margin: 24px 0; border: 1px solid #DFF0EF; color: #084E4B; font-size: 15px; line-height: 1.6;'>
+            {replyMessage.Replace("\n", "<br/>")}
+        </div>
+        <hr style='border: none; border-top: 1px solid #F3F4F6; margin: 24px 0;' />
+        <p style='color: #9CA3AF; font-size: 12px; font-style: italic; margin-bottom: 8px;'>Rappel de votre message :</p>
+        <p style='color: #9CA3AF; font-size: 13px; line-height: 1.5;'>""{originalMessage}""</p>
+    </div>
+    <div style='background: #F0FBFA; padding: 16px 40px; text-align: center; border-top: 1px solid #DFF0EF;'>
+        <p style='color: #9DBDBC; font-size: 11px; margin: 0;'>© 2026 SympNet — Tous droits réservés</p>
+    </div>
+</div>";
+
+        await SendEmailAsync(toEmail, "Réponse de l'équipe SympNet", body);
+    }
+
+    public async Task SendProcessingConfirmationAsync(string toEmail, string firstName)
+    {
+        var body = $@"
+<div style='font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; background: #fff; border-radius: 16px; border: 1px solid #DFF0EF; overflow: hidden;'>
+    <div style='background: linear-gradient(135deg, #084E4B, #1A9E97); padding: 32px 40px; text-align: center;'>
+        <h1 style='color: #fff; font-size: 24px; margin: 0;'>SympNet</h1>
+    </div>
+    <div style='padding: 32px 40px;'>
+        <h2 style='color: #0B2D2C; font-size: 20px; margin: 0 0 12px;'>Bonjour {firstName} !</h2>
+        <p style='color: #5E8584; font-size: 14px; line-height: 1.6;'>
+            Nous avons bien reçu votre demande. Votre dossier est désormais <strong>en cours de traitement</strong> par notre équipe technique.
+        </p>
+        <p style='color: #5E8584; font-size: 14px; line-height: 1.6;'>
+            Nous reviendrons vers vous dès que possible avec une réponse détaillée.
+        </p>
+        <div style='background: #F0FBFA; border-radius: 12px; padding: 16px; margin: 24px 0; border: 1px solid #DFF0EF; text-align: center;'>
+            <span style='color: #084E4B; font-weight: 700;'>Statut : En cours de traitement</span>
+        </div>
+    </div>
+    <div style='background: #F0FBFA; padding: 16px 40px; text-align: center; border-top: 1px solid #DFF0EF;'>
+        <p style='color: #9DBDBC; font-size: 11px; margin: 0;'>© 2026 SympNet — Tous droits réservés</p>
+    </div>
+</div>";
+
+        await SendEmailAsync(toEmail, "Mise à jour de votre demande — SympNet", body);
+    }
+
+    public async Task SendNewBlogPostNotificationAsync(string toEmail, string blogTitle, string blogUrl)
+    {
+        var body = $@"
+<div style='font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; background: #fff; border-radius: 16px; border: 1px solid #DFF0EF; overflow: hidden;'>
+    <div style='background: linear-gradient(135deg, #084E4B, #1A9E97); padding: 32px 40px; text-align: center;'>
+        <h1 style='color: #fff; font-size: 24px; margin: 0;'>SympNet Blog</h1>
+        <p style='color: rgba(255,255,255,0.7); font-size: 12px; margin: 5px 0 0;'>Nouveauté dans votre boîte mail</p>
+    </div>
+    <div style='padding: 32px 40px;'>
+        <h2 style='color: #0B2D2C; font-size: 20px; margin: 0 0 12px;'>Nouveau sur le Blog !</h2>
+        <p style='color: #5E8584; font-size: 14px; line-height: 1.6; margin-bottom: 24px;'>
+            Un nouvel article vient d'être publié : <strong>{blogTitle}</strong>.
+        </p>
+        <div style='text-align: center;'>
+            <a href='{blogUrl}' style='background: linear-gradient(135deg, #0D6E6A, #3ABFB8); color: white; padding: 12px 32px; border-radius: 10px; text-decoration: none; font-weight: 600; display: inline-block;'>
+                Lire l'article
+            </a>
+        </div>
+    </div>
+    <div style='background: #F0FBFA; padding: 16px 40px; text-align: center; border-top: 1px solid #DFF0EF;'>
+        <p style='color: #9DBDBC; font-size: 11px; margin: 0;'>Vous recevez cet email car vous êtes inscrit à notre newsletter.</p>
+        <p style='color: #9DBDBC; font-size: 11px; margin: 5px 0 0;'>© 2026 SympNet — Tous droits réservés</p>
+    </div>
+</div>";
+
+        await SendEmailAsync(toEmail, $"Nouveau Blog : {blogTitle}", body);
+    }
+
+    public async Task SendNewsletterConfirmationAsync(string toEmail)
+    {
+        var body = $@"
+<div style='font-family: Arial, sans-serif; max-width: 550px; margin: 0 auto; background: #fff; border-radius: 16px; border: 1px solid #DFF0EF; overflow: hidden;'>
+    <div style='background: linear-gradient(135deg, #084E4B, #1A9E97); padding: 32px 40px; text-align: center;'>
+        <h1 style='color: #fff; font-size: 24px; margin: 0;'>SympNet Newsletter</h1>
+        <p style='color: rgba(255,255,255,0.7); font-size: 12px; margin: 5px 0 0;'>Inscription confirmée</p>
+    </div>
+    <div style='padding: 32px 40px;'>
+        <h2 style='color: #0B2D2C; font-size: 20px; margin: 0 0 12px;'>Merci de nous rejoindre !</h2>
+        <p style='color: #5E8584; font-size: 14px; line-height: 1.6; margin-bottom: 24px;'>
+            Votre inscription à la newsletter SympNet est confirmée. Vous recevrez désormais nos dernières actualités, articles de blog et mises à jour directement dans votre boîte mail.
+        </p>
+        <div style='background: #F0FBFA; border-radius: 12px; padding: 16px; margin: 24px 0; border: 1px solid #DFF0EF; text-align: center;'>
+            <span style='color: #084E4B; font-weight: 700;'>Bienvenue parmi nous !</span>
+        </div>
+    </div>
+    <div style='background: #F0FBFA; padding: 16px 40px; text-align: center; border-top: 1px solid #DFF0EF;'>
+        <p style='color: #9DBDBC; font-size: 11px; margin: 0;'>© 2026 SympNet — Tous droits réservés</p>
+    </div>
+</div>";
+
+        await SendEmailAsync(toEmail, "Bienvenue à la newsletter SympNet !", body);
+    }
+
     // ── Méthode commune d'envoi ───────────────────────────────────────────
     private async Task SendEmailAsync(string to, string subject, string htmlBody)
     {
@@ -149,9 +257,20 @@ public class EmailService
         message.Body = new TextPart("html") { Text = htmlBody };
 
         using var client = new SmtpClient();
-        await client.ConnectAsync(smtpHost, smtpPort, MailKit.Security.SecureSocketOptions.StartTls);
-        await client.AuthenticateAsync(smtpUser, smtpPass);
-        await client.SendAsync(message);
-        await client.DisconnectAsync(true);
+        try
+        {
+            await client.ConnectAsync(smtpHost, smtpPort, MailKit.Security.SecureSocketOptions.StartTls);
+            await client.AuthenticateAsync(smtpUser, smtpPass);
+            await client.SendAsync(message);
+            await client.DisconnectAsync(true);
+        }
+        catch (MailKit.Security.AuthenticationException)
+        {
+            throw new Exception("L'envoi de l'email a échoué : Identifiants SMTP incorrects. Veuillez vérifier votre mot de passe d'application Google.");
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Erreur lors de l'envoi de l'email : {ex.Message}");
+        }
     }
 }

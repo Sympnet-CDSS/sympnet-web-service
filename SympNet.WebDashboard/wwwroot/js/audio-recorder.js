@@ -4,6 +4,7 @@ let isRecordingActive = false;
 let transcribedText = "";
 let reconnectAttempts = 0;
 let forcedStop = false;
+let currentDotNetHelper = null;
 const MAX_RECONNECT_ATTEMPTS = 3;
 
 // Filtrer les erreurs MetaMask
@@ -28,7 +29,8 @@ if (isLocalhost && !isHttps) {
     console.warn('⚠️ Reconnaissance vocale: HTTPS recommandé pour meilleure stabilité');
 }
 
-window.initAudioRecorder = function() {
+window.initAudioRecorder = function(helper = null) {
+    // On ne stocke plus de helper global unique pour éviter les conflits
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     
     if (!SpeechRecognition) {
@@ -74,21 +76,54 @@ window.initAudioRecorder = function() {
                 }
             }
             
-            if (finalTranscript) {
-                transcribedText += (transcribedText ? ' ' : '') + finalTranscript;
-                console.log(" Texte final:", finalTranscript);
+            if (finalTranscript || interimTranscript) {
+                const currentText = finalTranscript || interimTranscript;
+                const textToDisplay = transcribedText + (transcribedText && currentText ? ' ' : '') + currentText;
                 
-                const textarea = document.querySelector('textarea');
-                if (textarea) {
-                    textarea.value = transcribedText;
-                    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+                // DIAGNOSTIC: Lister tous les inputs pour comprendre pourquoi on ne trouve pas
+                const allInputs = document.querySelectorAll('input, textarea');
+                console.log(`🔍 Recherche d'input parmi ${allInputs.length} éléments...`);
+                allInputs.forEach((el, idx) => {
+                    console.log(`   [${idx}] Tag:${el.tagName} ID:${el.id} PlaceHolder:${el.placeholder} Type:${el.type}`);
+                });
+
+                // Recherche ultra-agressive du champ
+                const input = document.getElementById('chatbot-input-field') || 
+                              document.getElementById('consultation-symptoms') ||
+                              document.querySelector('.chatbot-input input') ||
+                              document.querySelector('input[placeholder*="question"]') ||
+                              document.querySelector('input[placeholder*="médicale"]') ||
+                              document.querySelector('textarea[placeholder*="symptômes"]') ||
+                              document.querySelector('.chatbot-window input') ||
+                              document.querySelector('textarea');
+                              
+                if (input) {
+                    console.log("🎯 Cible IDENTIFIÉE:", input.tagName, "ID:", input.id);
+                    
+                    const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+                    const nativeTextAreaValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                    
+                    if (input.tagName === 'TEXTAREA') {
+                        nativeTextAreaValueSetter.call(input, textToDisplay);
+                    } else {
+                        nativeInputValueSetter.call(input, textToDisplay);
+                    }
+                    
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
                 }
-            }
-            
-            if (interimTranscript) {
-                const textarea = document.querySelector('textarea');
-                if (textarea) {
-                    textarea.value = transcribedText + (transcribedText ? ' ' : '') + interimTranscript;
+
+                // BACKFALL / SYNC: Envoyer directement au composant qui a lancé l'enregistrement
+                if (currentDotNetHelper) {
+                    currentDotNetHelper.invokeMethodAsync('UpdateUserInput', textToDisplay);
+                }
+                
+                if (!input && !currentDotNetHelper) {
+                    console.warn("❌ ÉCHEC: Aucun champ trouvé et pas de helper actif.");
+                }
+                
+                if (finalTranscript) {
+                    transcribedText += (transcribedText ? ' ' : '') + finalTranscript;
+                    console.log("✅ Texte final ajouté:", finalTranscript);
                 }
             }
         };
@@ -146,7 +181,7 @@ window.initAudioRecorder = function() {
             // Redémarrer automatiquement si nécessaire
             if (!forcedStop && reconnectAttempts > 0 && reconnectAttempts <= MAX_RECONNECT_ATTEMPTS) {
                 console.log(" Redémarrage automatique...");
-                setTimeout(() => window.startRecording(), 1000);
+                setTimeout(() => window.startRecording(currentDotNetHelper), 1000);
             }
         };
         
@@ -159,7 +194,9 @@ window.initAudioRecorder = function() {
     }
 };
 
-window.startRecording = function() {
+window.startRecording = function(helper = null) {
+    if (helper) currentDotNetHelper = helper;
+    
     if (!recognition) {
         console.error(" API non initialisée");
         return false;
@@ -231,10 +268,10 @@ window.getTranscribedText = function() {
     const text = transcribedText;
     transcribedText = "";
     
-    // Nettoyer le textarea
-    const textarea = document.querySelector('textarea');
-    if (textarea && !textarea.value) {
-        textarea.value = "";
+    // Nettoyer l'input
+    const input = document.getElementById('chatbot-input-field') || document.querySelector('textarea');
+    if (input && !input.value) {
+        input.value = "";
     }
     
     return text;
@@ -242,9 +279,15 @@ window.getTranscribedText = function() {
 
 window.resetTranscribedText = function() {
     transcribedText = "";
-    const textarea = document.querySelector('textarea');
-    if (textarea) {
-        textarea.value = "";
+    const input = document.getElementById('chatbot-input-field') || 
+                  document.getElementById('consultation-symptoms') ||
+                  document.querySelector('input[placeholder*="question"]') ||
+                  document.querySelector('input[placeholder*="médicale"]') ||
+                  document.querySelector('.chatbot-input input') ||
+                  document.querySelector('textarea');
+    if (input) {
+        input.value = "";
+        input.dispatchEvent(new Event('input', { bubbles: true }));
     }
     console.log("🗑️ Texte réinitialisé");
     return true;

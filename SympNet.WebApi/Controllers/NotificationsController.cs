@@ -96,4 +96,22 @@ public async Task<IActionResult> GetMyNotifications()
         return StatusCode(500, new { message = ex.Message });
     }
 }
+
+[HttpGet("{id}")]
+public async Task<IActionResult> GetNotification(int id)
+{
+    try
+    {
+        var userId = GetCurrentUserId();
+        var notif = await _db.DoctorNotifications
+            .FirstOrDefaultAsync(n => n.Id == id && n.DoctorUserId == userId);
+
+        if (notif == null) return NotFound();
+        return Ok(notif);
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { message = ex.Message });
+    }
+}
 }

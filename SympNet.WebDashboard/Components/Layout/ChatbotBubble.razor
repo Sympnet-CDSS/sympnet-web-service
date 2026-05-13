@@ -52,7 +52,7 @@
                 <button class="mic-btn @(isRecording ? "recording" : "")" @onclick="ToggleRecording" disabled="@isTyping">
                     <i class="fas @(isRecording ? "fa-stop" : "fa-microphone")"></i>
                 </button>
-                <input type="text" placeholder="Posez votre question médicale..." 
+                <input id="chatbot-input-field" type="text" placeholder="Posez votre question médicale..." 
                        @bind="userInput" @bind:event="oninput" @onkeypress="HandleKeyPress" />
                 <button class="send-btn" @onclick="SendMessage" disabled="@(string.IsNullOrWhiteSpace(userInput) || isTyping)">
                     <i class="fas fa-paper-plane"></i>
@@ -287,15 +287,15 @@
     }
     
     .mic-btn.recording {
-        background: #FEE2E2;
-        color: #EF4444;
-        animation: pulse-mic 1.5s infinite;
+        background: #EF4444;
+        color: white;
+        animation: pulse-red 1.5s infinite;
     }
     
-    @@keyframes pulse-mic {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
-        70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    @@keyframes pulse-red {
+        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
     }
     
     .chatbot-input input {
@@ -360,25 +360,37 @@
     {
         if (firstRender)
         {
-            try { await JS.InvokeVoidAsync("initAudioRecorder"); } catch { }
+            try 
+            { 
+                var dotNetObjRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("initAudioRecorder", dotNetObjRef); 
+            } 
+            catch { }
         }
     }
+
+    [JSInvokable]
+    public void UpdateUserInput(string text)
+    {
+        userInput = initialTextBeforeRecording + (string.IsNullOrEmpty(initialTextBeforeRecording) ? "" : " ") + text;
+        StateHasChanged();
+    }
+
+    private string initialTextBeforeRecording = "";
 
     private async Task ToggleRecording()
     {
         if (isRecording)
         {
-            await JS.InvokeVoidAsync("stopRecording");
+            await JS.InvokeVoidAsync("stopRecording", true);
             isRecording = false;
-            var transcribedText = await JS.InvokeAsync<string>("getTranscribedText");
-            if (!string.IsNullOrEmpty(transcribedText))
-            {
-                userInput += (string.IsNullOrEmpty(userInput) ? "" : " ") + transcribedText;
-            }
         }
         else
         {
-            await JS.InvokeVoidAsync("startRecording");
+            initialTextBeforeRecording = userInput;
+            await JS.InvokeVoidAsync("resetTranscribedText");
+            var dotNetObjRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("startRecording", dotNetObjRef);
             isRecording = true;
         }
         StateHasChanged();

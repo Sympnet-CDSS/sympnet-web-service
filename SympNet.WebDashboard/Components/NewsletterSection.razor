@@ -1,0 +1,111 @@
+@inject HttpClient Http
+@inject IConfiguration Config
+@inject IJSRuntime JSRuntime
+
+<section class="newsletter-section">
+    <div class="newsletter-container">
+        <h3>Abonnez-vous à notre newsletter !</h3>
+        <p>Recevez les dernières actualités médicales et mises à jour de SympNet directement dans votre boîte mail.</p>
+        <div class="newsletter-input-group">
+            <input type="email" placeholder="Votre adresse email" @bind="email" />
+            <button @onclick="Subscribe" disabled="@loading">
+                @if (loading) { <span class="spinner-small"></span> }
+                else { <span>S'abonner</span> }
+            </button>
+        </div>
+        @if (!string.IsNullOrEmpty(statusMessage))
+        {
+            <p class="status-msg @(isError ? "error" : "success")">@statusMessage</p>
+        }
+    </div>
+</section>
+
+<style>
+    .newsletter-section { padding: 80px 24px; background: #F8FAFC; border-top: 1px solid #E2E8F0; }
+    .newsletter-container { max-width: 600px; margin: 0 auto; text-align: center; }
+    .newsletter-container h3 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; color: #111827; margin-bottom: 12px; }
+    .newsletter-container p { color: #64748B; font-size: 16px; margin-bottom: 32px; }
+    
+    .newsletter-input-group { 
+        display: flex; 
+        background: white; 
+        border-radius: 16px; 
+        overflow: hidden; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+        border: 1px solid #E2E8F0; 
+        transition: 0.2s;
+    }
+    .newsletter-input-group:focus-within { border-color: #0D9488; box-shadow: 0 0 0 4px rgba(13, 148, 136, 0.1); }
+    
+    .newsletter-input-group input { flex: 1; border: none; padding: 18px 24px; font-size: 15px; outline: none; }
+    .newsletter-input-group button { 
+        background: #0D9488; 
+        color: white; 
+        border: none; 
+        padding: 0 32px; 
+        font-weight: 700; 
+        cursor: pointer; 
+        transition: 0.2s; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
+        min-width: 140px;
+    }
+    .newsletter-input-group button:hover:not(:disabled) { background: #0F766E; }
+    .newsletter-input-group button:disabled { opacity: 0.7; cursor: not-allowed; }
+
+    .status-msg { margin-top: 16px; font-size: 14px; font-weight: 600; }
+    .status-msg.success { color: #059669; }
+    .status-msg.error { color: #DC2626; }
+
+    .spinner-small { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    @@media (max-width: 480px) {
+        .newsletter-input-group { flex-direction: column; border-radius: 12px; }
+        .newsletter-input-group button { padding: 14px; }
+    }
+</style>
+
+@code {
+    private string email = "";
+    private string statusMessage = "";
+    private bool isError = false;
+    private bool loading = false;
+
+    private async Task Subscribe()
+    {
+        if (string.IsNullOrWhiteSpace(email) || !email.Contains("@"))
+        {
+            statusMessage = "Veuillez entrer une adresse email valide.";
+            isError = true;
+            return;
+        }
+
+        loading = true;
+        statusMessage = "";
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var response = await Http.PostAsJsonAsync($"{baseUrl}/api/Newsletter/subscribe", new { Email = email });
+            
+            if (response.IsSuccessStatusCode)
+            {
+                statusMessage = "Merci ! Vous êtes maintenant inscrit à notre newsletter.";
+                isError = false;
+                email = "";
+            }
+            else
+            {
+                statusMessage = "Une erreur est survenue. Veuillez réessayer.";
+                isError = true;
+            }
+        }
+        catch (Exception)
+        {
+            statusMessage = "Erreur de connexion au serveur.";
+            isError = true;
+        }
+        finally { loading = false; }
+    }
+}

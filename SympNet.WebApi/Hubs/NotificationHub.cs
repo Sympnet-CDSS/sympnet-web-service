@@ -18,6 +18,9 @@ public class NotificationHub : Hub
 
             if (role == "Doctor")
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"doctor_user_{userId}");
+
+            if (role == "Admin")
+                await Groups.AddToGroupAsync(Context.ConnectionId, "admins");
         }
 
         await base.OnConnectedAsync();

@@ -136,5 +136,20 @@ public class PatientsController : ControllerBase
 
         return Ok(new { message = "Patient désactivé" });
     }
-    
+
+    // DELETE: api/patients/{id}
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeletePatient(int id)
+    {
+        var patient = await _db.Patients.Include(p => p.User).FirstOrDefaultAsync(p => p.Id == id);
+        if (patient == null)
+            return NotFound(new { message = "Patient non trouvé" });
+
+        var user = patient.User;
+        _db.Patients.Remove(patient);
+        _db.Users.Remove(user);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Patient supprimé avec succès" });
+    }
 }

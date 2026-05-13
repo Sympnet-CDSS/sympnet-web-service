@@ -64,7 +64,7 @@
                     </div>
                     <div class="form-group">
                         <label>Détail des symptômes et examen clinique</label>
-                        <textarea class="form-control" rows="4" @bind="symptoms" placeholder="Décrivez les symptômes, l'examen clinique..."></textarea>
+                        <textarea id="consultation-symptoms" class="form-control" rows="4" @bind="symptoms" @bind:event="oninput" placeholder="Décrivez les symptômes, l'examen clinique..."></textarea>
                     </div>
                 </div>
 
@@ -370,9 +370,23 @@
     {
         if (firstRender)
         {
-            await JS.InvokeVoidAsync("initAudioRecorder");
+            try 
+            { 
+                var dotNetObjRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("initAudioRecorder", dotNetObjRef); 
+            } 
+            catch { }
         }
     }
+
+    [JSInvokable]
+    public void UpdateUserInput(string text)
+    {
+        symptoms = initialTextBeforeRecording + (string.IsNullOrEmpty(initialTextBeforeRecording) ? "" : "\n") + text;
+        StateHasChanged();
+    }
+
+    private string initialTextBeforeRecording = "";
 
     private void AddMedication()
     {
@@ -390,21 +404,18 @@
     {
         if (isRecording)
         {
-            await JS.InvokeVoidAsync("stopRecording");
+            await JS.InvokeVoidAsync("stopRecording", true);
             isRecording = false;
-            var transcribedText = await JS.InvokeAsync<string>("getTranscribedText");
-            if (!string.IsNullOrEmpty(transcribedText))
-            {
-                symptoms += (string.IsNullOrEmpty(symptoms) ? "" : "\n") + transcribedText;
-                StateHasChanged();
-            }
         }
         else
         {
-            await JS.InvokeVoidAsync("startRecording");
+            initialTextBeforeRecording = symptoms;
+            await JS.InvokeVoidAsync("resetTranscribedText");
+            var dotNetObjRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("startRecording", dotNetObjRef);
             isRecording = true;
-            StateHasChanged();
         }
+        StateHasChanged();
     }
 
     private async Task CheckWithAI()

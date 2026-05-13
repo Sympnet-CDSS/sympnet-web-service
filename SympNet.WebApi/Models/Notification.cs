@@ -3,7 +3,7 @@ namespace SympNet.WebApi.Models;
 public class Notification
 {
     public int Id { get; set; }
-    public string UserId { get; set; } = string.Empty;
+    public Guid UserId { get; set; }
     public User User { get; set; } = null!;
     public int? PatientId { get; set; }
     public Patient? Patient { get; set; }

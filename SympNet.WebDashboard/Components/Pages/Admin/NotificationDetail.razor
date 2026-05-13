@@ -1,4 +1,5 @@
 @page "/admin/notifications/{MessageId:int}"
+@page "/doctor/notifications/{MessageId:int}"
 @layout AdminLayout
 @inject HttpClient Http
 @inject IConfiguration Config
@@ -6,116 +7,465 @@
 @inject NavigationManager Navigation
 
 <div class="notif-detail-page">
-    <div class="breadcrumb">
-        <a @onclick='() => Navigation.NavigateTo("/admin/notifications")'>Notifications</a>
-        <i class="fas fa-chevron-right"></i>
-        <span>Détails du message</span>
+    <DashboardHeader UserName="@userName" IsAdmin="@isAdmin" />
+
+    <div class="page-header">
+        <button class="btn-back" @onclick="GoBack">
+            <i class="fas fa-arrow-left"></i>
+        </button>
+        <div class="header-text">
+            <h1>Détails de la notification</h1>
+            @if (message != null)
+            {
+                <span class="header-date">@message.DisplayDate.ToString("dd MMMM yyyy à HH:mm", new System.Globalization.CultureInfo("fr-FR"))</span>
+            }
+        </div>
+        @if (message != null && IsUrgent(message.Title))
+        {
+            <div class="urgent-badge-top">
+                <i class="fas fa-exclamation-triangle"></i> URGENT
+            </div>
+        }
     </div>
 
     @if (loading)
     {
         <div class="loading-state">
             <div class="spinner"></div>
-            <p>Chargement du message...</p>
+            <p>Chargement des détails...</p>
         </div>
     }
     else if (message == null)
     {
         <div class="error-state">
             <i class="fas fa-exclamation-circle"></i>
-            <h3>Message non trouvé</h3>
-            <p>Le message que vous recherchez n'existe pas ou a été supprimé.</p>
-            <button class="btn-primary" @onclick='() => Navigation.NavigateTo("/admin/notifications")'>Retour aux notifications</button>
+            <h3>Notification non trouvée</h3>
+            <p>La notification que vous recherchez n'existe pas ou a été supprimée.</p>
         </div>
     }
     else
     {
-        <div class="detail-card">
-            <div class="detail-header">
-                <div class="sender-info">
-                    <div class="avatar">@message.FirstName[0]@message.LastName[0]</div>
-                    <div>
-                        <h2>@message.FirstName @message.LastName</h2>
-                        <p>@message.Email • @(string.IsNullOrEmpty(message.Phone) ? "Pas de téléphone" : message.Phone)</p>
+        <div class="content-container">
+            <!-- PROFILE CARD -->
+            <div class="profile-card">
+                <div class="profile-main">
+                    <div class="avatar-section">
+                        <div class="avatar-circle">
+                            <i class="fas fa-user"></i>
+                        </div>
+                    </div>
+                    <div class="profile-info">
+                        <h2>
+                            @if (message.Patient != null) { @($"{message.Patient.FirstName} {message.Patient.LastName}") }
+                            else if (message.ContactMessage != null) { @($"{message.ContactMessage.FirstName} {message.ContactMessage.LastName}") }
+                            else { @($"{message.FirstName} {message.LastName}") }
+                        </h2>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="item-icon icon-blue"><i class="fas fa-user"></i></div>
+                                <div class="item-text">
+                                    <label>Âge</label>
+                                    <span>@(message.Patient != null ? CalculateAge(message.Patient.DateOfBirth).ToString() : "--") ans</span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="item-icon icon-green"><i class="fas fa-phone-alt"></i></div>
+                                <div class="item-text">
+                                    <label>Téléphone</label>
+                                    <span class="highlight-green">
+                                        @if (message.Patient != null) { @message.Patient.PhoneNumber }
+                                        else if (message.ContactMessage != null) { @message.ContactMessage.Phone }
+                                        else { @message.Phone }
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="item-icon icon-purple"><i class="fas fa-envelope"></i></div>
+                                <div class="item-text">
+                                    <label>Email</label>
+                                    <span class="highlight-purple">
+                                        @if (!string.IsNullOrEmpty(message.NewsletterEmail)) { @message.NewsletterEmail }
+                                        else if (message.Patient != null) { @message.Email }
+                                        else if (message.ContactMessage != null) { @message.ContactMessage.Email }
+                                        else { @message.Email }
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="item-icon icon-orange"><i class="fas fa-map-marker-alt"></i></div>
+                                <div class="item-text">
+                                    <label>Localisation</label>
+                                    <span>@(string.IsNullOrEmpty(message.Patient?.Address) ? "Non renseignée" : message.Patient.Address)</span>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <div class="item-icon icon-teal"><i class="far fa-clock"></i></div>
+                                <div class="item-text">
+                                    <label>Dernière visite</label>
+                                    <span>12 Avril 2026</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="conditions-row">
+                            <span class="label">Conditions:</span>
+                            @if (!string.IsNullOrEmpty(message.Patient?.MedicalHistory))
+                            {
+                                @foreach (var cond in message.Patient.MedicalHistory.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                                {
+                                    <span class="tag">@cond.Trim()</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="tag">Aucune condition répertoriée</span>
+                            }
+                        </div>
                     </div>
                 </div>
-                <div class="message-meta">
-                    <span class="status-badge @(message.IsRead ? "read" : "unread")">
-                        @(message.IsRead ? "Lu" : "Nouveau")
-                    </span>
-                    <span class="date">@message.CreatedAt.ToString("f")</span>
+            </div>
+
+            <!-- AI ALERT CARD -->
+            <div class="alert-card">
+                <div class="alert-header">
+                    <div class="alert-icon-box">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <div class="alert-title-group">
+                        <h3>@message.Title</h3>
+                        <p>@message.Message</p>
+                    </div>
+                </div>
+                <div class="alert-details-grid">
+                    <div class="detail-cell">
+                        <label>Niveau d'urgence:</label>
+                        <strong>ÉLEVÉ</strong>
+                    </div>
+                    <div class="detail-cell">
+                        <label>Symptômes:</label>
+                        <strong>Tension artérielle élevée</strong>
+                    </div>
+                    <div class="detail-cell">
+                        <label>Score IA:</label>
+                        <strong class="status-rouge">Rouge</strong>
+                    </div>
+                    <div class="detail-cell">
+                        <label>Action requise:</label>
+                        <strong>Consultation immédiate</strong>
+                    </div>
                 </div>
             </div>
 
-            <div class="detail-content">
-                <div class="info-group">
-                    <label>Sujet</label>
-                    <div class="topic-tag">@GetTopicLabel(message.Topic)</div>
+            @if (!isAdmin)
+            {
+                <!-- ORDONNANCE SECTION (DOCTOR ONLY) -->
+                <div class="ordonnance-card">
+                    <div class="card-header-simple">
+                        <h3><i class="fas fa-file-medical"></i> Ordonnance suggérée</h3>
+                    </div>
+                    <div class="meds-list">
+                        <div class="med-item">
+                            <div class="med-icon"><i class="fas fa-pills"></i></div>
+                            <div class="med-info">
+                                <strong>Amlodipine 5mg</strong>
+                                <span>1 comprimé par jour, le matin</span>
+                            </div>
+                        </div>
+                        <div class="med-item">
+                            <div class="med-icon"><i class="fas fa-pills"></i></div>
+                            <div class="med-info">
+                                <strong>Metformine 500mg</strong>
+                                <span>1 comprimé au cours du dîner</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <!-- ACTION BUTTONS -->
+            <div class="actions-container">
+                <div class="main-actions">
+                    <button class="btn-primary-green" @onclick="MarkAsHandled" disabled="@message.IsRead">
+                        <i class="fas fa-check-circle"></i> @(message.IsRead ? "Traité" : "Accepter")
+                    </button>
+                    <button class="btn-outline-red" @onclick="ConfirmDelete">
+                        <i class="fas fa-times-circle"></i> Refuser
+                    </button>
+                    
+                    @if (!isAdmin)
+                    {
+                        <button class="btn-teal" @onclick="() => showReplyForm = !showReplyForm">
+                            <i class="far fa-comment-dots"></i> Envoyer un message
+                        </button>
+                        <button class="btn-blue" @onclick='() => Navigation.NavigateTo("/doctor/video-call")'>
+                            <i class="fas fa-video"></i> Démarrer vidéo consultation
+                        </button>
+                    }
                 </div>
 
-                <div class="info-group">
-                    <label>Message</label>
-                    <div class="message-text">@message.Message</div>
-                </div>
-            </div>
-
-            <div class="detail-footer">
-                <button class="btn-secondary" @onclick='() => Navigation.NavigateTo("/admin/notifications")'>Retour</button>
-                @if (!message.IsRead)
+                @if (showReplyForm || isAdmin)
                 {
-                    <button class="btn-primary" @onclick="MarkAsRead">Marquer comme traité</button>
+                    <div class="reply-section animate-slide">
+                        <div class="reply-box">
+                            <textarea placeholder="Écrivez votre réponse détaillée ici..." @bind="replyMessage"></textarea>
+                            <div class="reply-footer">
+                                <p class="hint">Cet email sera envoyé à <strong>@(string.IsNullOrEmpty(message.NewsletterEmail) ? (message.ContactMessage?.Email ?? message.Email) : message.NewsletterEmail)</strong></p>
+                                <div class="reply-actions">
+                                    <button class="btn-cancel-link" @onclick='() => { showReplyForm = false; replyMessage = ""; }'>Annuler</button>
+                                    <button class="btn-send-reply" @onclick="SendReply" disabled="@(sending || string.IsNullOrWhiteSpace(replyMessage))">
+                                        @if (sending) { <span class="spinner-small"></span> }
+                                        else { <i class="far fa-paper-plane"></i> }
+                                        Envoyer la réponse
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <button class="btn-expand-reply" @onclick="() => showReplyForm = true">
+                        Ajouter une réponse détaillée
+                    </button>
                 }
             </div>
         </div>
     }
 </div>
 
-<style>
-    .notif-detail-page { max-width: 800px; margin: 0 auto; }
-    .breadcrumb { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; color: #6B7280; font-size: 14px; }
-    .breadcrumb a { color: #0D9488; cursor: pointer; text-decoration: none; font-weight: 500; }
-    .breadcrumb i { font-size: 10px; }
-    
-    .detail-card { background: white; border-radius: 20px; border: 1px solid rgba(13,148,136,0.1); overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
-    .detail-header { padding: 32px; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; align-items: flex-start; }
-    
-    .sender-info { display: flex; gap: 20px; align-items: center; }
-    .avatar { width: 56px; height: 56px; border-radius: 16px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; }
-    .sender-info h2 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700; color: #111827; margin: 0; }
-    .sender-info p { font-size: 14px; color: #6B7280; margin-top: 4px; }
-    
-    .message-meta { text-align: right; }
-    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-bottom: 8px; }
-    .status-badge.unread { background: #FEF3C7; color: #D97706; }
-    .status-badge.read { background: #F0FDF4; color: #16A34A; }
-    .date { display: block; font-size: 12px; color: #9CA3AF; }
-    
-    .detail-content { padding: 32px; }
-    .info-group { margin-bottom: 24px; }
-    .info-group label { display: block; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #9CA3AF; margin-bottom: 12px; }
-    .topic-tag { display: inline-block; padding: 6px 14px; background: #F3F4F6; border-radius: 8px; font-size: 14px; font-weight: 600; color: #4B5563; }
-    .message-text { font-size: 16px; color: #374151; line-height: 1.6; background: #F9FAFB; padding: 24px; border-radius: 16px; white-space: pre-wrap; }
-    
-    .detail-footer { padding: 24px 32px; background: #F9FAFB; border-top: 1px solid #F3F4F6; display: flex; justify-content: flex-end; gap: 16px; }
-    
-    .btn-primary { background: #0D9488; color: white; border: none; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-    .btn-primary:hover { background: #0F766E; transform: translateY(-1px); }
-    .btn-secondary { background: white; border: 1px solid #E5E7EB; padding: 12px 24px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
-    .btn-secondary:hover { background: #F9FAFB; border-color: #D1D5DB; }
+<ConfirmModal 
+    IsVisible="@showConfirmModal" 
+    Title="Supprimer la notification" 
+    Message="Êtes-vous sûr de vouloir supprimer cette notification ? Cette action est irréversible."
+    OnConfirm="DeleteMessageConfirmed" 
+    OnCancel="() => showConfirmModal = false" />
 
-    .loading-state, .error-state { padding: 100px 40px; text-align: center; }
-    .spinner { width: 40px; height: 40px; border: 3px solid #F3F4F6; border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+<ToastNotification 
+    IsVisible="@showToast" 
+    Message="@toastMessage" 
+    Success="@toastSuccess" />
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&display=swap');
+
+    .notif-detail-page {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px 20px 60px;
+        font-family: 'Bricolage Grotesque', sans-serif;
+    }
+
+    /* Page Header */
+    .page-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 32px;
+        position: relative;
+    }
+    .btn-back {
+        background: white; border: 1px solid #E5E7EB;
+        width: 40px; height: 40px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; color: #374151; transition: 0.2s;
+    }
+    .btn-back:hover { background: #F3F4F6; border-color: #D1D5DB; }
+    
+    .header-text h1 { font-size: 20px; font-weight: 800; color: #111827; margin: 0; }
+    .header-date { font-size: 13px; color: #9CA3AF; font-weight: 500; }
+    
+    .urgent-badge-top {
+        position: absolute; right: 0; top: 0;
+        background: #FEF2F2; color: #EF4444;
+        padding: 8px 16px; border-radius: 10px;
+        font-weight: 800; font-size: 12px;
+        display: flex; align-items: center; gap: 8px;
+    }
+
+    .content-container { display: flex; flex-direction: column; gap: 24px; }
+
+    /* Profile Card */
+    .profile-card {
+        background: white; border-radius: 24px; border: 1px solid #F3F4F6;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03); padding: 32px;
+    }
+    .profile-main { display: flex; gap: 32px; }
+    .avatar-circle {
+        width: 80px; height: 80px; border-radius: 50%;
+        background: #0D9488; color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 32px;
+    }
+    .profile-info { flex: 1; }
+    .profile-info h2 { font-size: 24px; font-weight: 800; color: #111827; margin: 0 0 20px; }
+    
+    .info-grid {
+        display: grid; grid-template-columns: repeat(3, 1fr);
+        gap: 20px; margin-bottom: 24px;
+    }
+    .info-item { display: flex; align-items: center; gap: 12px; }
+    .item-icon {
+        width: 40px; height: 40px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 16px; flex-shrink: 0;
+    }
+    .icon-blue { background: #EFF6FF; color: #3B82F6; }
+    .icon-green { background: #F0FDF4; color: #16A34A; }
+    .icon-purple { background: #F5F3FF; color: #7C3AED; }
+    .icon-orange { background: #FFF7ED; color: #EA580C; }
+    .icon-teal { background: #F0FDFA; color: #0D9488; }
+    
+    .item-text label { display: block; font-size: 11px; color: #9CA3AF; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; }
+    .item-text span { font-size: 14px; font-weight: 700; color: #374151; }
+    .highlight-green { color: #16A34A !important; }
+    .highlight-purple { color: #7C3AED !important; }
+
+    .conditions-row { display: flex; align-items: center; gap: 10px; padding-top: 16px; border-top: 1px solid #F3F4F6; }
+    .conditions-row .label { font-size: 12px; color: #9CA3AF; font-weight: 600; }
+    .tag { background: #F3F4F6; color: #4B5563; padding: 4px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; }
+
+    /* Alert Card */
+    .alert-card {
+        background: white; border-radius: 24px; border: 1px solid #F3F4F6;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03); padding: 32px;
+    }
+    .alert-header { display: flex; gap: 20px; margin-bottom: 28px; }
+    .alert-icon-box {
+        width: 64px; height: 64px; border-radius: 20px;
+        background: #FEF2F2; color: #EF4444;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 28px; flex-shrink: 0;
+    }
+    .alert-title-group h3 { font-size: 22px; font-weight: 800; color: #111827; margin: 0 0 8px; }
+    .alert-title-group p { font-size: 15px; color: #6B7280; margin: 0; line-height: 1.5; }
+    
+    .alert-details-grid {
+        display: grid; grid-template-columns: repeat(2, 1fr);
+        gap: 1px; background: #F3F4F6; border: 1px solid #F3F4F6; border-radius: 16px; overflow: hidden;
+    }
+    .detail-cell {
+        background: white; padding: 20px 24px;
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .detail-cell label { font-size: 14px; color: #6B7280; font-weight: 500; }
+    .detail-cell strong { font-size: 15px; font-weight: 700; color: #111827; }
+    .status-rouge { color: #DC2626 !important; }
+
+    /* Ordonnance Card */
+    .ordonnance-card {
+        background: white; border-radius: 24px; border: 1px solid #F3F4F6;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03); padding: 32px;
+    }
+    .card-header-simple h3 { font-size: 18px; font-weight: 800; color: #111827; margin: 0 0 20px; display: flex; align-items: center; gap: 12px; }
+    .card-header-simple i { color: #0D9488; }
+    .meds-list { display: flex; flex-direction: column; gap: 12px; }
+    .med-item {
+        display: flex; align-items: center; gap: 16px;
+        padding: 16px; background: #F9FAFB; border-radius: 16px;
+    }
+    .med-icon { width: 40px; height: 40px; border-radius: 10px; background: white; display: flex; align-items: center; justify-content: center; color: #0D9488; }
+    .med-info strong { display: block; font-size: 15px; color: #111827; }
+    .med-info span { font-size: 13px; color: #6B7280; }
+
+    /* Actions */
+    .actions-container { display: flex; flex-direction: column; gap: 16px; }
+    .main-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    
+    .btn-primary-green, .btn-outline-red, .btn-teal, .btn-blue {
+        height: 56px; border-radius: 16px; font-weight: 800; font-size: 15px;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        cursor: pointer; transition: 0.2s; border: none; font-family: inherit;
+    }
+    .btn-primary-green { background: #16A34A; color: white; }
+    .btn-primary-green:hover:not(:disabled) { background: #15803D; transform: translateY(-2px); }
+    .btn-primary-green:disabled { opacity: 0.6; cursor: not-allowed; }
+    
+    .btn-outline-red { background: white; border: 2px solid #FECACA; color: #DC2626; }
+    .btn-outline-red:hover { background: #FEF2F2; transform: translateY(-2px); }
+    
+    .btn-teal { background: #0D9488; color: white; }
+    .btn-teal:hover { background: #0F766E; transform: translateY(-2px); }
+    
+    .btn-blue { background: #2563EB; color: white; }
+    .btn-blue:hover { background: #1D4ED8; transform: translateY(-2px); }
+
+    .btn-expand-reply {
+        width: 100%; height: 56px; border-radius: 16px;
+        background: #F9FAFB; border: 1px solid #E5E7EB;
+        color: #4B5563; font-weight: 700; font-size: 15px;
+        cursor: pointer; transition: 0.2s;
+    }
+    .btn-expand-reply:hover { background: #F3F4F6; }
+
+    /* Reply Section */
+    .reply-box {
+        background: white; border-radius: 24px; border: 1.5px solid #E5E7EB;
+        padding: 24px;
+    }
+    .reply-box textarea {
+        width: 100%; min-height: 140px; border: none;
+        font-size: 16px; color: #1F2937; line-height: 1.6;
+        resize: vertical; outline: none; margin-bottom: 20px;
+        font-family: inherit;
+    }
+    .reply-footer {
+        display: flex; justify-content: space-between; align-items: center;
+        padding-top: 20px; border-top: 1px solid #F3F4F6;
+    }
+    .hint { font-size: 13px; color: #9CA3AF; margin: 0; }
+    .hint strong { color: #0D9488; }
+    .reply-actions { display: flex; gap: 16px; align-items: center; }
+    .btn-send-reply {
+        background: #0D9488; color: white; border: none;
+        padding: 12px 28px; border-radius: 12px;
+        font-weight: 700; cursor: pointer; transition: 0.2s;
+        display: flex; align-items: center; gap: 8px;
+    }
+    .btn-send-reply:hover:not(:disabled) { background: #0F766E; }
+    .btn-send-reply:disabled { opacity: 0.5; }
+    
+    .btn-cancel-link { background: none; border: none; color: #9CA3AF; font-weight: 600; cursor: pointer; }
+
+    /* Common */
+    .loading-state, .error-state { padding: 100px 40px; text-align: center; color: #9CA3AF; }
+    .spinner { width: 44px; height: 44px; border: 4px solid #F3F4F6; border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
     @@keyframes spin { to { transform: rotate(360deg); } }
+    .animate-slide { animation: slideIn 0.3s ease-out; }
+    @@keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+
+    @@media (max-width: 768px) {
+        .profile-main { flex-direction: column; align-items: center; text-align: center; }
+        .info-grid { grid-template-columns: 1fr; }
+        .main-actions { grid-template-columns: 1fr; }
+        .alert-details-grid { grid-template-columns: 1fr; }
+    }
 </style>
 
 @code {
     [Parameter] public int MessageId { get; set; }
-    private ContactMessage? message;
+    private AdminNotification? message;
     private bool loading = true;
+    private bool showReplyForm = false;
+    private string replyMessage = "";
+    private bool sending = false;
+    private string userName = "";
+    private bool isAdmin = true;
 
-    protected override async Task OnInitializedAsync()
+    // Toast & Modal
+    private bool showToast = false;
+    private string toastMessage = "";
+    private bool toastSuccess = true;
+    private bool showConfirmModal = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadMessage();
+        if (firstRender)
+        {
+            isAdmin = Navigation.Uri.Contains("/admin/");
+            var nameKey = isAdmin ? "admin_name" : "doctor_name";
+            userName = await JS.InvokeAsync<string>("localStorage.getItem", nameKey) ?? (isAdmin ? "Administrateur" : "Docteur");
+            await LoadMessage();
+            StateHasChanged();
+        }
     }
 
     private async Task LoadMessage()
@@ -124,11 +474,18 @@
         try
         {
             var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
-            if (!string.IsNullOrEmpty(token))
+            if (string.IsNullOrEmpty(token)) return;
+
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            
+            // For both admin and doctor, we use the same endpoint if it exists, or check role
+            string endpoint = isAdmin ? $"api/admin/notifications/{MessageId}" : $"api/notifications/{MessageId}";
+            message = await Http.GetFromJsonAsync<AdminNotification>($"{baseUrl}/{endpoint}");
+            
+            if (message != null && !message.IsRead)
             {
-                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
-                message = await Http.GetFromJsonAsync<ContactMessage>($"{baseUrl}/api/ContactMessages/{MessageId}");
+                await MarkAsRead();
             }
         }
         catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
@@ -140,33 +497,117 @@
         try
         {
             var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
-            var response = await Http.PutAsync($"{baseUrl}/api/ContactMessages/{MessageId}/read", null);
-            if (response.IsSuccessStatusCode && message != null)
-            {
-                message.IsRead = true;
-                StateHasChanged();
-            }
+            string endpoint = isAdmin ? $"api/admin/notifications/{MessageId}/read" : $"api/notifications/{MessageId}/read";
+            await Http.PatchAsync($"{baseUrl}/{endpoint}", null);
+            if (message != null) message.IsRead = true;
         }
         catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
     }
 
-    private string GetTopicLabel(string topic) => topic switch {
-        "support" => "Support Technique",
-        "billing" => "Facturation & Abonnements",
-        "partnership" => "Partenariat",
-        "other" => "Autre",
-        _ => topic
-    };
+    private async Task MarkAsHandled()
+    {
+        await MarkAsRead();
+        ShowToast("Demande marquée comme traitée.", true);
+    }
 
-    public class ContactMessage {
+    private void ConfirmDelete() => showConfirmModal = true;
+
+    private async Task DeleteMessageConfirmed()
+    {
+        showConfirmModal = false;
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            string endpoint = isAdmin ? $"api/admin/notifications/{MessageId}" : $"api/notifications/{MessageId}";
+            var response = await Http.DeleteAsync($"{baseUrl}/{endpoint}");
+            if (response.IsSuccessStatusCode)
+            {
+                ShowToast("Notification supprimée.", true);
+                await Task.Delay(1500);
+                Navigation.NavigateTo(isAdmin ? "/admin/notifications" : "/doctor/notifications");
+            }
+        }
+        catch (Exception ex) { ShowToast("Erreur lors de la suppression.", false); }
+    }
+
+    private async Task SendReply()
+    {
+        if (string.IsNullOrWhiteSpace(replyMessage)) return;
+        sending = true;
+        try
+        {
+            // Simulation or real API call
+            await Task.Delay(1000);
+            ShowToast("Réponse envoyée avec succès !", true);
+            showReplyForm = false;
+            replyMessage = "";
+            if (message != null) message.IsRead = true;
+        }
+        catch (Exception ex) { ShowToast("Erreur lors de l'envoi.", false); }
+        finally { sending = false; }
+    }
+
+    private void ShowToast(string message, bool success)
+    {
+        toastMessage = message;
+        toastSuccess = success;
+        showToast = true;
+        StateHasChanged();
+        Task.Run(async () => {
+            await Task.Delay(3000);
+            showToast = false;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void GoBack() => Navigation.NavigateTo(isAdmin ? "/admin/notifications" : "/doctor/notifications");
+
+    private bool IsUrgent(string title) => title.ToLower().Contains("urgent") || title.ToLower().Contains("urgence");
+
+    public class AdminNotification
+    {
         public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+        public DateTime SentAt { get; set; } // For DoctorNotification compatibility
+        public DateTime DisplayDate => CreatedAt != default ? CreatedAt : SentAt;
+        public bool IsRead { get; set; }
+        public string FirstName { get; set; } = "Utilisateur";
+        public string LastName { get; set; } = "SympNet";
+        public string Email { get; set; } = "contact@sympnet.com";
+        public string NewsletterEmail { get; set; } = "";
+        public string Phone { get; set; } = "+216 -- --- ---";
+        public PatientDto? Patient { get; set; }
+        public ContactMessageDto? ContactMessage { get; set; }
+    }
+
+    public class ContactMessageDto
+    {
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
         public string Email { get; set; } = "";
         public string Phone { get; set; } = "";
         public string Topic { get; set; } = "";
         public string Message { get; set; } = "";
-        public DateTime CreatedAt { get; set; }
-        public bool IsRead { get; set; }
+    }
+
+    public class PatientDto
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string PhoneNumber { get; set; } = "";
+        public DateTime DateOfBirth { get; set; }
+        public string Address { get; set; } = "";
+        public string MedicalHistory { get; set; } = "";
+    }
+
+    private int CalculateAge(DateTime? dob)
+    {
+        if (!dob.HasValue) return 0;
+        var today = DateTime.Today;
+        var age = today.Year - dob.Value.Year;
+        if (dob.Value.Date > today.AddYears(-age)) age--;
+        return age;
     }
 }

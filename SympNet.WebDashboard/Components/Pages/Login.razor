@@ -279,9 +279,10 @@ a{text-decoration:none;color:inherit}
                 return;
             }
 
-            // Stocker le token dans localStorage
+            // Stocker le token et le rôle dans localStorage
             await JS.InvokeVoidAsync("localStorage.setItem", "sympnet_token", token);
             await JS.InvokeVoidAsync("localStorage.setItem", "sympnet_email", email);
+            await JS.InvokeVoidAsync("localStorage.setItem", "sympnet_role", result.RootElement.GetProperty("role").GetString());
             
             // Redirection
             if (returnedRole == "doctor")
