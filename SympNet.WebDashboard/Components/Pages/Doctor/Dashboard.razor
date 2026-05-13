@@ -1,4 +1,4 @@
-﻿@page "/doctor/dashboard"
+@page "/doctor/dashboard"
 @layout DoctorLayout
 @inject HttpClient Http
 @inject IJSRuntime JS
@@ -10,152 +10,461 @@
 <PageTitle>SympNet — Tableau de bord Médecin</PageTitle>
 
 <style>
-    .dashboard-container { max-width: 1400px; margin: 0 auto; }
+    .dashboard-wrapper {
+        padding: 24px 32px;
+        background-color: #f8fafc;
+        min-height: 100vh;
+        font-family: 'Inter', sans-serif;
+    }
 
-    .welcome-banner {
-        background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
-        border-radius: 28px;
-        padding: 32px 40px;
-        color: white;
-        margin-bottom: 32px;
+    .top-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .search-bar {
+        background: #fff;
+        border-radius: 20px;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        width: 320px;
+        border: 1px solid #e5e7eb;
+    }
+    .search-bar input {
+        border: none;
+        outline: none;
+        margin-left: 8px;
+        width: 100%;
+        background: transparent;
+        font-size: 14px;
+    }
+    .search-bar i {
+        color: #9ca3af;
+    }
+
+    .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .notif-bell {
+        background: #fff;
+        border: 1px solid #11826b;
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         position: relative;
+        cursor: pointer;
+        color: #11826b;
+        font-size: 20px;
+    }
+    .notif-badge {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        background: #ef4444;
+        color: white;
+        font-size: 11px;
+        font-weight: bold;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #fff;
+    }
+
+    .user-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #fff;
+        padding: 6px 16px 6px 6px;
+        border-radius: 30px;
+        border: 1px solid #e5e7eb;
+    }
+    .user-avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background: #11826b;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 14px;
+    }
+    .user-info {
+        display: flex;
+        flex-direction: column;
+    }
+    .user-name {
+        font-weight: 700;
+        font-size: 13px;
+        color: #1f2937;
+    }
+    .user-role {
+        font-size: 11px;
+        color: #6b7280;
+    }
+
+    /* Banner */
+    .dashboard-banner {
+        background: #158c70;
+        border-radius: 20px;
+        padding: 32px 40px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: white;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 25px rgba(21, 140, 112, 0.2);
+    }
+
+    .banner-text h2 {
+        font-size: 18px;
+        font-weight: 400;
+        margin: 0 0 4px 0;
+        opacity: 0.9;
+    }
+    .banner-text h1 {
+        font-size: 32px;
+        font-weight: 800;
+        margin: 0 0 16px 0;
+    }
+    .banner-text p {
+        font-size: 15px;
+        opacity: 0.9;
+        margin: 0;
+    }
+
+    .banner-stats {
+        display: flex;
+        gap: 16px;
+    }
+    .banner-stat-card {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 16px;
+        padding: 16px 24px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        min-width: 200px;
+    }
+    .banner-stat-icon {
+        background: rgba(255, 255, 255, 0.2);
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+    }
+    .banner-stat-info h3 {
+        font-size: 24px;
+        font-weight: 700;
+        margin: 0;
+    }
+    .banner-stat-info p {
+        font-size: 12px;
+        margin: 0;
+        text-transform: uppercase;
+        font-weight: 600;
+        opacity: 0.9;
+        letter-spacing: 0.5px;
+    }
+
+    /* Main Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 24px;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+    .section-header h3 {
+        font-size: 16px;
+        font-weight: 800;
+        color: #1f2937;
+        margin: 0;
+    }
+    .manage-link {
+        color: #158c70;
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .manage-link:hover { text-decoration: underline; }
+
+    .highlights-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 32px;
+    }
+    .highlight-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px 16px;
+        text-align: center;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        border: 1px solid #f3f4f6;
+    }
+    .highlight-card.total { border-top: 4px solid #1f2937; }
+    .highlight-card.confirm { background: #fffaf5; border-top: 4px solid #f59e0b; }
+    .highlight-card.live { background: #f0fdf4; border-top: 4px solid #10b981; }
+
+    .highlight-card h2 {
+        font-size: 32px;
+        font-weight: 800;
+        margin: 0 0 8px 0;
+        color: #1f2937;
+    }
+    .highlight-card p {
+        font-size: 11px;
+        font-weight: 700;
+        color: #6b7280;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stats-cards {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+    }
+    .stat-card {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        border: 1px solid #f3f4f6;
+    }
+    .stat-card-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+    }
+    .icon-green { background: #d1fae5; color: #10b981; }
+    .icon-red { background: #fee2e2; color: #ef4444; }
+    .icon-blue { background: #dbeafe; color: #3b82f6; }
+
+    .stat-card-info { display: flex; flex-direction: column; }
+    .stat-card-info p {
+        font-size: 12px;
+        color: #6b7280;
+        margin: 0 0 4px 0;
+        font-weight: 600;
+    }
+    .stat-card-info h3 {
+        font-size: 18px;
+        font-weight: 800;
+        margin: 0;
+        color: #1f2937;
+    }
+
+    /* Calendar Placeholder */
+    .calendar-container {
+        background: white;
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+        border: 1px solid #f3f4f6;
+    }
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+    .calendar-header h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 800;
+    }
+    .calendar-nav {
+        display: flex;
+        gap: 8px;
+    }
+    .calendar-nav button {
+        background: #f3f4f6;
+        border: none;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        cursor: pointer;
+        color: #4b5563;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .calendar-nav button:hover {
+        background: #e5e7eb;
+    }
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+        text-align: center;
+    }
+    .calendar-day-name {
+        font-size: 12px;
+        color: #9ca3af;
+        font-weight: 700;
+        margin-bottom: 12px;
+    }
+    .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        border-radius: 50%;
+        cursor: pointer;
+        color: #4b5563;
+        font-weight: 500;
+    }
+    .calendar-day:hover { background: #f3f4f6; }
+    .calendar-day.active { background: #158c70; color: white; font-weight: bold; }
+    .calendar-day.has-event { position: relative; }
+    .calendar-day.has-event::after {
+        content: '';
+        position: absolute;
+        bottom: 4px;
+        width: 4px;
+        height: 4px;
+        background: #ef4444;
+        border-radius: 50%;
+    }
+
+    /* Dropdown Notifications */
+    .notif-dropdown {
+        position: absolute;
+        top: 60px;
+        right: 0;
+        width: 400px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        border: 1px solid #e5e7eb;
+        z-index: 100;
         overflow: hidden;
+    }
+    .notif-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #e5e7eb;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
-    .welcome-banner::before {
-        content: '';
-        position: absolute;
-        top: -50%; right: -20%;
-        width: 300px; height: 300px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 50%;
+    .notif-header h4 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
-    .welcome-banner::after {
-        content: '';
-        position: absolute;
-        bottom: -30%; left: -10%;
-        width: 200px; height: 200px;
-        background: rgba(255,255,255,0.08);
-        border-radius: 50%;
+    .notif-header h4 span {
+        background: #ef4444;
+        color: white;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 12px;
     }
-    .welcome-text { position: relative; z-index: 1; }
-    .welcome-text h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; }
-    .welcome-text p { opacity: 0.9; margin-bottom: 0; }
-    .welcome-text small { opacity: 0.7; font-size: 13px; }
-    .welcome-actions { position: relative; z-index: 1; }
-
-    .notif-btn {
-        position: relative;
-        background: rgba(255,255,255,0.15);
-        border: 2px solid rgba(255,255,255,0.3);
-        border-radius: 50%;
-        width: 52px; height: 52px;
+    .mark-read-btn {
+        color: #158c70;
+        font-size: 12px;
+        font-weight: 600;
+        background: none;
+        border: none;
         cursor: pointer;
-        font-size: 22px;
-        color: white;
-        display: flex; align-items: center; justify-content: center;
-        transition: all 0.2s;
     }
-    .notif-btn:hover { background: rgba(255,255,255,0.25); transform: scale(1.05); }
-    .notif-badge {
-        position: absolute;
-        top: -4px; right: -4px;
-        background: #EF4444;
-        color: white;
-        font-size: 11px; font-weight: 700;
-        min-width: 20px; height: 20px;
-        border-radius: 10px;
-        display: flex; align-items: center; justify-content: center;
-        padding: 0 4px;
-        border: 2px solid white;
-        animation: pulse-badge 1.5s infinite;
+    .notif-tabs {
+        display: flex;
+        padding: 0 20px;
+        border-bottom: 1px solid #e5e7eb;
     }
-    @@keyframes pulse-badge {
-        0%,100% { transform: scale(1); }
-        50% { transform: scale(1.2); }
+    .notif-tab {
+        padding: 12px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #6b7280;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
     }
-
-    .overlay {
-        position: fixed; inset: 0;
-        background: rgba(0,0,0,0.35);
-        z-index: 9998;
-        backdrop-filter: blur(2px);
+    .notif-tab.active {
+        color: #158c70;
+        border-bottom-color: #158c70;
     }
-    .notif-panel {
-        position: fixed;
-        top: 0; right: 0;
-        width: 400px; height: 100vh;
-        background: white;
-        box-shadow: -4px 0 40px rgba(0,0,0,0.15);
-        z-index: 9999;
-        display: flex; flex-direction: column;
-        animation: slide-in 0.3s ease;
+    .notif-list {
+        max-height: 380px;
+        overflow-y: auto;
     }
-    @@keyframes slide-in {
-        from { transform: translateX(100%); }
-        to { transform: translateX(0); }
-    }
-    .notif-panel-header {
-        background: linear-gradient(135deg, #0D9488, #14B8A6);
-        color: white;
-        padding: 20px 24px;
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .notif-panel-header h3 { margin: 0; font-size: 18px; font-weight: 700; }
-    .notif-panel-header span { font-size: 13px; opacity: 0.85; }
-    .notif-close {
-        background: rgba(255,255,255,0.2);
-        border: none; color: white;
-        width: 34px; height: 34px;
-        border-radius: 50%; cursor: pointer; font-size: 16px;
-        display: flex; align-items: center; justify-content: center;
-    }
-    .notif-close:hover { background: rgba(255,255,255,0.35); }
-    .notif-list { flex: 1; overflow-y: auto; padding: 16px; }
     .notif-item {
-        background: #F9FAFB;
-        border-radius: 14px;
-        padding: 14px 16px;
-        margin-bottom: 10px;
-        border-left: 4px solid #0D9488;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-    .notif-item:hover { transform: translateX(4px); background: #F0FDF9; }
-    .notif-item.urgent { border-left-color: #EF4444; background: #FFF5F5; }
-    .notif-item.unread { background: #F0FDF9; }
-    .notif-item-title {
-        font-weight: 700; color: #1F2937;
-        margin-bottom: 4px;
-        display: flex; align-items: center; gap: 6px; font-size: 14px;
-    }
-    .notif-urgent-badge {
-        background: #EF4444; color: white;
-        font-size: 10px; padding: 2px 7px;
-        border-radius: 8px; font-weight: 700;
-    }
-    .notif-item-msg { font-size: 13px; color: #4B5563; margin-bottom: 6px; }
-    .notif-item-time { font-size: 11px; color: #9CA3AF; }
-    .notif-empty { text-align: center; padding: 60px 20px; color: #9CA3AF; }
-    .notif-empty-icon { font-size: 52px; margin-bottom: 12px; display: block; }
-    .notif-footer {
         padding: 16px 20px;
-        border-top: 1px solid #E5E7EB;
-        display: flex; gap: 10px;
+        border-bottom: 1px solid #f3f4f6;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        cursor: pointer;
     }
-    .btn-clear {
-        flex: 1; padding: 10px;
-        border: 1px solid #E5E7EB; background: white;
-        border-radius: 10px; cursor: pointer; font-size: 13px; color: #6B7280;
+    .notif-item:hover { background: #f9fafb; }
+    .notif-item.unread { background: #f0fdf4; }
+    .notif-item-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        flex-shrink: 0;
     }
-    .btn-mark-read {
-        flex: 1; padding: 10px;
-        background: #0D9488; color: white;
-        border: none; border-radius: 10px;
-        cursor: pointer; font-size: 13px; font-weight: 600;
+    .notif-item-icon.cancel { background: #fee2e2; color: #ef4444; }
+    .notif-item-icon.new { background: #d1fae5; color: #10b981; }
+    .notif-content { flex: 1; }
+    .notif-title {
+        font-size: 13px;
+        color: #1f2937;
+        margin: 0 0 6px 0;
+        line-height: 1.4;
     }
+    .notif-time {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+    .notif-check {
+        color: #d1d5db;
+        font-size: 18px;
+        margin-top: 2px;
+    }
+    .notif-item.unread .notif-check { color: #10b981; }
 
     .toast-container {
         position: fixed; top: 20px; right: 20px;
@@ -168,7 +477,7 @@
         border-radius: 16px;
         padding: 16px 20px;
         box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-        border-left: 4px solid #0D9488;
+        border-left: 4px solid #158c70;
         min-width: 320px; max-width: 380px;
         animation: toast-in 0.4s ease;
         display: flex; align-items: flex-start; gap: 12px;
@@ -183,63 +492,9 @@
     .toast-title { font-weight: 700; color: #1F2937; margin-bottom: 3px; font-size: 14px; }
     .toast-msg { font-size: 13px; color: #6B7280; line-height: 1.4; }
 
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
-    .stat-card {
-        background: white; border-radius: 24px; padding: 24px;
-        border: 1px solid rgba(13,148,136,0.1);
-        transition: all 0.3s; cursor: pointer;
-        position: relative; overflow: hidden;
-    }
-    .stat-card::before {
-        content: ''; position: absolute; top: 0; left: 0;
-        width: 100%; height: 4px;
-        background: linear-gradient(90deg, #0D9488, #14B8A6);
-        transform: scaleX(0); transition: transform 0.3s;
-    }
-    .stat-card:hover::before { transform: scaleX(1); }
-    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1); }
-    .stat-icon { width: 52px; height: 52px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 24px; margin-bottom: 16px; }
-    .stat-icon.patients { background: rgba(13,148,136,0.12); color: #0D9488; }
-    .stat-icon.today { background: rgba(245,158,11,0.12); color: #F59E0B; }
-    .stat-icon.total { background: rgba(59,130,246,0.12); color: #3B82F6; }
-    .stat-icon.diseases { background: rgba(139,92,246,0.12); color: #8B5CF6; }
-    .stat-value { font-size: 36px; font-weight: 800; color: #1F2937; margin-bottom: 4px; }
-    .stat-label { font-size: 14px; color: #6B7280; margin-bottom: 12px; }
-    .stat-trend { font-size: 12px; display: flex; align-items: center; gap: 4px; }
-    .stat-trend.up { color: #10B981; }
-
-    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
-    .chart-card { background: white; border-radius: 24px; padding: 24px; border: 1px solid rgba(13,148,136,0.1); }
-    .chart-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #1F2937; }
-    .chart-title i { color: #0D9488; }
-
-    .recent-card { background: white; border-radius: 24px; border: 1px solid rgba(13,148,136,0.1); overflow: hidden; }
-    .recent-header { padding: 20px 24px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center; }
-    .recent-header h3 { font-size: 18px; font-weight: 700; margin: 0; }
-    .recent-header a { color: #0D9488; text-decoration: none; font-size: 14px; font-weight: 500; cursor: pointer; }
-    .consultation-item { padding: 16px 24px; border-bottom: 1px solid #F3F4F6; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
-    .consultation-item:hover { background: #F9FAFB; }
-    .consultation-info { flex: 1; }
-    .consultation-patient { font-weight: 700; color: #1F2937; margin-bottom: 4px; }
-    .consultation-date { font-size: 12px; color: #9CA3AF; }
-    .consultation-diagnosis { font-size: 13px; color: #0D9488; font-weight: 600; margin-top: 4px; }
-    .consultation-confidence { display: flex; align-items: center; gap: 8px; }
-    .confidence-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .confidence-high { background: #D1FAE5; color: #10B981; }
-    .confidence-medium { background: #FEF3C7; color: #F59E0B; }
-    .confidence-low { background: #FEE2E2; color: #EF4444; }
-
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 400px; }
-    .loading-spinner { width: 60px; height: 60px; border: 4px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; }
+    .loading-spinner { width: 60px; height: 60px; border: 4px solid #E5E7EB; border-top-color: #158c70; border-radius: 50%; animation: spin 1s linear infinite; }
     @@keyframes spin { to { transform: rotate(360deg); } }
-    .empty-state { text-align: center; padding: 60px 20px; }
-    .empty-icon { font-size: 64px; color: #D1D5DB; margin-bottom: 16px; }
-
-    @@media (max-width: 1024px) {
-        .stats-grid { grid-template-columns: repeat(2, 1fr); }
-        .charts-grid { grid-template-columns: 1fr; }
-        .notif-panel { width: 100%; }
-    }
 </style>
 
 <div class="toast-container">
@@ -255,186 +510,120 @@
     }
 </div>
 
-@if (showPanel)
+@if (isLoading)
 {
-    <div class="overlay" @onclick="ClosePanel"></div>
-    <div class="notif-panel">
-        <div class="notif-panel-header">
-            <div>
-                <h3>🔔 Notifications</h3>
-                <span>@notifications.Count notification(s)</span>
+    <div class="loading-container">
+        <div class="loading-spinner"></div>
+    </div>
+}
+else
+{
+    <div class="dashboard-wrapper">
+        <div class="dashboard-banner">
+            <div class="banner-text">
+                <h2>Bonjour,</h2>
+                <h1>Dr. @doctorName</h1>
+                <p>Voici un résumé de votre activité d'aujourd'hui. Vous avez @todayConsultations consultations prévues.</p>
             </div>
-            <button class="notif-close" @onclick="ClosePanel">✕</button>
-        </div>
-        <div class="notif-list">
-            @if (!notifications.Any())
-            {
-                <div class="notif-empty">
-                    <span class="notif-empty-icon">🔕</span>
-                    <p style="font-weight:600;margin-bottom:6px;">Aucune notification</p>
-                    <p style="font-size:13px;">Les nouveaux rendez-vous apparaîtront ici</p>
-                </div>
-            }
-            else
-            {
-                @foreach (var n in notifications.OrderByDescending(x => x.SentAt))
-                {
-                    <div class="notif-item @(n.IsUrgent ? "urgent" : "") @(!n.IsRead ? "unread" : "")"
-                         @onclick="() => OpenAppointment(n.AppointmentId)">
-                        <div class="notif-item-title">
-                            @(n.IsUrgent ? "🚨" : "📅") @n.Title
-                            @if (n.IsUrgent)
-                            {
-                                <span class="notif-urgent-badge">URGENT</span>
-                            }
-                        </div>
-                        <div class="notif-item-msg">@n.Message</div>
-                        <div class="notif-item-time">@n.SentAt.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</div>
+            <div class="banner-stats">
+                <div class="banner-stat-card">
+                    <div class="banner-stat-icon"><i class="fas fa-users"></i></div>
+                    <div class="banner-stat-info">
+                        <h3>@totalPatients</h3>
+                        <p>Patients totaux</p>
                     </div>
-                }
-            }
+                </div>
+                <div class="banner-stat-card">
+                    <div class="banner-stat-icon"><i class="fas fa-stethoscope"></i></div>
+                    <div class="banner-stat-info">
+                        <h3>@totalConsultations</h3>
+                        <p>Consultations</p>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="notif-footer">
-            <button class="btn-clear" @onclick="ClearAll">Tout effacer</button>
-            <button class="btn-mark-read" @onclick="MarkAllRead">Tout marquer lu</button>
+
+        <div class="dashboard-grid">
+            <div class="main-column">
+                <div class="section-header">
+                    <h3>Aperçu de l'activité</h3>
+                    <a class="manage-link" @onclick="GoToConsultations">Gérer les consultations</a>
+                </div>
+                <div class="highlights-cards">
+                    <div class="highlight-card total">
+                        <h2>@todayConsultations</h2>
+                        <p>Aujourd'hui</p>
+                    </div>
+                    <div class="highlight-card confirm">
+                        <h2>@toConfirmCount</h2>
+                        <p>À confirmer</p>
+                    </div>
+                    <div class="highlight-card live">
+                        <h2>@liveSessionsCount</h2>
+                        <p>Téléconsultations</p>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <h3>Performances & Indicateurs</h3>
+                </div>
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-card-icon icon-blue"><i class="fas fa-chart-pie"></i></div>
+                        <div class="stat-card-info">
+                            <p>Taux de présence</p>
+                            <h3>@attendanceRate%</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon icon-red"><i class="fas fa-user-times"></i></div>
+                        <div class="stat-card-info">
+                            <p>Absences</p>
+                            <h3>@noShowRate%</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-icon icon-green"><i class="fas fa-star"></i></div>
+                        <div class="stat-card-info">
+                            <p>Avis positifs</p>
+                            <h3>@reviewsCount</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="side-column">
+                <div class="calendar-container">
+                    <div class="calendar-header">
+                        <h3>Calendrier - @DateTime.Now.ToString("MMMM yyyy")</h3>
+                        <div class="calendar-nav">
+                            <button><i class="fas fa-chevron-left"></i></button>
+                            <button><i class="fas fa-chevron-right"></i></button>
+                        </div>
+                    </div>
+                    <div class="calendar-grid">
+                        <div class="calendar-day-name">L</div>
+                        <div class="calendar-day-name">M</div>
+                        <div class="calendar-day-name">M</div>
+                        <div class="calendar-day-name">J</div>
+                        <div class="calendar-day-name">V</div>
+                        <div class="calendar-day-name">S</div>
+                        <div class="calendar-day-name">D</div>
+                        
+                        @for (int i = 1; i <= 30; i++)
+                        {
+                            bool isToday = i == DateTime.Now.Day;
+                            bool hasEvent = i % 5 == 0;
+                            <div class="calendar-day @(isToday ? "active" : "") @(hasEvent ? "has-event" : "")">@i</div>
+                        }
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 }
 
-<div class="dashboard-container">
-    @if (isLoading)
-    {
-        <div class="loading-container"><div class="loading-spinner"></div></div>
-    }
-    else
-    {
-        <div class="welcome-banner">
-            <div class="welcome-text">
-                <h1><i class="fas fa-stethoscope"></i> Bonjour, Dr. @doctorName</h1>
-                <p>Bienvenue sur votre tableau de bord médical intelligent</p>
-                <small><i class="far fa-calendar-alt"></i> @DateTime.Now.ToString("dddd dd MMMM yyyy", new System.Globalization.CultureInfo("fr-FR"))</small>
-            </div>
-            <div class="welcome-actions">
-                <button class="notif-btn" @onclick="TogglePanel" title="Notifications">
-                    🔔
-                    @if (unreadCount > 0)
-                    {
-                        <span class="notif-badge">@(unreadCount > 9 ? "9+" : unreadCount.ToString())</span>
-                    }
-                </button>
-            </div>
-        </div>
 
-        <div class="stats-grid">
-            <div class="stat-card" @onclick="GoToPatients">
-                <div class="stat-icon patients"><i class="fas fa-users"></i></div>
-                <div class="stat-value">@totalPatients</div>
-                <div class="stat-label">Patients totaux</div>
-                @if (patientGrowth > 0)
-                {
-                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> +@patientGrowth% ce mois</div>
-                }
-            </div>
-            <div class="stat-card" @onclick="GoToConsultations">
-                <div class="stat-icon today"><i class="fas fa-calendar-day"></i></div>
-                <div class="stat-value">@todayConsultations</div>
-                <div class="stat-label">Consultations aujourd'hui</div>
-            </div>
-            <div class="stat-card" @onclick="GoToConsultations">
-                <div class="stat-icon total"><i class="fas fa-chart-line"></i></div>
-                <div class="stat-value">@totalConsultations</div>
-                <div class="stat-label">Consultations totales</div>
-                @if (consultationGrowth > 0)
-                {
-                    <div class="stat-trend up"><i class="fas fa-arrow-up"></i> +@consultationGrowth% vs mois dernier</div>
-                }
-            </div>
-            <div class="stat-card">
-                <div class="stat-icon diseases"><i class="fas fa-diagnoses"></i></div>
-                <div class="stat-value">@diseaseCount</div>
-                <div class="stat-label">Pathologies traitées</div>
-            </div>
-        </div>
-
-        <div class="charts-grid">
-            <div class="chart-card">
-                <div class="chart-title"><i class="fas fa-chart-pie"></i> Top pathologies</div>
-                @if (topPathologies.Any())
-                {
-                    @foreach (var patho in topPathologies.Take(5))
-                    {
-                        var percent = totalConsultations > 0 ? (patho.Count * 100.0 / totalConsultations) : 0;
-                        <div style="margin-bottom:16px;">
-                            <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px;">
-                                <span>@patho.Name</span>
-                                <span style="font-weight:600;color:#0D9488;">@patho.Count (@percent.ToString("F0")%)</span>
-                            </div>
-                            <div style="background:#E5E7EB;border-radius:10px;height:8px;overflow:hidden;">
-                                <div style="width:@percent%;background:linear-gradient(90deg,#0D9488,#14B8A6);height:100%;border-radius:10px;"></div>
-                            </div>
-                        </div>
-                    }
-                }
-                else
-                {
-                    <div class="empty-state" style="padding:40px;"><div class="empty-icon">📊</div><p>Aucune donnée disponible</p></div>
-                }
-            </div>
-
-            <div class="chart-card">
-                <div class="chart-title"><i class="fas fa-chart-line"></i> Activité mensuelle</div>
-                @if (monthlyActivity.Any())
-                {
-                    <div style="display:flex;align-items:flex-end;gap:12px;height:200px;margin-top:20px;">
-                        @foreach (var month in monthlyActivity.Take(6))
-                        {
-                            var barHeight = Math.Min(month.Count * 8, 180);
-                            <div style="flex:1;text-align:center;">
-                                <div style="height:@(barHeight)px;background:linear-gradient(180deg,#0D9488,#14B8A6);border-radius:8px 8px 4px 4px;margin-bottom:8px;"></div>
-                                <div style="font-size:11px;color:#6B7280;">@month.Name</div>
-                                <div style="font-size:12px;font-weight:600;">@month.Count</div>
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div class="empty-state" style="padding:40px;"><div class="empty-icon">📈</div><p>Aucune donnée disponible</p></div>
-                }
-            </div>
-        </div>
-
-        <div class="recent-card">
-            <div class="recent-header">
-                <h3><i class="fas fa-history"></i> Consultations récentes</h3>
-                <a @onclick="GoToConsultations">Voir tout <i class="fas fa-arrow-right"></i></a>
-            </div>
-            @if (recentConsultations.Any())
-            {
-                @foreach (var c in recentConsultations)
-                {
-                    <div class="consultation-item" @onclick="() => GoToConsultationDetail(c.Id)">
-                        <div class="consultation-info">
-                            <div class="consultation-patient"><i class="fas fa-user-circle"></i> @c.PatientName</div>
-                            <div class="consultation-date"><i class="far fa-clock"></i> @c.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
-                            <div class="consultation-diagnosis">@c.Diagnosis</div>
-                        </div>
-                        <div class="consultation-confidence">
-                            <span class="confidence-badge @(c.ConfidenceScore >= 0.8 ? "confidence-high" : c.ConfidenceScore >= 0.6 ? "confidence-medium" : "confidence-low")">
-                                @((c.ConfidenceScore * 100).ToString("F0"))% confiance
-                            </span>
-                            <i class="fas fa-chevron-right" style="color:#9CA3AF;"></i>
-                        </div>
-                    </div>
-                }
-            }
-            else
-            {
-                <div class="empty-state" style="padding:40px;"><div class="empty-icon">📁</div><p>Aucune consultation récente</p></div>
-            }
-        </div>
-    }
-</div>
 
 @code {
     private string doctorName         = "Médecin";
@@ -445,6 +634,14 @@
     private int    patientGrowth      = 0;
     private int    consultationGrowth = 0;
     private bool   isLoading          = true;
+
+    // Nouvelles statistiques pour l'UI
+    private int reviewsCount = 0;
+    private int toConfirmCount = 0;
+    private int liveSessionsCount = 0;
+    private int attendanceRate = 50;
+    private int noShowRate = 50;
+    private int estimatedRevenue = 100;
 
     private List<PathologyStat>      topPathologies      = new();
     private List<MonthlyStat>        monthlyActivity     = new();
@@ -499,11 +696,6 @@
     {
         try
         {
-            await JS.InvokeVoidAsync("console.log",
-                $"[SignalR] Token: {(string.IsNullOrEmpty(token) ? "NULL/VIDE" : "OK")}");
-            await JS.InvokeVoidAsync("console.log",
-                $"[SignalR] URL: {baseUrl}/hubs/notifications");
-
             hubConnection = new HubConnectionBuilder()
                 .WithUrl($"{baseUrl}/hubs/notifications", options =>
                 {
@@ -514,8 +706,6 @@
 
             hubConnection.On<System.Text.Json.JsonElement>("ReceiveNotification", async (data) =>
             {
-                await JS.InvokeVoidAsync("console.log", "[SignalR] ✅ Notification reçue !");
-
                 var notif = new NotificationItem
                 {
                     Id            = data.TryGetProperty("id",            out var i)  ? i.GetInt32()    : 0,
@@ -527,7 +717,6 @@
                     IsRead        = false
                 };
 
-                // Évite les doublons
                 if (!notifications.Any(n => n.Id == notif.Id && notif.Id != 0))
                     notifications.Insert(0, notif);
 
@@ -536,13 +725,10 @@
             });
 
             await hubConnection.StartAsync();
-            await JS.InvokeVoidAsync("console.log",
-                $"[SignalR] État: {hubConnection.State}");
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("console.error",
-                $"[SignalR] ERREUR: {ex.Message}");
+            await JS.InvokeVoidAsync("console.error", $"[SignalR] ERREUR: {ex.Message}");
         }
     }
 
@@ -559,7 +745,6 @@
 
     // ── Panneau ───────────────────────────────────────────────────────────────
     private void TogglePanel() { showPanel = !showPanel; StateHasChanged(); }
-    private void ClosePanel()  { showPanel = false; StateHasChanged(); }
 
     private void OpenAppointment(int id)
     {
@@ -574,18 +759,6 @@
         try
         {
             await Http.PatchAsync($"{baseUrl}/api/notifications/read-all", null);
-        }
-        catch { }
-    }
-
-    private async Task ClearAll()
-    {
-        notifications.Clear();
-        showPanel = false;
-        StateHasChanged();
-        try
-        {
-            await Http.DeleteAsync($"{baseUrl}/api/notifications");
         }
         catch { }
     }

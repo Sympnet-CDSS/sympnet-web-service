@@ -1,0 +1,603 @@
+@page "/doctor/notifications"
+@layout DoctorLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject IConfiguration Config
+@inject NavigationManager Navigation
+
+<div class="notifications-page">
+    <div class="page-header">
+        <div class="header-content">
+            <h1>Mes Notifications</h1>
+            <p>Gérez vos alertes et mises à jour système.</p>
+        </div>
+        <div class="header-actions">
+            <button class="btn-secondary" @onclick="MarkAllAsRead" disabled="@(!notifications.Any(n => !n.IsRead))">
+                <i class="fas fa-check-double"></i> Tout marquer comme lu
+            </button>
+            <button class="btn-danger" @onclick="ClearAll" disabled="@(!notifications.Any())">
+                <i class="fas fa-trash-alt"></i> Tout effacer
+            </button>
+        </div>
+    </div>
+
+    <div class="notifications-container">
+        <div class="filter-bar">
+            <div class="filter-tabs">
+                <button class="filter-tab @(filter == "all" ? "active" : "")" @onclick='() => filter = "all"'>
+                    Toutes <span>@notifications.Count</span>
+                </button>
+                <button class="filter-tab @(filter == "unread" ? "active" : "")" @onclick='() => filter = "unread"'>
+                    Non lues <span>@notifications.Count(n => !n.IsRead)</span>
+                </button>
+            </div>
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Rechercher une notification..." @bind="searchQuery" @bind:event="oninput" />
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Chargement de vos notifications...</p>
+            </div>
+        }
+        else if (!FilteredNotifications.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="far fa-bell-slash"></i>
+                </div>
+                <h3>Aucune notification</h3>
+                <p>Vous n'avez aucune notification @(filter == "unread" ? "non lue" : "") pour le moment.</p>
+            </div>
+        }
+        else
+        {
+            <div class="notifications-list">
+                @foreach (var notif in FilteredNotifications)
+                {
+                    <div class="notification-card @(notif.IsRead ? "read" : "unread") @(notif.IsUrgent ? "urgent" : "")">
+                        <div class="notif-icon-wrapper">
+                            <i class="@GetIcon(notif)"></i>
+                        </div>
+                        <div class="notif-body">
+                            <div class="notif-header">
+                                <h3>@notif.Title</h3>
+                                <span class="notif-time">@GetTimeAgo(notif.SentAt)</span>
+                            </div>
+                            <p class="notif-message">@notif.Message</p>
+                            
+                            @if (notif.AppointmentId > 0)
+                            {
+                                <div class="notif-actions">
+                                    <button class="btn-action" @onclick="() => GoToAppointment(notif.AppointmentId)">
+                                        Voir le rendez-vous <i class="fas fa-arrow-right"></i>
+                                    </button>
+                                </div>
+                            }
+                        </div>
+                        <div class="notif-controls">
+                            @if (!notif.IsRead)
+                            {
+                                <button class="btn-icon-check" @onclick="() => MarkAsRead(notif.Id)" title="Marquer comme lu">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+<style>
+    .notifications-page {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding-bottom: 40px;
+    }
+
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-bottom: 32px;
+    }
+
+    .header-content h1 {
+        font-family: 'Bricolage Grotesque', sans-serif;
+        font-size: 32px;
+        font-weight: 800;
+        color: #1F2937;
+        margin-bottom: 8px;
+    }
+
+    .header-content p {
+        color: #6B7280;
+        font-size: 16px;
+    }
+
+    .header-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-secondary {
+        background: white;
+        border: 1px solid #E5E7EB;
+        color: #374151;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+        background: #F9FAFB;
+        border-color: #D1D5DB;
+    }
+
+    .btn-danger {
+        background: white;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        color: #EF4444;
+        padding: 10px 20px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+        background: rgba(239, 68, 68, 0.05);
+        border-color: #EF4444;
+    }
+
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    .notifications-container {
+        background: white;
+        border-radius: 24px;
+        border: 1px solid rgba(13, 148, 136, 0.1);
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.03);
+        overflow: hidden;
+    }
+
+    .filter-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 32px;
+        border-bottom: 1px solid #F3F4F6;
+        background: #F9FAFB;
+    }
+
+    .filter-tabs {
+        display: flex;
+        gap: 8px;
+    }
+
+    .filter-tab {
+        background: none;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #6B7280;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .filter-tab span {
+        background: #E5E7EB;
+        color: #4B5563;
+        font-size: 11px;
+        padding: 2px 8px;
+        border-radius: 20px;
+    }
+
+    .filter-tab.active {
+        background: white;
+        color: #0D9488;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .filter-tab.active span {
+        background: #0D9488;
+        color: white;
+    }
+
+    .search-box {
+        position: relative;
+        width: 300px;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9CA3AF;
+        font-size: 14px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 10px 14px 10px 40px;
+        border: 1px solid #E5E7EB;
+        border-radius: 12px;
+        font-size: 14px;
+        transition: all 0.2s;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: #0D9488;
+        box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    }
+
+    .notifications-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .notification-card {
+        display: flex;
+        gap: 20px;
+        padding: 24px 32px;
+        border-bottom: 1px solid #F3F4F6;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+    .notification-card:last-child {
+        border-bottom: none;
+    }
+
+    .notification-card:hover {
+        background: #F9FAFB;
+    }
+
+    .notification-card.unread {
+        background: rgba(13, 148, 136, 0.02);
+    }
+
+    .notification-card.unread::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        background: #0D9488;
+    }
+
+    .notification-card.urgent {
+        background: rgba(239, 68, 68, 0.02);
+    }
+
+    .notification-card.urgent::before {
+        background: #EF4444;
+    }
+
+    .notif-icon-wrapper {
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+        background: #F3F4F6;
+        color: #6B7280;
+    }
+
+    .unread .notif-icon-wrapper {
+        background: rgba(13, 148, 136, 0.1);
+        color: #0D9488;
+    }
+
+    .urgent .notif-icon-wrapper {
+        background: rgba(239, 68, 68, 0.1);
+        color: #EF4444;
+    }
+
+    .notif-body {
+        flex: 1;
+    }
+
+    .notif-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+    }
+
+    .notif-header h3 {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1F2937;
+        margin: 0;
+    }
+
+    .notif-time {
+        font-size: 12px;
+        color: #9CA3AF;
+    }
+
+    .notif-message {
+        font-size: 14px;
+        color: #4B5563;
+        line-height: 1.6;
+        margin-bottom: 12px;
+    }
+
+    .notif-actions {
+        display: flex;
+        gap: 12px;
+    }
+
+    .btn-action {
+        background: #F3F4F6;
+        border: none;
+        color: #4B5563;
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+        background: #E5E7EB;
+        color: #1F2937;
+    }
+
+    .notif-controls {
+        display: flex;
+        align-items: center;
+    }
+
+    .btn-icon-check {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid #E5E7EB;
+        background: white;
+        color: #9CA3AF;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-icon-check:hover {
+        border-color: #0D9488;
+        color: #0D9488;
+        background: rgba(13, 148, 136, 0.05);
+    }
+
+    .loading-state, .empty-state {
+        padding: 80px 40px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(13, 148, 136, 0.1);
+        border-top-color: #0D9488;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @@keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .empty-icon {
+        width: 80px;
+        height: 80px;
+        background: #F9FAFB;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        color: #D1D5DB;
+        margin-bottom: 8px;
+    }
+
+    .empty-state h3 {
+        font-size: 20px;
+        font-weight: 700;
+        color: #374151;
+        margin: 0;
+    }
+
+    .empty-state p {
+        color: #6B7280;
+        max-width: 300px;
+        line-height: 1.5;
+    }
+
+    @@media (max-width: 640px) {
+        .page-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 20px;
+        }
+        
+        .filter-bar {
+            flex-direction: column;
+            gap: 16px;
+            align-items: stretch;
+        }
+
+        .search-box {
+            width: 100%;
+        }
+    }
+</style>
+
+@code {
+    private List<DoctorNotification> notifications = new();
+    private bool isLoading = true;
+    private string filter = "all";
+    private string searchQuery = "";
+
+    private IEnumerable<DoctorNotification> FilteredNotifications => 
+        notifications.Where(n => 
+            (filter == "all" || !n.IsRead) &&
+            (string.IsNullOrWhiteSpace(searchQuery) || 
+             n.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) || 
+             n.Message.Contains(searchQuery, StringComparison.OrdinalIgnoreCase))
+        ).OrderByDescending(n => n.SentAt);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNotifications();
+    }
+
+    private async Task LoadNotifications()
+    {
+        isLoading = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                var result = await Http.GetFromJsonAsync<List<DoctorNotification>>($"{baseUrl}/api/notifications");
+                if (result != null)
+                {
+                    notifications = result;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading notifications: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task MarkAsRead(int id)
+    {
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var response = await Http.PatchAsync($"{baseUrl}/api/notifications/{id}/read", null);
+            if (response.IsSuccessStatusCode)
+            {
+                var notif = notifications.FirstOrDefault(n => n.Id == id);
+                if (notif != null) notif.IsRead = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error marking as read: {ex.Message}");
+        }
+    }
+
+    private async Task MarkAllAsRead()
+    {
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var response = await Http.PatchAsync($"{baseUrl}/api/notifications/read-all", null);
+            if (response.IsSuccessStatusCode)
+            {
+                foreach (var n in notifications) n.IsRead = true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error marking all as read: {ex.Message}");
+        }
+    }
+
+    private async Task ClearAll()
+    {
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var response = await Http.DeleteAsync($"{baseUrl}/api/notifications");
+            if (response.IsSuccessStatusCode)
+            {
+                notifications.Clear();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error clearing notifications: {ex.Message}");
+        }
+    }
+
+    private string GetIcon(DoctorNotification notif)
+    {
+        if (notif.IsUrgent) return "fas fa-exclamation-triangle";
+        if (notif.AppointmentId > 0) return "far fa-calendar-check";
+        if (notif.Message.Contains("ordonnance", StringComparison.OrdinalIgnoreCase)) return "fas fa-file-prescription";
+        return "far fa-bell";
+    }
+
+    private string GetTimeAgo(DateTime dateTime)
+    {
+        var diff = DateTime.UtcNow - dateTime;
+        if (diff.TotalDays >= 1) return $"Il y a {Math.Floor(diff.TotalDays)} jour(s)";
+        if (diff.TotalHours >= 1) return $"Il y a {Math.Floor(diff.TotalHours)} heure(s)";
+        if (diff.TotalMinutes >= 1) return $"Il y a {Math.Floor(diff.TotalMinutes)} minute(s)";
+        return "À l'instant";
+    }
+
+    private void GoToAppointment(int appointmentId)
+    {
+        Navigation.NavigateTo($"/doctor/appointments/{appointmentId}");
+    }
+
+    public class DoctorNotification
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public int AppointmentId { get; set; }
+        public bool IsUrgent { get; set; }
+        public bool IsRead { get; set; }
+        public DateTime SentAt { get; set; }
+    }
+}

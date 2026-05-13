@@ -73,4 +73,32 @@ public class UploadController : ControllerBase
 
         return Ok(new { photoUrl = photoUrl, message = "Photo mise à jour avec succès" });
     }
+
+    [HttpPost("blog-image")]
+    public async Task<IActionResult> UploadBlogImage(IFormFile file)
+    {
+        if (file == null || file.Length == 0)
+            return BadRequest(new { message = "Aucun fichier n'a été fourni." });
+
+        var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        
+        if (!allowedExtensions.Contains(extension))
+            return BadRequest(new { message = "Type de fichier non autorisé." });
+
+        var uploadsFolder = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "blog");
+        if (!Directory.Exists(uploadsFolder))
+            Directory.CreateDirectory(uploadsFolder);
+
+        var uniqueFileName = $"{Guid.NewGuid()}{extension}";
+        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+
+        using (var fileStream = new FileStream(filePath, FileMode.Create))
+        {
+            await file.CopyToAsync(fileStream);
+        }
+
+        var photoUrl = $"{Request.Scheme}://{Request.Host}/uploads/blog/{uniqueFileName}";
+        return Ok(new { url = photoUrl });
+    }
 }

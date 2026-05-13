@@ -117,32 +117,6 @@
     .user-role.doctor { background: #E6F8F7; color: #0D9488; }
     .user-role.patient { background: #F0FDF4; color: #10B981; }
     
-    /* Quick Actions */
-    .quick-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 32px; }
-    .action-card { 
-        background: white; 
-        border-radius: 20px; 
-        padding: 24px; 
-        text-align: center; 
-        cursor: pointer; 
-        transition: all 0.3s; 
-        border: 1px solid rgba(13,148,136,0.1);
-    }
-    .action-card:hover { transform: translateY(-4px); box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1); border-color: #0D9488; }
-    .action-icon { 
-        width: 70px; 
-        height: 70px; 
-        border-radius: 20px; 
-        background: linear-gradient(135deg, rgba(13,148,136,0.12), rgba(20,184,166,0.08));
-        display: flex; 
-        align-items: center; 
-        justify-content: center; 
-        margin: 0 auto 16px; 
-    }
-    .action-icon svg { width: 32px; height: 32px; color: #0D9488; }
-    .action-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-    .action-card p { font-size: 13px; color: #6B7280; margin: 0; }
-    
     /* Spinner */
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 400px; flex-direction: column; gap: 20px; }
     .loading-spinner { width: 60px; height: 60px; border: 4px solid #E5E7EB; border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; }
@@ -159,10 +133,6 @@
     @@media (max-width: 1024px) {
         .stats-grid { grid-template-columns: repeat(2, 1fr); }
         .charts-grid { grid-template-columns: 1fr; }
-        .quick-actions { grid-template-columns: repeat(2, 1fr); }
-    }
-    @@media (max-width: 640px) {
-        .quick-actions { grid-template-columns: 1fr; }
     }
 </style>
 
@@ -326,6 +296,53 @@
             </div>
         </div>
 
+        <!-- Recent Notifications -->
+        <div class="users-card">
+            <div class="users-header">
+                <h3>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                    </svg>
+                    Notifications récentes
+                </h3>
+                <a @onclick='() => Navigation.NavigateTo("/admin/notifications")'>
+                    Voir tout
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                </a>
+            </div>
+            @if (recentNotifications.Any())
+            {
+                @foreach (var notif in recentNotifications)
+                {
+                    <div class="user-item" @onclick="() => ViewNotif(notif)" style="cursor: pointer;">
+                        <div class="user-info">
+                            <div class="user-avatar" style="background: rgba(13,148,136,0.1); color: #0D9488;">
+                                <i class="fas fa-info-circle"></i>
+                            </div>
+                            <div class="user-details">
+                                <h4>@notif.Title</h4>
+                                <p>@notif.Message</p>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                            <span class="user-status @(notif.IsRead ? "status-active" : "status-inactive")" style="background: @(notif.IsRead ? "#F3F4F6" : "#FEF3C7"); color: @(notif.IsRead ? "#6B7280" : "#D97706");">
+                                @(notif.IsRead ? "Lu" : "Nouveau")
+                            </span>
+                            <span style="font-size: 11px; color: #9CA3AF;">@notif.CreatedAt.ToString("g")</span>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="empty-state" style="padding: 40px;">
+                    <i class="far fa-bell-slash" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i>
+                    <p>Aucune notification récente</p>
+                </div>
+            }
+        </div>
+
         <!-- Recent Users -->
         <div class="users-card">
             <div class="users-header">
@@ -373,38 +390,6 @@
             }
         </div>
 
-        <!-- Quick Actions -->
-        <div class="quick-actions">
-            <div class="action-card" @onclick="GoToDoctors">
-                <div class="action-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M22 12h-4l-3 9-4-18-3 9H2"/>
-                    </svg>
-                </div>
-                <h3>Gérer les médecins</h3>
-                <p>Ajouter, modifier ou désactiver des médecins</p>
-            </div>
-            <div class="action-card" @onclick="GoToPatients">
-                <div class="action-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                    </svg>
-                </div>
-                <h3>Gérer les patients</h3>
-                <p>Consulter la liste des patients</p>
-            </div>
-            <div class="action-card" @onclick="GoToProfile">
-                <div class="action-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="8" r="4"/>
-                        <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-                    </svg>
-                </div>
-                <h3>Mon profil</h3>
-                <p>Modifier vos informations personnelles</p>
-            </div>
-        </div>
     }
 </div>
 
@@ -480,8 +465,9 @@
                 doctorGrowth = random.Next(5, 15);
                 patientGrowth = random.Next(8, 20);
                 
-                // Charger les utilisateurs récents (à adapter selon votre API)
+                // Charger les données récentes
                 await LoadRecentUsers();
+                await LoadRecentNotifications();
                 
                 Console.WriteLine($"📊 Stats chargées: {stats.totalDoctors} médecins, {stats.totalPatients} patients");
             }
@@ -506,6 +492,45 @@
             isLoading = false;
             StateHasChanged();
         }
+    }
+    
+    private List<AdminNotification> recentNotifications = new();
+
+    private async Task LoadRecentNotifications()
+    {
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var result = await Http.GetFromJsonAsync<List<AdminNotification>>($"{baseUrl}/api/admin/notifications");
+            if (result != null)
+            {
+                recentNotifications = result.Take(3).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur chargement notifications: {ex.Message}");
+        }
+    }
+
+    private void ViewNotif(AdminNotification notif)
+    {
+        if (!string.IsNullOrEmpty(notif.ActionUrl))
+        {
+            Navigation.NavigateTo(notif.ActionUrl);
+        }
+    }
+
+    public class AdminNotification
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public string ActionUrl { get; set; } = "";
+        public bool IsRead { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
     
     private async Task LoadRecentUsers()

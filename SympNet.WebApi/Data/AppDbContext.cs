@@ -20,6 +20,9 @@ public class AppDbContext : DbContext
     public DbSet<Ordonnance> Ordonnances => Set<Ordonnance>();
     public DbSet<DoctorNotification> DoctorNotifications => Set<DoctorNotification>();
     public DbSet<PatientNotification> PatientNotifications { get; set; }
+    public DbSet<BlogPost> BlogPosts { get; set; }
+    public DbSet<ContactMessage> ContactMessages { get; set; }
+    public DbSet<Notification> Notifications { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

@@ -1,0 +1,266 @@
+@page "/blog"
+@layout SympNet.WebDashboard.Components.Layout.EmptyLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject IConfiguration Config
+@inject NavigationManager Navigation
+
+<PageTitle>Blog - SympNet</PageTitle>
+
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
+
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Instrument Sans', sans-serif; background: #F8FAFC; color: #1F2937; line-height: 1.5; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+    .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+    .logo { font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 800; color: #0D9488; display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .nav-links { display: flex; gap: 24px; font-weight: 500; font-size: 15px; }
+    .nav-links a { text-decoration: none; color: #4B5563; transition: 0.2s; }
+    .nav-links a:hover, .nav-links a.active { color: #0D9488; }
+    .doctor-logo-icon { width: 40px; height: 40px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; color: white; }
+    .btn-primary { background: #0D9488; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
+    .btn-primary:hover { background: #0F766E; }
+
+    .blog-hero { background: #0D9488; padding: 60px 0 80px; color: white; }
+    .blog-hero h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 40px; font-weight: 800; margin-bottom: 12px; }
+    .blog-hero p { font-size: 16px; opacity: 0.9; max-width: 600px; }
+
+    .blog-controls { margin-top: -30px; margin-bottom: 50px; }
+    .search-bar { background: white; border-radius: 12px; padding: 4px; display: flex; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-bottom: 24px; border: 1px solid #E5E7EB; }
+    .search-bar i { color: #9CA3AF; margin: 0 16px; }
+    .search-bar input { flex: 1; border: none; padding: 12px 0; font-size: 15px; outline: none; }
+    
+    .categories { display: flex; gap: 12px; flex-wrap: wrap; }
+    .cat-btn { background: white; border: 1px solid #E5E7EB; padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; color: #4B5563; cursor: pointer; transition: 0.2s; }
+    .cat-btn:hover { background: #F9FAFB; border-color: #0D9488; color: #0D9488; }
+    .cat-btn.active { background: #0D9488; border-color: #0D9488; color: white; }
+
+    .section-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 24px; color: #111827; }
+    .featured-card { background: white; border-radius: 24px; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #E5E7EB; margin-bottom: 60px; transition: 0.3s; cursor: pointer; }
+    .featured-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); }
+    .featured-img { width: 100%; height: 100%; object-fit: cover; min-height: 350px; background: #F3F4F6; }
+    .featured-content { padding: 40px; display: flex; flex-direction: column; justify-content: center; }
+    .badge-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .cat-badge { background: #F0FDF4; color: #10B981; padding: 4px 12px; border-radius: 99px; font-size: 12px; font-weight: 700; }
+    .date-badge { color: #9CA3AF; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+    .featured-content h2 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 16px; line-height: 1.3; }
+    .featured-content p { color: #6B7280; font-size: 16px; margin-bottom: 24px; line-height: 1.6; }
+    .author-row { display: flex; align-items: center; justify-content: space-between; margin-top: auto; }
+    .author-info { display: flex; align-items: center; gap: 12px; }
+    .author-avatar { width: 32px; height: 32px; border-radius: 50%; background: #0D9488; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; }
+    .author-name { font-size: 13px; font-weight: 600; color: #374151; }
+    .read-more { color: #0D9488; text-decoration: none; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+
+    .articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); gap: 32px; margin-bottom: 80px; }
+    .article-card { background: white; border-radius: 20px; border: 1px solid #E5E7EB; overflow: hidden; transition: 0.3s; cursor: pointer; }
+    .article-card:hover { transform: translateY(-5px); box-shadow: 0 20px 40px rgba(0,0,0,0.05); border-color: #0D9488; }
+    .card-img-wrap { width: 100%; height: 220px; overflow: hidden; background: #F3F4F6; }
+    .card-img { width: 100%; height: 100%; object-fit: cover; transition: 0.5s; }
+    .article-card:hover .card-img { transform: scale(1.05); }
+    .card-body { padding: 24px; }
+    .card-body h3 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 18px; font-weight: 800; margin-bottom: 12px; line-height: 1.4; }
+    .card-body p { color: #6B7280; font-size: 14px; margin-bottom: 20px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    
+
+
+    .spinner { width: 40px; height: 40px; border: 4px solid rgba(13, 148, 136, 0.1); border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<header>
+    <nav class="navbar">
+        <div class="logo" @onclick='() => Navigation.NavigateTo("/")'>
+           <div class="doctor-logo-icon"><i class="fas fa-stethoscope"></i></div>
+            SympNet
+        </div>
+        <div class="nav-links">
+            <a href="/">Accueil</a>
+            <a href="/services">Services</a>
+            <a href="/contact">Contactez-nous</a>
+            <a href="/help">Aide</a>
+            <a href="/blog" class="active">Blog</a>
+        </div>
+        <div class="nav-actions">
+            <button class="btn-primary" @onclick='() => Navigation.NavigateTo("/login")'>Connexion</button>
+        </div>
+    </nav>
+</header>
+
+<main>
+    <section class="blog-hero">
+        <div class="container">
+            <h1>Blog SympNet</h1>
+            <p>Actualités, conseils et insights sur la santé numérique et l'intelligence artificielle médicale</p>
+        </div>
+    </section>
+
+    <div class="container">
+        <div class="blog-controls">
+            <div class="search-bar">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="Rechercher un article..." @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleSearch" />
+            </div>
+            <div class="categories">
+                <button class="cat-btn @(currentCategory == "Tous" ? "active" : "")" @onclick='() => SetCategory("Tous")'>Tous</button>
+                <button class="cat-btn @(currentCategory == "Intelligence Artificielle" ? "active" : "")" @onclick='() => SetCategory("Intelligence Artificielle")'>Intelligence Artificielle</button>
+                <button class="cat-btn @(currentCategory == "Santé" ? "active" : "")" @onclick='() => SetCategory("Santé")'>Santé</button>
+                <button class="cat-btn @(currentCategory == "Technologie" ? "active" : "")" @onclick='() => SetCategory("Technologie")'>Technologie</button>
+                <button class="cat-btn @(currentCategory == "Conseil" ? "active" : "")" @onclick='() => SetCategory("Conseil")'>Conseil</button>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div style="text-align: center; padding: 100px 0;"><div class="spinner"></div></div>
+        }
+        else
+        {
+            @if (featuredPost != null && string.IsNullOrEmpty(searchQuery) && currentCategory == "Tous")
+            {
+                <h2 class="section-title">Article en vedette</h2>
+                <div class="featured-card" @onclick="() => ReadPost(featuredPost.Id)">
+                    <img src="@(string.IsNullOrEmpty(featuredPost.ImageUrl) ? "images/blog-placeholder.jpg" : featuredPost.ImageUrl)" class="featured-img" alt="" />
+                    <div class="featured-content">
+                        <div class="badge-row">
+                            <span class="cat-badge">@featuredPost.Category</span>
+                            <span class="date-badge"><i class="far fa-calendar"></i> @featuredPost.CreatedAt.ToString("d MMMM yyyy")</span>
+                        </div>
+                        <h2>@featuredPost.Title</h2>
+                        <p>@featuredPost.Summary</p>
+                        <div class="author-row">
+                            <div class="author-info">
+                                <div class="author-avatar">@featuredPost.AuthorName[0]</div>
+                                <div class="author-name">@featuredPost.AuthorName</div>
+                                <span class="date-badge"><i class="far fa-clock"></i> @featuredPost.ReadingTime min de lecture</span>
+                            </div>
+                            <span class="read-more">Lire l'article <i class="fas fa-arrow-right"></i></span>
+                        </div>
+                    </div>
+                </div>
+            }
+
+            <h2 class="section-title">Tous les articles</h2>
+            @if (!filteredPosts.Any())
+            {
+                <div style="text-align: center; padding: 60px 0; color: #9CA3AF;">
+                    <i class="fas fa-search" style="font-size: 48px; margin-bottom: 20px;"></i>
+                    <p>Aucun article ne correspond à votre recherche.</p>
+                </div>
+            }
+            else
+            {
+                <div class="articles-grid">
+                    @foreach (var blog in filteredPosts)
+                    {
+                        <div class="article-card" @onclick="() => ReadPost(blog.Id)">
+                            <div class="card-img-wrap">
+                                <img src="@(string.IsNullOrEmpty(blog.ImageUrl) ? "images/blog-placeholder.jpg" : blog.ImageUrl)" class="card-img" alt="" />
+                            </div>
+                            <div class="card-body">
+                                <div class="badge-row" style="margin-bottom: 12px;">
+                                    <span class="cat-badge">@blog.Category</span>
+                                    <span class="date-badge">@blog.CreatedAt.ToString("d MMM")</span>
+                                </div>
+                                <h3>@blog.Title</h3>
+                                <p>@blog.Summary</p>
+                                <div class="author-row">
+                                    <div class="author-info">
+                                        <span class="author-name">@blog.AuthorName</span>
+                                    </div>
+                                    <span class="date-badge"><i class="far fa-clock"></i> @blog.ReadingTime min</span>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        }
+    </div>
+</main>
+
+<Footer />
+
+@code {
+    private List<BlogPost> allPosts = new();
+    private List<BlogPost> filteredPosts = new();
+    private BlogPost? featuredPost;
+    private bool isLoading = true;
+    private string searchQuery = "";
+    private string currentCategory = "Tous";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBlogData();
+    }
+
+    private async Task LoadBlogData()
+    {
+        isLoading = true;
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var posts = await Http.GetFromJsonAsync<List<BlogPost>>($"{baseUrl}/api/blogposts");
+            if (posts != null)
+            {
+                allPosts = posts.OrderByDescending(p => p.CreatedAt).ToList();
+                featuredPost = allPosts.OrderByDescending(p => p.Views).FirstOrDefault();
+                FilterPosts();
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+        finally { isLoading = false; }
+    }
+
+    private void SetCategory(string category)
+    {
+        currentCategory = category;
+        FilterPosts();
+        StateHasChanged();
+    }
+
+    private void HandleSearch()
+    {
+        FilterPosts();
+        StateHasChanged();
+    }
+
+    private void FilterPosts()
+    {
+        var query = allPosts.AsEnumerable();
+        
+        if (!string.Equals(currentCategory, "Tous", StringComparison.OrdinalIgnoreCase))
+        {
+            query = query.Where(p => string.Equals(p.Category, currentCategory, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            query = query.Where(p => p.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) || 
+                                   p.Summary.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+        
+        filteredPosts = query.ToList();
+        
+        if (featuredPost != null && string.IsNullOrEmpty(searchQuery) && currentCategory == "Tous")
+        {
+            filteredPosts = filteredPosts.Where(p => p.Id != featuredPost.Id).ToList();
+        }
+    }
+
+    private void ReadPost(int id) => Navigation.NavigateTo($"/blog/{id}");
+
+    public class BlogPost
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Summary { get; set; } = "";
+        public string ImageUrl { get; set; } = "";
+        public string Category { get; set; } = "";
+        public string AuthorName { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+        public int ReadingTime { get; set; }
+        public int Views { get; set; }
+    }
+}

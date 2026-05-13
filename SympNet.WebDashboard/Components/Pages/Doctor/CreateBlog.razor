@@ -1,0 +1,282 @@
+@page "/doctor/create-blog"
+@page "/doctor/edit-blog/{Id:int}"
+@layout DoctorLayout
+@using System.Net.Http.Headers
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject IConfiguration Config
+@inject NavigationManager Navigation
+
+<div class="create-blog-page">
+    <div class="page-header">
+        <button class="btn-back" @onclick='() => Navigation.NavigateTo("/doctor/manage-blogs")'>
+            <i class="fas fa-arrow-left"></i> Retour
+        </button>
+        <h1>@(Id == null ? "Nouvel Article" : "Modifier l'Article")</h1>
+    </div>
+
+    <div class="editor-container">
+        <div class="main-editor">
+            <div class="form-section card">
+                <div class="form-group">
+                    <label>Titre de l'article</label>
+                    <input type="text" @bind="blog.Title" placeholder="Ex: Comment l'IA transforme le diagnostic médical" class="input-title" />
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Catégorie</label>
+                        <select @bind="blog.Category">
+                            <option value="Intelligence Artificielle">Intelligence Artificielle</option>
+                            <option value="Santé">Santé</option>
+                            <option value="Technologie">Technologie</option>
+                            <option value="Conseil">Conseil</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Temps de lecture (minutes)</label>
+                        <input type="number" @bind="blog.ReadingTime" min="1" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Résumé court</label>
+                    <textarea @bind="blog.Summary" placeholder="Un bref aperçu pour attirer les lecteurs..." rows="3"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Contenu de l'article</label>
+                    <textarea @bind="blog.Content" placeholder="Rédigez votre article ici..." class="input-content" rows="15"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar-editor">
+            <div class="publish-card card">
+                <h3>Publication</h3>
+                <div class="publish-options">
+                    <div class="toggle-group">
+                        <label class="toggle">
+                            <input type="checkbox" @bind="blog.IsPublished" />
+                            <span class="slider"></span>
+                        </label>
+                        <span>Publier immédiatement</span>
+                    </div>
+                </div>
+                <div class="publish-actions">
+                    <button class="btn-primary" @onclick="SaveBlog" disabled="@isSaving">
+                        @if (isSaving)
+                        {
+                            <span class="spinner-small"></span><span>Sauvegarde...</span>
+                        }
+                        else
+                        {
+                            <i class="fas fa-save"></i><span>@(Id == null ? "Publier l'article" : "Enregistrer les modifications")</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <div class="image-card card">
+                <h3>Image de couverture</h3>
+                <div class="image-preview-box @(string.IsNullOrEmpty(blog.ImageUrl) ? "empty" : "")">
+                    @if (!string.IsNullOrEmpty(blog.ImageUrl))
+                    {
+                        <img src="@blog.ImageUrl" alt="Preview" />
+                        <button class="remove-img" @onclick="() => blog.ImageUrl = null"><i class="fas fa-times"></i></button>
+                    }
+                    else
+                    {
+                        <div class="upload-placeholder">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <p>Cliquez pour uploader</p>
+                        </div>
+                    }
+                    <InputFile OnChange="HandleFileSelected" class="file-input" accept=".jpg,.jpeg,.png,.webp" />
+                </div>
+                <p class="image-hint">Recommandé : 1200x630px (PNG, JPG ou WebP)</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container">
+    @foreach (var toast in toasts)
+    {
+        <div class="toast @toast.Type">
+            <i class="@(toast.Type == "success" ? "fas fa-check-circle" : "fas fa-info-circle")"></i>
+            <span>@toast.Message</span>
+        </div>
+    }
+</div>
+
+<style>
+    .create-blog-page { animation: fadeIn 0.5s ease-out; max-width: 1200px; margin: 0 auto; }
+    .page-header { display: flex; align-items: center; gap: 20px; margin-bottom: 32px; }
+    .btn-back { background: white; border: 1px solid #E5E7EB; padding: 10px 18px; border-radius: 10px; color: #4B5563; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+    .btn-back:hover { background: #F9FAFB; border-color: #D1D5DB; }
+    .page-header h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; color: #111827; }
+
+    .editor-container { display: grid; grid-template-columns: 1fr 350px; gap: 32px; }
+    .card { background: white; border-radius: 20px; border: 1px solid rgba(13, 148, 136, 0.1); padding: 24px; box-shadow: 0 4px 20px rgba(0,0,0,0.02); }
+    
+    .form-group { margin-bottom: 24px; }
+    .form-group label { display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 8px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    
+    input[type="text"], input[type="number"], select, textarea {
+        width: 100%; padding: 12px 16px; border: 1px solid #E5E7EB; border-radius: 10px;
+        font-family: 'Instrument Sans', sans-serif; font-size: 15px; transition: all 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1); }
+    
+    .input-title { font-size: 20px !important; font-weight: 700; }
+    .input-content { line-height: 1.6; resize: vertical; }
+
+    .sidebar-editor { display: flex; flex-direction: column; gap: 24px; }
+    .sidebar-editor h3 { font-size: 16px; font-weight: 700; margin-bottom: 20px; color: #111827; }
+
+    .publish-actions { margin-top: 24px; }
+    .btn-primary { 
+        width: 100%; background: #0D9488; color: white; border: none; padding: 14px; 
+        border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.2s;
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-primary:hover { background: #0F766E; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+    .toggle-group { display: flex; align-items: center; gap: 12px; font-size: 14px; color: #4B5563; }
+    .toggle { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background-color: #E5E7EB; transition: .4s; border-radius: 34px; }
+    .slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+    input:checked + .slider { background-color: #0D9488; }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    .image-preview-box {
+        width: 100%; height: 200px; border: 2px dashed #E5E7EB; border-radius: 16px;
+        position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;
+        background: #F9FAFB; cursor: pointer; transition: all 0.2s;
+    }
+    .image-preview-box:hover { border-color: #0D9488; background: #F0FDF4; }
+    .image-preview-box.empty { height: 160px; }
+    .image-preview-box img { width: 100%; height: 100%; object-fit: cover; }
+    .file-input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .upload-placeholder { text-align: center; color: #9CA3AF; }
+    .upload-placeholder i { font-size: 32px; margin-bottom: 10px; }
+    .upload-placeholder p { font-size: 13px; font-weight: 500; }
+    .remove-img { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; }
+    .image-hint { font-size: 12px; color: #9CA3AF; margin-top: 12px; }
+
+    .spinner-small { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+
+    .toast-container { position: fixed; top: 30px; right: 30px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
+    .toast { background: white; border-radius: 16px; padding: 16px 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); animation: slideIn 0.3s ease-out; border-left: 4px solid #10B981; }
+    .toast i { font-size: 18px; color: #10B981; }
+    .toast span { font-size: 14px; font-weight: 600; color: #374151; }
+    @@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+</style>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+    private BlogPost blog = new();
+    private bool isSaving = false;
+    private List<Toast> toasts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Id != null)
+        {
+            await LoadBlog();
+        }
+    }
+
+    private async Task LoadBlog()
+    {
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var result = await Http.GetFromJsonAsync<BlogPost>($"{baseUrl}/api/blogposts/{Id}");
+            if (result != null) blog = result;
+        }
+        catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+    }
+
+    private async Task HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        try
+        {
+            var content = new MultipartFormDataContent();
+            var fileContent = new StreamContent(file.OpenReadStream(10 * 1024 * 1024));
+            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+            content.Add(fileContent, "file", file.Name);
+
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var response = await Http.PostAsync($"{baseUrl}/api/upload/blog-image", content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResponse>();
+                blog.ImageUrl = result?.Url;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Upload error: {ex.Message}"); }
+    }
+
+    private async Task SaveBlog()
+    {
+        if (string.IsNullOrWhiteSpace(blog.Title) || string.IsNullOrWhiteSpace(blog.Content))
+        {
+            AddToast("Le titre et le contenu sont obligatoires.", "error");
+            return;
+        }
+
+        isSaving = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+
+            HttpResponseMessage response;
+            if (Id == null)
+            {
+                response = await Http.PostAsJsonAsync($"{baseUrl}/api/blogposts", blog);
+            }
+            else
+            {
+                response = await Http.PutAsJsonAsync($"{baseUrl}/api/blogposts/{Id}", blog);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                var msg = Id == null ? "Article créé avec succès !" : "Article mis à jour avec succès !";
+                AddToast(msg, "success");
+                await Task.Delay(1500);
+                Navigation.NavigateTo("/doctor/manage-blogs");
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Save error: {ex.Message}"); }
+        finally { isSaving = false; }
+    }
+
+    private void AddToast(string message, string type)
+    {
+        var toast = new Toast { Message = message, Type = type };
+        toasts.Add(toast);
+        StateHasChanged();
+        Task.Delay(3000).ContinueWith(_ => { toasts.Remove(toast); InvokeAsync(StateHasChanged); });
+    }
+
+    public class Toast { public string Message { get; set; } = ""; public string Type { get; set; } = "success"; }
+    public class BlogPost { public int Id { get; set; } public string Title { get; set; } = ""; public string Content { get; set; } = ""; public string Summary { get; set; } = ""; public string ImageUrl { get; set; } = ""; public string Category { get; set; } = "Intelligence Artificielle"; public int ReadingTime { get; set; } = 5; public bool IsPublished { get; set; } = true; }
+    public class UploadResponse { public string Url { get; set; } = ""; }
+}
