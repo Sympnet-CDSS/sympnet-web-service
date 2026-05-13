@@ -86,23 +86,35 @@ public class AppointmentsController : ControllerBase
         if (!isPatient && !isDoctor)
             return Unauthorized();
 
+        var patient = await _db.Patients.FirstOrDefaultAsync(p => p.UserId == appointment.PatientId);
+        var patientAge = patient != null ? DateTime.Today.Year - patient.DateOfBirth.Year : 0;
+        if (patient != null && patient.DateOfBirth.Date > DateTime.Today.AddYears(-patientAge)) patientAge--;
+
         return Ok(new AppointmentDto
         {
-            Id               = appointment.Id,
-            PatientName      = appointment.Patient?.FullName ?? "",
-            DoctorId         = appointment.DoctorId,
-            DoctorName       = appointment.Doctor != null
-                                   ? $"Dr. {appointment.Doctor.FirstName} {appointment.Doctor.LastName}"
-                                   : "Docteur",
-            DoctorSpeciality = appointment.Doctor?.Speciality ?? "Généraliste",
-            DoctorAddress    = appointment.Doctor?.Address    ?? "Adresse non renseignée",
-            DateTime         = appointment.DateTime,
-            Status           = appointment.Status,
-            Notes            = appointment.Notes,
-            Type             = appointment.Type ?? "Consultation",
-            IsUrgent         = appointment.IsUrgent,
-            Reason           = appointment.Reason,
-            CreatedAt        = appointment.CreatedAt
+            Id                = appointment.Id,
+            PatientId         = appointment.PatientId,
+            PatientName       = appointment.Patient?.FullName ?? "",
+            PatientEmail      = appointment.Patient?.Email ?? "",
+            PatientPhone      = patient?.PhoneNumber ?? "",
+            PatientAge        = patientAge,
+            PatientLocation   = patient?.Address ?? "Tunis, Tunisie",
+            PatientConditions = patient?.MedicalHistory ?? "Aucune condition",
+            PatientGender     = patient?.Gender ?? "",
+            PatientPhotoUrl   = appointment.Patient?.PhotoUrl ?? "",
+            DoctorId          = appointment.DoctorId,
+            DoctorName        = appointment.Doctor != null
+                                    ? $"Dr. {appointment.Doctor.FirstName} {appointment.Doctor.LastName}"
+                                    : "Docteur",
+            DoctorSpeciality  = appointment.Doctor?.Speciality ?? "Généraliste",
+            DoctorAddress     = appointment.Doctor?.Address    ?? "Adresse non renseignée",
+            DateTime          = appointment.DateTime,
+            Status            = appointment.Status,
+            Notes             = appointment.Notes,
+            Type              = appointment.Type ?? "Consultation",
+            IsUrgent          = appointment.IsUrgent,
+            Reason            = appointment.Reason,
+            CreatedAt         = appointment.CreatedAt
         });
     }
 

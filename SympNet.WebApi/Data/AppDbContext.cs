@@ -23,6 +23,7 @@ public class AppDbContext : DbContext
     public DbSet<BlogPost> BlogPosts { get; set; }
     public DbSet<ContactMessage> ContactMessages { get; set; }
     public DbSet<Notification> Notifications { get; set; }
+    public DbSet<NewsletterSubscriber> NewsletterSubscribers { get; set; }
     
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

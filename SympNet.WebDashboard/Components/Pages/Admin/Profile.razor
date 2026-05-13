@@ -7,17 +7,18 @@
 <PageTitle>SympNet — Mon Profil Administrateur</PageTitle>
 
 <div class="full-profile-container">
+    
     @if (!string.IsNullOrEmpty(successMessage))
     {
         <div class="alert-success">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+            <i class="fas fa-check-circle"></i>
             @successMessage
         </div>
     }
     @if (!string.IsNullOrEmpty(errorMessage))
     {
         <div class="alert-error">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            <i class="fas fa-exclamation-circle"></i>
             @errorMessage
         </div>
     }
@@ -34,11 +35,11 @@
                     }
                     else
                     {
-                        <i class="fas fa-user-shield" style="font-size: 60px; color: white;"></i>
+                        <i class="fas fa-user-shield" style="font-size: 60px; color: #94A3B8;"></i>
                     }
                 </div>
                 <label for="avatar-upload" class="upload-btn" title="Changer la photo">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                    <i class="fas fa-camera"></i>
                 </label>
                 <InputFile id="avatar-upload" class="upload-input" OnChange="HandleImageUpload" accept="image/png, image/jpeg" />
             </div>
@@ -47,7 +48,7 @@
                 <h2>Administrateur Système</h2>
                 <p class="speciality">Gestionnaire SympNet</p>
                 <div class="profile-stats">
-                    <span class="location"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> Siège Central, Tunis</span>
+                    <span class="location"><i class="fas fa-map-marker-alt"></i> Siège Central, Tunis</span>
                 </div>
             </div>
 
@@ -83,17 +84,18 @@
             <h3>Contact</h3>
             <div class="info-list-icons">
                 <div class="info-icon-item">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    <i class="fas fa-envelope" style="color: #9CA3AF; width: 18px;"></i>
                     <span>@email</span>
                 </div>
                 <div class="info-icon-item">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    <i class="fas fa-phone-alt" style="color: #9CA3AF; width: 18px;"></i>
                     <span>Non renseigné</span>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
 
 <!-- EDIT MODAL -->
 @if (showEditModal)
@@ -103,7 +105,7 @@
             <div class="modal-header">
                 <h3>Modifier le profil Administrateur</h3>
                 <button class="close-btn" @onclick="() => showEditModal = false">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
             <div class="modal-body">
@@ -421,6 +423,7 @@
 </style>
 
 @code {
+    private string adminName = "";
     private string email = "";
     private string currentPassword = "";
     private string newPassword = "";
@@ -434,7 +437,11 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (firstRender) await LoadProfile();
+        if (firstRender)
+        {
+            adminName = await JS.InvokeAsync<string>("localStorage.getItem", "admin_name") ?? "Administrateur";
+            await LoadProfile();
+        }
     }
 
     private async Task LoadProfile()

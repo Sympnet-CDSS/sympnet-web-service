@@ -1,0 +1,59 @@
+@if (IsVisible)
+{
+    <div class="toast-wrapper @(Success ? "toast-success" : "toast-error")">
+        <div class="toast-icon">
+            <i class="@(Success ? "fas fa-check-circle" : "fas fa-exclamation-circle")"></i>
+        </div>
+        <div class="toast-content">
+            <p>@Message</p>
+        </div>
+    </div>
+}
+
+<style>
+    .toast-wrapper {
+        position: fixed;
+        bottom: 32px;
+        right: 32px;
+        background: #111827;
+        color: white;
+        padding: 16px 24px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        z-index: 3000;
+        min-width: 300px;
+        border-left: 6px solid #10B981;
+        animation: toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .toast-error {
+        border-left-color: #EF4444;
+    }
+
+    .toast-icon {
+        font-size: 20px;
+    }
+
+    .toast-success .toast-icon { color: #10B981; }
+    .toast-error .toast-icon { color: #EF4444; }
+
+    .toast-content p {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    @@keyframes toastSlideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+</style>
+
+@code {
+    [Parameter] public bool IsVisible { get; set; }
+    [Parameter] public string Message { get; set; } = "";
+    [Parameter] public bool Success { get; set; } = true;
+}

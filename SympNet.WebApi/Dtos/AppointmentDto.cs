@@ -5,6 +5,13 @@ public class AppointmentDto
     public int      Id               { get; set; }
     public Guid     PatientId        { get; set; } 
     public string   PatientName      { get; set; } = string.Empty;
+    public string   PatientEmail     { get; set; } = string.Empty;
+    public string   PatientPhone     { get; set; } = string.Empty;
+    public int      PatientAge       { get; set; }
+    public string   PatientLocation  { get; set; } = string.Empty;
+    public string   PatientConditions { get; set; } = string.Empty;
+    public string   PatientGender    { get; set; } = string.Empty;
+    public string   PatientPhotoUrl  { get; set; } = string.Empty;
     public int      DoctorId         { get; set; }
     public string   DoctorName       { get; set; } = string.Empty;
     public string   DoctorSpeciality { get; set; } = string.Empty;

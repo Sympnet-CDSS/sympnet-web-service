@@ -1,0 +1,440 @@
+@page "/admin/notifications"
+@page "/doctor/notifications"
+@layout AdminLayout
+@inject HttpClient Http
+@inject IConfiguration Config
+@inject IJSRuntime JS
+@inject NavigationManager Navigation
+
+<div class="notifications-page">
+    <DashboardHeader UserName="@userName" IsAdmin="@isAdmin" />
+
+    <div class="page-header">
+        <div class="header-left">
+            <button class="btn-back" @onclick="GoBack">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <div class="header-titles">
+                <h1>Notifications</h1>
+                <p class="stats-line">
+                    <span class="count-unread">@notifications.Count(n => !n.IsRead) non lues</span>
+                    sur @notifications.Count totales
+                </p>
+            </div>
+        </div>
+        <button class="btn-mark-all" @onclick="MarkAllAsRead">
+            <i class="fas fa-check-double"></i> Tout marquer comme lu
+        </button>
+    </div>
+
+    <div class="filter-tabs">
+        <button class="tab @(currentFilter == "all" ? "active" : "")" @onclick='() => currentFilter = "all"'>
+            Toutes (@notifications.Count)
+        </button>
+        <button class="tab @(currentFilter == "unread" ? "active" : "")" @onclick='() => currentFilter = "unread"'>
+            Non lues (@notifications.Count(n => !n.IsRead))
+        </button>
+        <button class="tab @(currentFilter == "read" ? "active" : "")" @onclick='() => currentFilter = "read"'>
+            Lues (@notifications.Count(n => n.IsRead))
+        </button>
+    </div>
+
+    <div class="notif-list">
+        @if (loading)
+        {
+            <div class="loading-state">
+                <div class="spinner"></div>
+                <p>Chargement des notifications...</p>
+            </div>
+        }
+        else if (!FilteredNotifications.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon"><i class="far fa-bell-slash"></i></div>
+                <h3>Aucune notification</h3>
+                <p>Vous n'avez pas encore de notifications @(currentFilter != "all" ? "dans cette catégorie" : "").</p>
+            </div>
+        }
+        else
+        {
+            @foreach (var notif in FilteredNotifications)
+            {
+                <div class="notif-card @(notif.IsRead ? "read" : "unread")" @onclick="() => ViewDetail(notif)">
+                    <div class="unread-dot @(notif.IsRead ? "hidden" : "")"></div>
+
+                    <div class="notif-icon-wrap @GetIconColor(notif)">
+                        <i class="@GetIcon(notif)"></i>
+                    </div>
+
+                    <div class="notif-body">
+                        <div class="notif-meta">
+                            <span class="notif-category @GetCategoryClass(notif)">@GetCategory(notif)</span>
+                            @if (IsUrgent(notif))
+                            {
+                                <span class="badge-urgent">URGENT</span>
+                            }
+                            <span class="notif-time">
+                                <i class="far fa-clock"></i>
+                                @GetTimeShort(notif.CreatedAt)
+                            </span>
+                        </div>
+                        <h3 class="notif-title">@notif.Title</h3>
+                        <p class="notif-message">@notif.Message</p>
+                        <div class="notif-footer">
+                            <span class="patient-label">
+                                <strong>@(isAdmin ? "Origine" : "Patient"):</strong> @GetSourceLabel(notif)
+                            </span>
+                            <span class="see-detail">Voir les détails →</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-delete" @onclick:stopPropagation="true" @onclick="() => ConfirmDelete(notif.Id)">
+                        <i class="far fa-trash-alt"></i>
+                    </button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+<ConfirmModal 
+    IsVisible="@showConfirmModal" 
+    Title="Supprimer la notification" 
+    Message="Êtes-vous sûr de vouloir supprimer cette notification ? Cette action est irréversible."
+    OnConfirm="DeleteNotif" 
+    OnCancel="() => showConfirmModal = false" />
+
+<ToastNotification 
+    IsVisible="@showToast" 
+    Message="@toastMessage" 
+    Success="@toastSuccess" />
+
+<style>
+    @@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&display=swap');
+
+    .notifications-page {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 0 20px 40px;
+        font-family: 'Bricolage Grotesque', sans-serif;
+    }
+
+    /* Header */
+    .page-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 28px;
+    }
+    .header-left { display: flex; align-items: center; gap: 20px; }
+    
+    .btn-back {
+        width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid #E5E7EB;
+        background: white; color: #374151; display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: 0.2s;
+    }
+    .btn-back:hover { background: #F9FAFB; border-color: #D1D5DB; }
+
+    .header-titles h1 { font-size: 28px; font-weight: 800; color: #111827; margin: 0; }
+    .stats-line { font-size: 14px; color: #9CA3AF; margin: 4px 0 0; font-weight: 500; }
+    .count-unread { color: #0D9488; font-weight: 700; }
+
+    .btn-mark-all {
+        display: flex; align-items: center; gap: 8px; background: #F0FDFA;
+        border: none; color: #0D9488; font-weight: 700; font-size: 14px;
+        cursor: pointer; padding: 10px 18px; border-radius: 12px;
+        transition: 0.2s;
+    }
+    .btn-mark-all:hover { background: #CCFBF1; }
+
+    /* Tabs */
+    .filter-tabs { display: flex; gap: 12px; margin-bottom: 24px; }
+    .tab {
+        padding: 10px 24px; border-radius: 999px; font-size: 14px; font-weight: 700;
+        border: 1.5px solid #E5E7EB; background: white; color: #6B7280;
+        cursor: pointer; transition: 0.2s;
+    }
+    .tab.active {
+        background: #111827; color: white; border-color: #111827;
+        box-shadow: 0 4px 12px rgba(17, 24, 39, 0.2);
+    }
+    .tab:not(.active):hover { background: #F9FAFB; }
+
+    /* Cards */
+    .notif-list { display: flex; flex-direction: column; gap: 16px; }
+    .notif-card {
+        background: white; border-radius: 20px; border: 1.5px solid #F3F4F6;
+        padding: 24px; display: flex; align-items: flex-start; gap: 20px;
+        cursor: pointer; transition: 0.2s; position: relative;
+    }
+    .notif-card:hover {
+        border-color: #D1FAF5; shadow: 0 10px 30px rgba(13,148,136,0.05);
+        transform: translateY(-2px);
+    }
+    .notif-card.unread { border-color: #CCFBF1; background: #FBFFFE; }
+
+    .unread-dot {
+        position: absolute; left: 24px; top: 24px; width: 10px; height: 10px;
+        border-radius: 50%; background: #0D9488; box-shadow: 0 0 0 4px rgba(13,148,136,0.1);
+    }
+    .unread-dot.hidden { display: none; }
+
+    .notif-icon-wrap {
+        width: 54px; height: 54px; border-radius: 16px; display: flex;
+        align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+        margin-top: 15px;
+    }
+    .icon-red { background: #FEF2F2; color: #EF4444; }
+    .icon-teal { background: #F0FDFA; color: #0D9488; }
+    .icon-indigo { background: #EEF2FF; color: #6366F1; }
+    .icon-blue { background: #EFF6FF; color: #3B82F6; }
+    .icon-orange { background: #FFF7ED; color: #F97316; }
+    .icon-yellow { background: #FEFCE8; color: #CA8A04; }
+
+    .notif-body { flex: 1; min-width: 0; padding-left: 5px; }
+    .notif-meta { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .notif-category { font-size: 11px; font-weight: 800; text-transform: uppercase; padding: 4px 10px; border-radius: 6px; }
+    .cat-urgence { background: #FEF2F2; color: #DC2626; }
+    .cat-rdv { background: #FFF7ED; color: #EA580C; }
+    .cat-diagnostic { background: #F0FDF4; color: #16A34A; }
+    .cat-message { background: #EFF6FF; color: #2563EB; }
+    .cat-ordonnance { background: #F5F3FF; color: #7C3AED; }
+    .cat-default { background: #F3F4F6; color: #6B7280; }
+
+    .badge-urgent { background: #EF4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px; }
+    .notif-time { font-size: 12px; color: #9CA3AF; font-weight: 600; margin-left: auto; }
+
+    .notif-title { font-size: 18px; font-weight: 800; color: #111827; margin: 0 0 6px; }
+    .notif-message { font-size: 14px; color: #6B7280; line-height: 1.6; margin-bottom: 12px; }
+    
+    .notif-footer { display: flex; justify-content: space-between; align-items: center; }
+    .patient-label { font-size: 13px; color: #9CA3AF; }
+    .patient-label strong { color: #374151; }
+    .see-detail { color: #0D9488; font-weight: 700; font-size: 14px; }
+
+    .btn-delete {
+        position: absolute; right: 24px; top: 24px; background: none; border: none;
+        color: #D1D5DB; cursor: pointer; transition: 0.2s; font-size: 16px;
+    }
+    .btn-delete:hover { color: #EF4444; transform: scale(1.1); }
+
+    .loading-state, .empty-state { padding: 100px 0; text-align: center; color: #9CA3AF; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #F3F4F6; border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+@code {
+    private List<UnifiedNotif> notifications = new();
+    private bool loading = true;
+    private string currentFilter = "all";
+    private bool isAdmin = false;
+    private string userName = "";
+    private dynamic? NavLayout => isAdmin ? typeof(AdminLayout) : typeof(DoctorLayout);
+
+    // Modal & Toast
+    private bool showConfirmModal = false;
+    private int? notifToDeleteId;
+    private bool showToast = false;
+    private string toastMessage = "";
+    private bool toastSuccess = true;
+
+    private IEnumerable<UnifiedNotif> FilteredNotifications => notifications
+        .Where(n => currentFilter == "all" || (currentFilter == "unread" && !n.IsRead) || (currentFilter == "read" && n.IsRead))
+        .OrderByDescending(n => n.CreatedAt);
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            isAdmin = Navigation.Uri.Contains("/admin/");
+            await LoadUserInfo();
+            await LoadNotifications();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadUserInfo()
+    {
+        if (isAdmin)
+        {
+            userName = await JS.InvokeAsync<string>("localStorage.getItem", "admin_name") ?? "Administrateur";
+        }
+        else
+        {
+            userName = await JS.InvokeAsync<string>("localStorage.getItem", "doctor_name") ?? "Docteur";
+        }
+    }
+
+    private async Task LoadNotifications()
+    {
+        loading = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (string.IsNullOrEmpty(token)) return;
+
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            
+            if (isAdmin)
+            {
+                var result = await Http.GetFromJsonAsync<List<UnifiedNotif>>($"{baseUrl}/api/admin/notifications");
+                if (result != null) notifications = result;
+            }
+            else
+            {
+                var result = await Http.GetFromJsonAsync<List<DoctorNotifRaw>>($"{baseUrl}/api/notifications");
+                if (result != null)
+                {
+                    notifications = result.Select(n => new UnifiedNotif {
+                        Id = n.Id,
+                        Title = n.Title,
+                        Message = n.Message,
+                        CreatedAt = n.SentAt,
+                        IsRead = n.IsRead,
+                        Type = n.AppointmentId > 0 ? 1 : 0,
+                        ActionUrl = n.AppointmentId > 0 ? $"/doctor/appointments/{n.AppointmentId}" : null
+                    }).ToList();
+                }
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+        finally { loading = false; }
+    }
+
+    private async Task MarkAllAsRead()
+    {
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            string endpoint = isAdmin ? "api/admin/notifications/read-all" : "api/notifications/read-all";
+            await Http.PatchAsync($"{baseUrl}/{endpoint}", null);
+            foreach (var n in notifications) n.IsRead = true;
+            ShowToast("Toutes les notifications marquées comme lues", true);
+        }
+        catch (Exception ex) { ShowToast("Erreur lors de l'opération", false); }
+    }
+
+    private void ConfirmDelete(int id)
+    {
+        notifToDeleteId = id;
+        showConfirmModal = true;
+    }
+
+    private async Task DeleteNotif()
+    {
+        if (notifToDeleteId == null) return;
+        showConfirmModal = false;
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            string endpoint = isAdmin ? $"api/admin/notifications/{notifToDeleteId}" : $"api/notifications/{notifToDeleteId}";
+            var response = await Http.DeleteAsync($"{baseUrl}/{endpoint}");
+            if (response.IsSuccessStatusCode)
+            {
+                notifications.RemoveAll(n => n.Id == notifToDeleteId);
+                ShowToast("Notification supprimée avec succès", true);
+            }
+        }
+        catch (Exception ex) { ShowToast("Erreur lors de la suppression", false); }
+    }
+
+    private void ViewDetail(UnifiedNotif notif)
+    {
+        // Redirect to unified detail page for all notification types and roles
+        string rolePath = isAdmin ? "admin" : "doctor";
+        Navigation.NavigateTo($"/{rolePath}/notifications/{notif.Id}");
+    }
+
+    private void ShowToast(string message, bool success)
+    {
+        toastMessage = message;
+        toastSuccess = success;
+        showToast = true;
+        StateHasChanged();
+        Task.Run(async () => {
+            await Task.Delay(3000);
+            showToast = false;
+            await InvokeAsync(StateHasChanged);
+        });
+    }
+
+    private void GoBack() => Navigation.NavigateTo(isAdmin ? "/admin/dashboard" : "/doctor/dashboard");
+
+    private bool IsUrgent(UnifiedNotif notif) => notif.Title.ToLower().Contains("urgent") || notif.Title.ToLower().Contains("urgence");
+
+    private string GetIcon(UnifiedNotif notif)
+    {
+        var t = notif.Title.ToLower();
+        if (t.Contains("urgent") || t.Contains("urgence")) return "fas fa-triangle-exclamation";
+        if (t.Contains("rendez-vous") || t.Contains("rdv")) return "far fa-calendar-check";
+        if (t.Contains("diagnostic") || t.Contains("ia")) return "fas fa-brain";
+        if (t.Contains("message") || t.Contains("contact")) return "far fa-comment-dots";
+        if (t.Contains("ordonnance")) return "fas fa-file-medical";
+        return "fas fa-bell";
+    }
+
+    private string GetIconColor(UnifiedNotif notif)
+    {
+        var t = notif.Title.ToLower();
+        if (t.Contains("urgent") || t.Contains("urgence")) return "icon-red";
+        if (t.Contains("rendez-vous") || t.Contains("rdv")) return "icon-teal";
+        if (t.Contains("diagnostic") || t.Contains("ia")) return "icon-indigo";
+        if (t.Contains("message") || t.Contains("contact")) return "icon-blue";
+        if (t.Contains("ordonnance")) return "icon-orange";
+        return "icon-yellow";
+    }
+
+    private string GetCategory(UnifiedNotif notif)
+    {
+        var t = notif.Title.ToLower();
+        if (t.Contains("urgent") || t.Contains("urgence")) return "Urgence";
+        if (t.Contains("rendez-vous") || t.Contains("rdv")) return "Rendez-vous";
+        if (t.Contains("diagnostic") || t.Contains("ia")) return "Diagnostic IA";
+        if (t.Contains("message") || t.Contains("contact")) return "Message";
+        if (t.Contains("ordonnance")) return "Ordonnance";
+        return "Notification";
+    }
+
+    private string GetCategoryClass(UnifiedNotif notif)
+    {
+        var t = notif.Title.ToLower();
+        if (t.Contains("urgent") || t.Contains("urgence")) return "cat-urgence";
+        if (t.Contains("rendez-vous") || t.Contains("rdv")) return "cat-rdv";
+        if (t.Contains("diagnostic") || t.Contains("ia")) return "cat-diagnostic";
+        if (t.Contains("message") || t.Contains("contact")) return "cat-message";
+        if (t.Contains("ordonnance")) return "cat-ordonnance";
+        return "cat-default";
+    }
+
+    private string GetSourceLabel(UnifiedNotif notif)
+    {
+        if (!isAdmin) return "Système SympNet";
+        if (notif.Title.Contains("Newsletter")) return "Newsletter";
+        if (notif.Title.Contains("contact")) return "Formulaire Contact";
+        return "Système";
+    }
+
+    private string GetTimeShort(DateTime dt) => dt.ToString("d MMM, HH:mm", new System.Globalization.CultureInfo("fr-FR"));
+
+    public class UnifiedNotif
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+        public bool IsRead { get; set; }
+        public string? ActionUrl { get; set; }
+        public int Type { get; set; }
+    }
+
+    public class DoctorNotifRaw
+    {
+        public int Id { get; set; }
+        public string Title { get; set; } = "";
+        public string Message { get; set; } = "";
+        public int AppointmentId { get; set; }
+        public bool IsRead { get; set; }
+        public DateTime SentAt { get; set; }
+    }
+}

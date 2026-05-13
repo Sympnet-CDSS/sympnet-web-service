@@ -12,10 +12,14 @@ namespace SympNet.WebApi.Controllers;
 public class BlogPostsController : ControllerBase
 {
     private readonly AppDbContext _db;
+    private readonly Services.EmailService _emailService;
+    private readonly IConfiguration _config;
 
-    public BlogPostsController(AppDbContext db)
+    public BlogPostsController(AppDbContext db, Services.EmailService emailService, IConfiguration config)
     {
         _db = db;
+        _emailService = emailService;
+        _config = config;
     }
 
     // GET: api/blogposts
@@ -99,6 +103,26 @@ public class BlogPostsController : ControllerBase
 
         _db.BlogPosts.Add(blogPost);
         await _db.SaveChangesAsync();
+
+        // Notification des abonnés à la newsletter
+        if (blogPost.IsPublished)
+        {
+            _ = Task.Run(async () => 
+            {
+                try 
+                {
+                    var subscribers = await _db.NewsletterSubscribers.Where(s => s.IsActive).ToListAsync();
+                    var frontendUrl = _config["App:FrontendUrl"] ?? "http://localhost:5002";
+                    var blogUrl = $"{frontendUrl}/blog/{blogPost.Id}";
+
+                    foreach (var sub in subscribers)
+                    {
+                        await _emailService.SendNewBlogPostNotificationAsync(sub.Email, blogPost.Title, blogUrl);
+                    }
+                }
+                catch (Exception ex) { Console.WriteLine($"Newsletter notification failed: {ex.Message}"); }
+            });
+        }
 
         return CreatedAtAction("GetBlogPost", new { id = blogPost.Id }, blogPost);
     }

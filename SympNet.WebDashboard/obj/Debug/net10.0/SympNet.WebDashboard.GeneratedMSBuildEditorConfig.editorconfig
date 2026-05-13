@@ -30,20 +30,20 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcQWRtaW5MYXlvdXQucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/AdminNavbar.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcQWRtaW5OYXZiYXIucmF6b3I=
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/ChatbotBubble.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcQ2hhdGJvdEJ1YmJsZS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/DoctorLayout.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRG9jdG9yTGF5b3V0LnJhem9y
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/ConfirmModal.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcQ29uZmlybU1vZGFsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/DoctorNavbar.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRG9jdG9yTmF2YmFyLnJhem9y
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/DashboardHeader.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRGFzaGJvYXJkSGVhZGVyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/DoctorLayout.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRG9jdG9yTGF5b3V0LnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/EmptyLayout.razor]
@@ -54,6 +54,18 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRm9vdGVyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/Navbar.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcTmF2YmFyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Layout/ToastNotification.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcVG9hc3ROb3RpZmljYXRpb24ucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/NewsletterSection.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xOZXdzbGV0dGVyU2VjdGlvbi5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/Dashboard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxEYXNoYm9hcmQucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
@@ -62,12 +74,12 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxEb2N0b3JzLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/NotificationDetail.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxOb3RpZmljYXRpb25EZXRhaWwucmF6b3I=
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/NewsletterSubscribers.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxOZXdzbGV0dGVyU3Vic2NyaWJlcnMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/Notifications.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxOb3RpZmljYXRpb25zLnJhem9y
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/NotificationDetail.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxOb3RpZmljYXRpb25EZXRhaWwucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/Patients.razor]
@@ -142,10 +154,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcTmV3Q29uc3VsdGF0aW9uLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Notifications.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcTm90aWZpY2F0aW9ucy5yYXpvcg==
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Patients.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcUGF0aWVudHMucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
@@ -192,6 +200,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Services.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXJ2aWNlcy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Shared/Notifications.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTaGFyZWRcTm90aWZpY2F0aW9ucy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/lenovo/Desktop/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Weather.razor]
