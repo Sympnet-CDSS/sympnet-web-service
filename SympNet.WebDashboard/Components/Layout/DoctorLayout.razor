@@ -51,18 +51,7 @@
         color: white;
     }
     .doctor-sidebar-footer { padding: 20px 16px; border-top: 1px solid rgba(13,148,136,0.1); }
-    .doctor-user-info {
-        display: flex; align-items: center; gap: 12px; padding: 12px;
-        border-radius: 12px; background: rgba(13,148,136,0.05); margin-bottom: 12px;
-        cursor: pointer;
-    }
-    .doctor-user-avatar {
-        width: 44px; height: 44px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
-        border-radius: 12px; display: flex; align-items: center; justify-content: center;
-        font-weight: 700; font-size: 16px; color: white;
-    }
-    .doctor-user-details h4 { font-size: 14px; font-weight: 600; margin: 0; color: #1F2937; }
-    .doctor-user-details p { font-size: 11px; color: #6B7280; margin: 2px 0 0; }
+
     .doctor-logout-btn {
         width: 100%; padding: 10px; background: none; border: 1px solid rgba(239,68,68,0.2);
         border-radius: 12px; color: #EF4444; font-size: 13px; font-weight: 500;
@@ -70,7 +59,7 @@
         transition: all 0.2s;
     }
     .doctor-logout-btn:hover { background: rgba(239,68,68,0.1); border-color: #EF4444; }
-    .doctor-main-content { margin-left: 280px; min-height: 100vh; background: #F9FAFB; padding: 24px 32px; width: calc(100% - 280px); }
+    .doctor-main-content { margin-left: 280px; min-height: 100vh; background: #F9FAFB; width: calc(100% - 280px); }
     
     @@media (max-width: 768px) {
         .doctor-sidebar { transform: translateX(-100%); }
@@ -116,9 +105,12 @@
 <div class="doctor-nav-item @(IsActive("/doctor/agenda") ? "active" : "")" @onclick="GoToAgenda">
     <i class="fas fa-calendar-alt"></i><span>Mon agenda</span>
 </div>
-            <div class="doctor-nav-label">Gestion</div>
             <div class="doctor-nav-item @(IsActive("/doctor/patients") ? "active" : "")" @onclick="GoToPatients">
                 <i class="fas fa-users"></i><span>Mes patients</span>
+            </div>
+            <div class="doctor-nav-label">Blog</div>
+            <div class="doctor-nav-item @(IsActive("/doctor/manage-blogs") ? "active" : "")" @onclick="GoToManageBlogs">
+                <i class="fas fa-newspaper"></i><span>Mes articles</span>
             </div>
             <div class="doctor-nav-label">Compte</div>
             <div class="doctor-nav-item @(IsActive("/doctor/profile") ? "active" : "")" @onclick="GoToProfile">
@@ -126,19 +118,21 @@
             </div>
         </div>
         <div class="doctor-sidebar-footer">
-            <div class="doctor-user-info" @onclick="GoToProfile">
-                <div class="doctor-user-avatar">@doctorInitial</div>
-                <div class="doctor-user-details">
-                    <h4>Dr. @doctorName</h4>
-                    <p>@doctorSpeciality</p>
-                </div>
-            </div>
             <button class="doctor-logout-btn" @onclick="Logout">
                 <i class="fas fa-sign-out-alt"></i> Déconnexion
             </button>
         </div>
     </aside>
-    <div class="doctor-main-content">@Body</div>
+    <div class="doctor-main-content">
+        <DoctorNavbar 
+            DoctorName="@doctorName" 
+            DoctorInitial="@doctorInitial" 
+            DoctorSpeciality="@doctorSpeciality" 
+            OnProfileClick="GoToProfile" />
+        <div style="padding: 24px 32px;">
+            @Body
+        </div>
+    </div>
     <ChatbotBubble />
 </div>
 
@@ -354,8 +348,11 @@ private async Task InitializeChatHub(string token)
 private async Task AcceptIncomingCall()
 {
     showCallModal = false;
-    // Rediriger vers la page d'appel avec les paramètres
-    Navigation.NavigateTo($"/doctor/video-call?sessionId={incomingSessionId}&callerId={incomingCallerId}&sdp={Uri.EscapeDataString(incomingSdp)}");
+    // ✅ Utiliser sessionStorage pour éviter la troncature de l'SDP dans l'URL
+    await JS.InvokeVoidAsync("sessionStorage.setItem", "pending_sdp", incomingSdp);
+    
+    // Rediriger vers la page d'appel avec les paramètres (sans SDP)
+    Navigation.NavigateTo($"/doctor/video-call?sessionId={incomingSessionId}&callerId={incomingCallerId}");
 }
 
 private async Task RejectIncomingCall()
@@ -407,6 +404,7 @@ private async Task LoadUnreadCount()
     private void GoToAgenda() => Navigation.NavigateTo("/doctor/agenda");
     private void GoToChat() => Navigation.NavigateTo("/doctor/chat");
     private void GoToVideoCall() => Navigation.NavigateTo("/doctor/video-call");
+    private void GoToManageBlogs() => Navigation.NavigateTo("/doctor/manage-blogs");
 
     private async Task Logout()
     {

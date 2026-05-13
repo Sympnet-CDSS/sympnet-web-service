@@ -32,41 +32,62 @@ public class DoctorPatientsController : ControllerBase
     {
         var doctorId = GetCurrentDoctorId();
         
-        // Récupérer les emails des patients du docteur
-        var patientEmails = await _db.Consultations
-            .Where(c => c.DoctorId == doctorId)
-            .Select(c => c.PatientEmail)
-            .Distinct()
-            .ToListAsync();
-
-        if (!patientEmails.Any())
+        try 
         {
-            return Ok(new List<object>());
+            // Récupérer tous les patients enregistrés dans le système
+            var patients = await _db.Patients
+                .Include(p => p.User)
+                .Where(p => p.User.Role == "Patient")
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FirstName,
+                    p.LastName,
+                    Email = p.User.Email,
+                    p.PhoneNumber,
+                    p.DateOfBirth,
+                    p.Gender,
+                    p.BloodType,
+                    p.Allergies,
+                    p.MedicalHistory,
+                    // Si la migration a échoué, on évite de planter en retournant vide ou le MedicalHistory
+                    ChronicDiseases = p.MedicalHistory, 
+                    CurrentMedications = "",
+                    ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
+                    p.CreatedAt
+                })
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+     
+            return Ok(patients);
         }
-
-        // Récupérer les détails des patients
-        var patients = await _db.Patients
-            .Include(p => p.User)
-            .Where(p => patientEmails.Contains(p.User.Email))
-            .Select(p => new
-            {
-                p.Id,
-                p.FirstName,
-                p.LastName,
-                Email = p.User.Email,
-                p.PhoneNumber,
-                p.DateOfBirth,
-                p.Gender,
-                p.BloodType,
-                p.Allergies,
-                p.MedicalHistory,
-                ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
-                p.CreatedAt
-            })
-            .OrderByDescending(p => p.CreatedAt)
-            .ToListAsync();
-
-        return Ok(patients);
+        catch (Exception)
+        {
+            // Fallback : Version simplifiée sans les nouvelles colonnes si la DB n'est pas à jour
+            var patients = await _db.Patients
+                .Include(p => p.User)
+                .Where(p => p.User.Role == "Patient")
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FirstName,
+                    p.LastName,
+                    Email = p.User.Email,
+                    p.PhoneNumber,
+                    p.DateOfBirth,
+                    p.Gender,
+                    p.BloodType,
+                    p.Allergies,
+                    p.MedicalHistory,
+                    ChronicDiseases = p.MedicalHistory,
+                    CurrentMedications = "",
+                    ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
+                    p.CreatedAt
+                })
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+            return Ok(patients);
+        }
     }
 
     // GET: api/doctorpatients/{id}
@@ -75,41 +96,88 @@ public class DoctorPatientsController : ControllerBase
     {
         var doctorId = GetCurrentDoctorId();
         
-        var patient = await _db.Patients
-            .Include(p => p.User)
-            .Where(p => p.Id == id)
-            .Select(p => new
-            {
-                p.Id,
-                p.FirstName,
-                p.LastName,
-                Email = p.User.Email,
-                p.PhoneNumber,
-                p.DateOfBirth,
-                p.Gender,
-                p.BloodType,
-                p.Allergies,
-                p.MedicalHistory,
-                ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
-                Consultations = _db.Consultations
-                    .Where(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId)
-                    .OrderByDescending(c => c.CreatedAt)
-                    .Select(c => new
-                    {
-                        c.Id,
-                        c.Diagnosis,
-                        c.Symptoms,
-                        c.Recommendations,
-                        c.ConfidenceScore,
-                        c.CreatedAt
-                    })
-                    .ToList()
-            })
-            .FirstOrDefaultAsync();
+        try 
+        {
+            var patient = await _db.Patients
+                .Include(p => p.User)
+                .Where(p => p.Id == id)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FirstName,
+                    p.LastName,
+                    Email = p.User.Email,
+                    p.PhoneNumber,
+                    p.DateOfBirth,
+                    p.Gender,
+                    p.BloodType,
+                    p.Allergies,
+                    p.MedicalHistory,
+                    ChronicDiseases = p.MedicalHistory,
+                    CurrentMedications = "",
+                    ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
+                    Consultations = _db.Consultations
+                        .Where(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId)
+                        .OrderByDescending(c => c.CreatedAt)
+                        .Select(c => new
+                        {
+                            c.Id,
+                            c.Diagnosis,
+                            c.Symptoms,
+                            c.Recommendations,
+                            c.ConfidenceScore,
+                            c.CreatedAt
+                        })
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
 
-        if (patient == null)
-            return NotFound(new { message = "Patient non trouvé" });
+            if (patient == null)
+                return NotFound(new { message = "Patient non trouvé" });
 
-        return Ok(patient);
+            return Ok(patient);
+        }
+        catch (Exception)
+        {
+            // Fallback en cas d'erreur de base de données
+             var patient = await _db.Patients
+                .Include(p => p.User)
+                .Where(p => p.Id == id)
+                .Select(p => new
+                {
+                    p.Id,
+                    p.FirstName,
+                    p.LastName,
+                    Email = p.User.Email,
+                    p.PhoneNumber,
+                    p.DateOfBirth,
+                    p.Gender,
+                    p.BloodType,
+                    p.Allergies,
+                    p.MedicalHistory,
+                    ChronicDiseases = p.MedicalHistory,
+                    CurrentMedications = "",
+                    ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
+                    Consultations = _db.Consultations
+                        .Where(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId)
+                        .OrderByDescending(c => c.CreatedAt)
+                        .Select(c => new
+                        {
+                            c.Id,
+                            c.Diagnosis,
+                            c.Symptoms,
+                            c.Recommendations,
+                            c.ConfidenceScore,
+                            c.CreatedAt
+                        })
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            if (patient == null)
+                return NotFound(new { message = "Patient non trouvé" });
+
+            return Ok(patient);
+        }
     }
 }

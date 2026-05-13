@@ -23,51 +23,109 @@ public class PatientsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAllPatients()
     {
-        var patients = await _db.Patients
-            .Include(p => p.User)
-            .Select(p => new PatientDto
-            {
-                Id = p.Id,
-                Email = p.User.Email,
-                IsActive = p.User.IsActive,
-                FirstName = p.FirstName,
-                LastName = p.LastName,
-                PhoneNumber = p.PhoneNumber,
-                DateOfBirth = p.DateOfBirth,
-                Gender = p.Gender,
-                ConsultationCount = p.ConsultationCount
-            })
-            .OrderByDescending(p => p.Id)
-            .ToListAsync();
+        try 
+        {
+            var patients = await _db.Patients
+                .Include(p => p.User)
+                .Select(p => new PatientDto
+                {
+                    Id = p.Id,
+                    Email = p.User.Email,
+                    IsActive = p.User.IsActive,
+                    FirstName = p.FirstName,
+                    LastName = p.LastName,
+                    PhoneNumber = p.PhoneNumber,
+                    DateOfBirth = p.DateOfBirth,
+                    Gender = p.Gender,
+                    ConsultationCount = p.ConsultationCount,
+                    MedicalHistory = p.MedicalHistory,
+                    ChronicConditions = string.IsNullOrEmpty(p.ChronicDiseases) ? new List<string>() : p.ChronicDiseases.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                    CurrentMedications = string.IsNullOrEmpty(p.CurrentMedications) ? new List<string>() : p.CurrentMedications.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                    Allergies = string.IsNullOrEmpty(p.Allergies) ? new List<string>() : p.Allergies.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
+                })
+                .OrderByDescending(p => p.Id)
+                .ToListAsync();
 
-        return Ok(patients);
+            return Ok(patients);
+        }
+        catch (Exception)
+        {
+            var patients = await _db.Patients
+                .Include(p => p.User)
+                .Select(p => new PatientDto
+                {
+                    Id = p.Id,
+                    Email = p.User.Email,
+                    IsActive = p.User.IsActive,
+                    FirstName = p.FirstName,
+                    LastName = p.LastName,
+                    PhoneNumber = p.PhoneNumber,
+                    DateOfBirth = p.DateOfBirth,
+                    Gender = p.Gender,
+                    ConsultationCount = p.ConsultationCount,
+                    MedicalHistory = p.MedicalHistory,
+                    Allergies = string.IsNullOrEmpty(p.Allergies) ? new List<string>() : p.Allergies.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
+                })
+                .OrderByDescending(p => p.Id)
+                .ToListAsync();
+            return Ok(patients);
+        }
     }
 
     // GET: api/patients/{id}
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPatient(int id)
     {
-        var patient = await _db.Patients
-            .Include(p => p.User)
-            .Where(p => p.Id == id)
-            .Select(p => new PatientDto
-            {
-                Id = p.Id,
-                Email = p.User.Email,
-                IsActive = p.User.IsActive,
-                FirstName = p.FirstName,
-                LastName = p.LastName,
-                PhoneNumber = p.PhoneNumber,
-                DateOfBirth = p.DateOfBirth,
-                Gender = p.Gender,
-                ConsultationCount = p.ConsultationCount
-            })
-            .FirstOrDefaultAsync();
+        try 
+        {
+            var patient = await _db.Patients
+                .Include(p => p.User)
+                .Where(p => p.Id == id)
+                .Select(p => new PatientDto
+                {
+                    Id = p.Id,
+                    Email = p.User.Email,
+                    IsActive = p.User.IsActive,
+                    FirstName = p.FirstName,
+                    LastName = p.LastName,
+                    PhoneNumber = p.PhoneNumber,
+                    DateOfBirth = p.DateOfBirth,
+                    Gender = p.Gender,
+                    ConsultationCount = p.ConsultationCount,
+                    MedicalHistory = p.MedicalHistory,
+                    ChronicConditions = string.IsNullOrEmpty(p.ChronicDiseases) ? new List<string>() : p.ChronicDiseases.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                    CurrentMedications = string.IsNullOrEmpty(p.CurrentMedications) ? new List<string>() : p.CurrentMedications.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                    Allergies = string.IsNullOrEmpty(p.Allergies) ? new List<string>() : p.Allergies.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
+                })
+                .FirstOrDefaultAsync();
 
-        if (patient == null)
-            return NotFound(new { message = "Patient non trouvé" });
+            if (patient == null)
+                return NotFound(new { message = "Patient non trouvé" });
 
-        return Ok(patient);
+            return Ok(patient);
+        }
+        catch (Exception)
+        {
+            var patient = await _db.Patients
+                .Include(p => p.User)
+                .Where(p => p.Id == id)
+                .Select(p => new PatientDto
+                {
+                    Id = p.Id,
+                    Email = p.User.Email,
+                    IsActive = p.User.IsActive,
+                    FirstName = p.FirstName,
+                    LastName = p.LastName,
+                    PhoneNumber = p.PhoneNumber,
+                    DateOfBirth = p.DateOfBirth,
+                    Gender = p.Gender,
+                    ConsultationCount = p.ConsultationCount,
+                    MedicalHistory = p.MedicalHistory,
+                    Allergies = string.IsNullOrEmpty(p.Allergies) ? new List<string>() : p.Allergies.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
+                })
+                .FirstOrDefaultAsync();
+            return Ok(patient);
+        }
     }
 
     // POST: api/patients
@@ -137,4 +195,28 @@ public class PatientsController : ControllerBase
         return Ok(new { message = "Patient désactivé" });
     }
     
+    [HttpPut("{id}/medical-background")]
+    [Authorize(Roles = "Admin,Doctor")]
+    public async Task<IActionResult> UpdateMedicalBackground(int id, [FromBody] MedicalBackgroundUpdateDto dto)
+    {
+        var patient = await _db.Patients.FindAsync(id);
+        if (patient == null)
+            return NotFound(new { message = "Patient non trouvé" });
+
+        patient.MedicalHistory = dto.MedicalHistory ?? patient.MedicalHistory;
+        patient.Allergies = dto.Allergies ?? patient.Allergies;
+        patient.ChronicDiseases = dto.ChronicDiseases ?? patient.ChronicDiseases;
+        patient.CurrentMedications = dto.CurrentMedications ?? patient.CurrentMedications;
+
+        await _db.SaveChangesAsync();
+        return Ok(new { message = "Dossier médical mis à jour" });
+    }
 }
+
+public class MedicalBackgroundUpdateDto
+{
+    public string? MedicalHistory { get; set; }
+    public string? Allergies { get; set; }
+    public string? ChronicDiseases { get; set; }
+    public string? CurrentMedications { get; set; }
+}

@@ -30,6 +30,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcQWRtaW5MYXlvdXQucmF6b3I=
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Layout/AdminNavbar.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcQWRtaW5OYXZiYXIucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Layout/ChatbotBubble.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcQ2hhdGJvdEJ1YmJsZS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
@@ -38,8 +42,16 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRG9jdG9yTGF5b3V0LnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Layout/DoctorNavbar.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRG9jdG9yTmF2YmFyLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Layout/EmptyLayout.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRW1wdHlMYXlvdXQucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Layout/Footer.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xMYXlvdXRcRm9vdGVyLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/Dashboard.razor]
@@ -48,6 +60,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/Doctors.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxEb2N0b3JzLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/NotificationDetail.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxOb3RpZmljYXRpb25EZXRhaWwucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/Notifications.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxOb3RpZmljYXRpb25zLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/Patients.razor]
@@ -60,6 +80,14 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Admin/Users.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xBZG1pblxVc2Vycy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Blog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCbG9nLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/BlogDetail.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xCbG9nRGV0YWlsLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Contact.razor]
@@ -98,12 +126,24 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcQ29uc3VsdGF0aW9ucy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/CreateBlog.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcQ3JlYXRlQmxvZy5yYXpvcg==
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Dashboard.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcRGFzaGJvYXJkLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/ManageBlogs.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcTWFuYWdlQmxvZ3MucmF6b3I=
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/NewConsultation.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcTmV3Q29uc3VsdGF0aW9uLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Notifications.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcTm90aWZpY2F0aW9ucy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/Patients.razor]
@@ -130,6 +170,10 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xGb3Jnb3RQYXNzd29yZC5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Help.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIZWxwLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Home.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xIb21lLnJhem9y
 build_metadata.AdditionalFiles.CssScope = 
@@ -144,6 +188,10 @@ build_metadata.AdditionalFiles.CssScope =
 
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/ResetPassword.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xSZXNldFBhc3N3b3JkLnJhem9y
+build_metadata.AdditionalFiles.CssScope = 
+
+[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Services.razor]
+build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xTZXJ2aWNlcy5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Weather.razor]

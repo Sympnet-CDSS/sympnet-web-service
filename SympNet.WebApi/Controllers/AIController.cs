@@ -1,90 +1,63 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using SympNet.WebApi.Hubs;
-using SympNet.WebApi.Services;
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Net.Http;
+using System.Net.Http.Json;
+using System.Threading.Tasks;
 
-namespace SympNet.WebApi.Controllers;
-
-[ApiController]
-[Route("api/[controller]")]
-[Authorize] // Requires authentication
-public class AIController : ControllerBase
+namespace SympNet.WebApi.Controllers
 {
-    private readonly IAIService _aiService;
-
-    public AIController(IAIService aiService)
+    [Authorize]
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AIController : ControllerBase
     {
-        _aiService = aiService;
-    }
+        private readonly HttpClient _httpClient;
+        private readonly string _aiBaseUrl;
 
-    [HttpPost("diagnose")]
-    [Authorize(Roles = "Doctor,Admin")]
-    public async Task<IActionResult> RunDiagnostic([FromBody] AIDiagnosticRequest request)
-    {
-        if (request == null)
-            return BadRequest(new { message = "Invalid request payload" });
-
-        var result = await _aiService.RunDiagnosticAsync(request);
-        
-        if (result == null)
-            return StatusCode(500, new { message = "Error communicating with AI service (MS1)." });
-
-        return Ok(result);
-    }
-
-    [HttpPost("ordonnance/check")]
-    [Authorize(Roles = "Doctor,Admin")]
-    public async Task<IActionResult> CheckOrdonnance([FromBody] OrdonnanceCheckRequest request, [FromServices] IHubContext<NotificationHub> hubContext)
-    {
-        if (request == null)
-            return BadRequest(new { message = "Invalid request payload" });
-
-        var result = await _aiService.CheckOrdonnanceAsync(request);
-
-        if (result == null)
-            return StatusCode(500, new { message = "Error verifying ordonnance with AI service (MS1)." });
-
-        // Push SignalR -> médecin (décision finale)
-        if (result.HasAlerts)
+        public AIController(IHttpClientFactory httpClientFactory, IConfiguration configuration)
         {
-            var doctorId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (doctorId != null)
+            _httpClient = httpClientFactory.CreateClient();
+            _aiBaseUrl = configuration["AIService:Url"] ?? "http://localhost:8000";
+        }
+
+        [HttpPost("diagnostic")]
+        public async Task<IActionResult> GetDiagnostic([FromBody] object payload)
+        {
+            try
             {
-                await hubContext.Clients.Group($"user_{doctorId}").SendAsync("ReceiveAlert", result);
+                var response = await _httpClient.PostAsJsonAsync($"{_aiBaseUrl}/api/v1/diagnostic", payload);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<object>();
+                    return Ok(result);
+                }
+                return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Erreur de communication avec le service IA : {ex.Message}");
             }
         }
 
-        return Ok(result);
+        [HttpPost("symptom-to-doctor")]
+        public async Task<IActionResult> SymptomToDoctor([FromBody] object payload)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync($"{_aiBaseUrl}/api/v1/symptom-to-doctor", payload);
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = await response.Content.ReadFromJsonAsync<object>();
+                    return Ok(result);
+                }
+                return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Erreur de communication avec le service IA : {ex.Message}");
+            }
+        }
     }
-
-    [HttpPost("symptom-to-doctor")]
-    [AllowAnonymous] // Maybe patient app needs this without full auth, or maybe Patient role
-    public async Task<IActionResult> FindDoctors([FromBody] SymptomDoctorRequest request)
-    {
-        if (string.IsNullOrEmpty(request.Symptoms))
-            return BadRequest(new { message = "Symptoms are required." });
-
-        var result = await _aiService.FindDoctorsBySymptomsAsync(request.Symptoms, request.Lat, request.Lng);
-        return Ok(result);
-    }
-
-    [HttpPost("chat")]
-    [AllowAnonymous] // Or Authorize, depending on usage. If admin/doctor use it, it can be authorize. Let's make it available to authenticated users.
-    [Authorize]
-    public async Task<IActionResult> Chat([FromBody] AIChatRequest request)
-    {
-        if (string.IsNullOrWhiteSpace(request.Message))
-            return BadRequest(new { message = "Message is required." });
-
-        var result = await _aiService.ChatAsync(request);
-        return Ok(result);
-    }
-}
-
-public class SymptomDoctorRequest
-{
-    public string Symptoms { get; set; } = "";
-    public double? Lat { get; set; }
-    public double? Lng { get; set; }
 }

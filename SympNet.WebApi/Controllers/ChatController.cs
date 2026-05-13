@@ -167,25 +167,14 @@ namespace SympNet.WebApi.Controllers
             conversation.LastMessageAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             
-            // Broadcast via SignalR directly to ReceiverId
-            await _hub.Clients.User(dto.ReceiverId.ToString())
-                .SendAsync("ReceiveMessage",
-                    senderId.ToString(),
-                    senderUser?.FullName ?? "Utilisateur",
-                    message.SenderRole,
-                    message.Content,
-                    false, // isVoice
-                    message.SentAt.ToString("o"));
-
-            // ✅ Broadcast to groups to reach both participants (including sender)
             var senderName = senderUser?.FullName ?? "Utilisateur";
+
+            // ✅ UNSEUL BROADCAST : au groupe de la conversation
             await _hub.Clients.Group($"consultation_{conversation.Id}")
                 .SendAsync("ReceiveMessage", senderId.ToString(), senderName, message.SenderRole, message.Content, false, message.SentAt.ToString("o"));
             
-            await _hub.Clients.Group($"consultation_{dto.ReceiverId}")
-                .SendAsync("ReceiveMessage", senderId.ToString(), senderName, message.SenderRole, message.Content, false, message.SentAt.ToString("o"));
-
-            await _hub.Clients.Group($"consultation_{senderId}")
+            // ✅ Notifier spécifiquement l'autre utilisateur via son groupe personnel au cas où il n'est pas dans le salon
+            await _hub.Clients.User(dto.ReceiverId.ToString())
                 .SendAsync("ReceiveMessage", senderId.ToString(), senderName, message.SenderRole, message.Content, false, message.SentAt.ToString("o"));
 
             // ✅ Real-time notifications for the dashboard (Match Dashboard.razor format)

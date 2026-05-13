@@ -12,6 +12,7 @@ window.webrtc = {
     },
 
     init: async function (dotNetHelper, hubConnection) {
+        console.log("[WebRTC] Initializing...");
         this.dotNetHelper = dotNetHelper;
         this.hubConnection = hubConnection;
         await this.startLocalStream();
@@ -20,12 +21,16 @@ window.webrtc = {
 
     startLocalStream: async function () {
         try {
+            console.log("[WebRTC] Requesting camera/mic...");
             this.localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             const localVideo = document.getElementById('localVideo');
-            if (localVideo) localVideo.srcObject = this.localStream;
+            if (localVideo) {
+                localVideo.srcObject = this.localStream;
+                console.log("[WebRTC] Local stream attached to UI");
+            }
             return this.localStream;
         } catch (e) {
-            console.error("Error accessing media devices:", e);
+            console.error("[WebRTC] Error accessing media devices:", e);
         }
     },
 
@@ -59,17 +64,19 @@ window.webrtc = {
 
         this.peerConnection.onicecandidate = (event) => {
             if (event.candidate) {
+                console.log("[WebRTC] New ICE Candidate found");
                 this.dotNetHelper.invokeMethodAsync('SendIceCandidate',
                     this.targetUserId,
-                    JSON.stringify(event.candidate),
+                    event.candidate.candidate,
                     event.candidate.sdpMid,
                     event.candidate.sdpMLineIndex);
             }
         };
 
+        console.log("[WebRTC] Creating offer for " + targetUserId);
         const offer = await this.peerConnection.createOffer();
         await this.peerConnection.setLocalDescription(offer);
-        await this.dotNetHelper.invokeMethodAsync('SendOffer', this.targetUserId, JSON.stringify(offer));
+        await this.dotNetHelper.invokeMethodAsync('SendOffer', this.targetUserId, offer.sdp);
     },
 
     handleOffer: async function (fromUserId, sdp) {
@@ -92,24 +99,30 @@ window.webrtc = {
             if (event.candidate) {
                 this.dotNetHelper.invokeMethodAsync('SendIceCandidate',
                     this.targetUserId,
-                    JSON.stringify(event.candidate),
+                    event.candidate.candidate,
                     event.candidate.sdpMid,
                     event.candidate.sdpMLineIndex);
             }
         };
 
-        await this.peerConnection.setRemoteDescription(JSON.parse(sdp));
+        await this.peerConnection.setRemoteDescription({ type: 'offer', sdp: sdp });
         const answer = await this.peerConnection.createAnswer();
         await this.peerConnection.setLocalDescription(answer);
-        await this.dotNetHelper.invokeMethodAsync('SendAnswer', this.targetUserId, JSON.stringify(answer));
+        await this.dotNetHelper.invokeMethodAsync('SendAnswer', this.targetUserId, answer.sdp);
     },
 
     handleAnswer: async function (fromUserId, sdp) {
-        await this.peerConnection.setRemoteDescription(JSON.parse(sdp));
+        console.log("[WebRTC] Answer received from " + fromUserId);
+        await this.peerConnection.setRemoteDescription({ type: 'answer', sdp: sdp });
     },
 
     handleIceCandidate: async function (fromUserId, candidate, sdpMid, sdpMLineIndex) {
-        const iceCandidate = new RTCIceCandidate(JSON.parse(candidate));
+        console.log("[WebRTC] Remote ICE Candidate received");
+        const iceCandidate = new RTCIceCandidate({
+            candidate: candidate,
+            sdpMid: sdpMid,
+            sdpMLineIndex: sdpMLineIndex
+        });
         await this.peerConnection.addIceCandidate(iceCandidate);
     },
 
@@ -166,8 +179,5 @@ window.webrtc = {
     endCall: function () {
         if (this.peerConnection) this.peerConnection.close();
         if (this.localStream) this.localStream.getTracks().forEach(track => track.stop());
-        if (this.hubConnection && this.targetUserId) {
-            this.hubConnection.invoke('EndCall');
-        }
     }
 };

@@ -1,6 +1,7 @@
 @page "/doctor/chat"
 @layout DoctorLayout
 @using Microsoft.AspNetCore.SignalR.Client
+@using System.Security.Claims
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
@@ -10,7 +11,6 @@
 <PageTitle>SympNet — Messagerie</PageTitle>
 
 <style>
-
     .chat-container {
         display: flex;
         height: calc(100vh - 100px);
@@ -201,13 +201,8 @@
         font-size: 12px;
     }
 
-    .status.online {
-        color: #10B981;
-    }
-
-    .status.offline {
-        color: #9CA3AF;
-    }
+    .status.online { color: #10B981; }
+    .status.offline { color: #9CA3AF; }
 
     .typing-indicator {
         font-size: 12px;
@@ -257,13 +252,8 @@
         max-width: 75%;
     }
 
-    .message.sent {
-        align-self: flex-end;
-    }
-
-    .message.received {
-        align-self: flex-start;
-    }
+    .message.sent { align-self: flex-end; }
+    .message.received { align-self: flex-start; }
 
     .message-bubble {
         padding: 12px 18px;
@@ -294,13 +284,7 @@
         gap: 4px;
     }
 
-    .message.sent .message-time {
-        justify-content: flex-end;
-    }
-
-    .message-status {
-        font-size: 10px;
-    }
+    .message.sent .message-time { justify-content: flex-end; }
 
     .input-area {
         padding: 20px 24px;
@@ -377,7 +361,6 @@
     .send-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
-        transform: none;
     }
 
     .empty-chat {
@@ -396,31 +379,70 @@
         margin-bottom: 20px;
     }
 
-    .empty-chat h3 {
-        font-size: 18px;
-        font-weight: 600;
-        margin-bottom: 8px;
+    .empty-chat h3 { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+    .empty-chat p { color: #6B7280; }
+
+    /* Pop-up d'appel entrant */
+    .incoming-call-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15, 23, 42, 0.9);
+        backdrop-filter: blur(12px);
+        z-index: 9999;
+        display: flex; align-items: center; justify-content: center;
+        animation: fadeIn 0.3s ease-out;
     }
 
-    .empty-chat p {
-        color: #6B7280;
+    .incoming-call-modal {
+        background: white; padding: 40px; border-radius: 32px;
+        text-align: center; width: 100%; max-width: 400px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        position: relative;
     }
 
-    .messages-area::-webkit-scrollbar,
-    .conversations-list::-webkit-scrollbar {
-        width: 4px;
+    .pulse-ring {
+        position: absolute; top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        width: 120px; height: 120px;
+        border: 4px solid #0D9488; border-radius: 50%;
+        animation: pulse-ring 1.5s infinite; z-index: -1;
     }
 
-    .messages-area::-webkit-scrollbar-track,
-    .conversations-list::-webkit-scrollbar-track {
-        background: #E5E7EB;
+    .caller-avatar {
+        width: 100px; height: 100px;
+        background: linear-gradient(135deg, #0D9488, #14B8A6);
+        color: white; font-size: 36px; font-weight: 700;
+        border-radius: 50%; display: flex; align-items: center;
+        justify-content: center; margin: 0 auto 24px;
+        border: 4px solid white; box-shadow: 0 10px 20px rgba(13, 148, 136, 0.2);
     }
 
-    .messages-area::-webkit-scrollbar-thumb,
-    .conversations-list::-webkit-scrollbar-thumb {
-        background: #9CA3AF;
-        border-radius: 4px;
+    .call-actions { display: flex; gap: 16px; margin-top: 32px; }
+
+    .accept-btn, .reject-btn {
+        flex: 1; padding: 14px; border: none; border-radius: 16px;
+        font-weight: 600; display: flex; align-items: center;
+        justify-content: center; gap: 8px; transition: all 0.2s;
+        cursor: pointer;
     }
+
+    .accept-btn { background: #0D9488; color: white; }
+    .accept-btn:hover { background: #0F766E; transform: scale(1.05); }
+
+    .reject-btn { background: #EF4444; color: white; }
+    .reject-btn:hover { background: #DC2626; transform: scale(1.05); }
+
+    @@keyframes pulse-ring {
+        0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.8; }
+        100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+    }
+
+    .spinner {
+        width: 40px; height: 40px; border: 3px solid #E5E7EB;
+        border-top-color: #0D9488; border-radius: 50%;
+        margin: 0 auto; animation: spin 1s linear infinite;
+    }
+    @@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
 <div class="chat-container">
@@ -520,11 +542,11 @@
                                 @msg.SentAt.ToString("HH:mm")
                                 @if (msg.IsMine && msg.IsRead)
                                 {
-                                    <span class="message-status"><i class="fas fa-check-double"></i></span>
+                                    <span class="message-status" style="margin-left: 5px; color: #14B8A6;"><i class="fas fa-check-double"></i></span>
                                 }
                                 else if (msg.IsMine)
                                 {
-                                    <span class="message-status"><i class="fas fa-check"></i></span>
+                                    <span class="message-status" style="margin-left: 5px; opacity: 0.5;"><i class="fas fa-check"></i></span>
                                 }
                             </div>
                         </div>
@@ -562,20 +584,28 @@
     }
 </div>
 
-<style>
-    .spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #E5E7EB;
-        border-top-color: #0D9488;
-        border-radius: 50%;
-        margin: 0 auto;
-        animation: spin 1s linear infinite;
-    }
-    @@keyframes spin {
-        to { transform: rotate(360deg); }
-    }
-</style>
+@if (incomingCall != null)
+{
+    <div class="incoming-call-overlay">
+        <div class="incoming-call-modal">
+            <div class="pulse-ring"></div>
+            <div class="caller-avatar">
+                @GetInitials(incomingCall.CallerName)
+            </div>
+            <h3>Appel vidéo entrant</h3>
+            <p>Le patient <strong>@incomingCall.CallerName</strong> vous appelle...</p>
+            
+            <div class="call-actions">
+                <button class="accept-btn" @onclick="AcceptIncomingCall">
+                    <i class="fas fa-video"></i> Accepter
+                </button>
+                <button class="reject-btn" @onclick="RejectIncomingCall">
+                    <i class="fas fa-phone-slash"></i> Refuser
+                </button>
+            </div>
+        </div>
+    </div>
+}
 
 @code {
     private List<ConversationDto> conversations = new();
@@ -590,7 +620,27 @@
     private ElementReference messagesContainer;
     private HubConnection? hubConnection;
     private Guid currentUserId;
-    private bool _isInitialized = false;
+    private IncomingCallEvent? incomingCall;
+
+    private List<ConversationDto> filteredConversations => conversations
+        .Where(c => string.IsNullOrEmpty(searchTerm) || 
+                   c.OtherUserName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // On ne fait rien qui nécessite JS ici
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await LoadConversations();
+            await InitializeSignalR();
+            StateHasChanged();
+        }
+    }
     
     private List<string> quickReplies = new()
     {
@@ -600,26 +650,9 @@
         "🏥 En cas d'urgence, appelez le 15"
     };
 
-    private List<ConversationDto> filteredConversations => conversations
-        .Where(c => string.IsNullOrEmpty(searchTerm) || 
-                   c.OtherUserName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-        .ToList();
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            _isInitialized = true;
-            await LoadConversations();
-            await InitializeSignalR();
-            await ScrollToBottom();
-            StateHasChanged();
-        }
-    }
-
     private async Task InitializeSignalR()
     {
-        var baseUrl = "http://localhost:5057";
+        var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
         
         try
         {
@@ -630,53 +663,50 @@
                 if (parts.Length > 1)
                 {
                     var payload = parts[1];
-                    // Fix padding
                     payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
                     var jsonBytes = Convert.FromBase64String(payload);
                     var json = System.Text.Encoding.UTF8.GetString(jsonBytes);
                     using var doc = System.Text.Json.JsonDocument.Parse(json);
-                    if (doc.RootElement.TryGetProperty("nameid", out var idProp))
+                    if (doc.RootElement.TryGetProperty("nameid", out var idProp) || 
+                        doc.RootElement.TryGetProperty("sub", out idProp) ||
+                        doc.RootElement.TryGetProperty("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier", out idProp))
                     {
                         currentUserId = Guid.Parse(idProp.GetString()!);
+                        await JS.InvokeVoidAsync("console.log", $"[SignalR] Identifié comme: {currentUserId}");
                     }
                 }
             }
 
             hubConnection = new HubConnectionBuilder()
-                .WithUrl($"{baseUrl}/hubs/chat?access_token={token}") // ✅ Force le token dans la query pour plus de fiabilité
+                .WithUrl($"{baseUrl}/hubs/chat?access_token={token}")
                 .WithAutomaticReconnect()
                 .Build();
 
             hubConnection.On<string, string, string, string, bool, string>("ReceiveMessage", async (senderId, senderName, senderRole, content, isVoice, sentAt) =>
             {
-                // Si le message appartient à la conversation sélectionnée (qu'il vienne de nous ou de l'autre)
-                if (selectedConversation != null && (senderId == selectedConversation.OtherUserId.ToString() || senderId == currentUserId.ToString()))
+                if (senderId == currentUserId.ToString()) return;
+
+                if (selectedConversation != null && senderId == selectedConversation.OtherUserId.ToString())
                 {
-                    // Éviter les doublons si on a déjà ajouté le message localement
-                    if (!messages.Any(m => m.Content == content && Math.Abs((m.SentAt - DateTime.UtcNow).TotalSeconds) < 5))
+                    messages.Add(new MessageDto
                     {
-                        messages.Add(new MessageDto
-                        {
-                            Id = "",
-                            Content = content,
-                            SentAt = DateTime.TryParse(sentAt, out var date) ? date : DateTime.UtcNow,
-                            IsMine = senderId == currentUserId.ToString(),
-                            IsRead = false
-                        });
-                        await InvokeAsync(async () =>
-                        {
-                            StateHasChanged();
-                            await ScrollToBottom();
-                        });
-                    }
+                        Id = "",
+                        Content = content,
+                        SentAt = DateTime.TryParse(sentAt, out var date) ? date : DateTime.UtcNow,
+                        IsMine = false,
+                        IsRead = false
+                    });
                     
-                    // ✅ Mettre aussi à jour la liste des conversations pour le "Dernier message"
-                    await LoadConversations();
+                    await InvokeAsync(async () =>
+                    {
+                        StateHasChanged();
+                        await ScrollToBottom();
+                    });
+                    
+                    await hubConnection.InvokeAsync("MarkAsRead", selectedConversation.Id.ToString());
                 }
-                else
-                {
-                    await LoadConversations();
-                }
+                
+                await LoadConversations();
             });
 
             hubConnection.On("UpdateConversationList", async () =>
@@ -715,8 +745,19 @@
                 }
             });
 
+            hubConnection.On<string, string, string, string>("IncomingCall", (sessionId, callerId, callerName, sdp) =>
+            {
+                incomingCall = new IncomingCallEvent
+                {
+                    SessionId = sessionId,
+                    CallerId = callerId,
+                    CallerName = callerName,
+                    Sdp = sdp
+                };
+                InvokeAsync(StateHasChanged);
+            });
+
             await hubConnection.StartAsync();
-            Console.WriteLine("SignalR connecté");
         }
         catch (Exception ex)
         {
@@ -727,7 +768,7 @@
     private async Task LoadConversations()
     {
         isLoadingConversations = true;
-        var baseUrl = "http://localhost:5057";
+        var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
         
         try
         {
@@ -736,13 +777,9 @@
             var response = await Http.GetFromJsonAsync<List<ConversationDto>>($"{baseUrl}/api/chat/conversations");
             
             if (response != null)
-            {
                 conversations = response;
-            }
             else
-            {
                 conversations = new List<ConversationDto>();
-            }
         }
         catch (Exception ex)
         {
@@ -760,7 +797,7 @@
     {
         selectedConversation = conversation;
         isUserOnline = conversation.IsOnline;
-        var baseUrl = "http://localhost:5057";
+        var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
         
         try
         {
@@ -772,22 +809,18 @@
             if (response != null)
             {
                 foreach (var msg in response)
-                {
                     msg.IsMine = (msg.SenderId != conversation.OtherUserId);
-                }
                 messages = response;
             }
             else
-            {
                 messages = new List<MessageDto>();
-            }
             
             conversation.UnreadCount = 0;
 
-            // ✅ Rejoindre le groupe SignalR pour le temps réel
             if (hubConnection?.State == HubConnectionState.Connected)
             {
                 await hubConnection.InvokeAsync("JoinConsultation", conversation.Id.ToString());
+                await hubConnection.InvokeAsync("MarkAsRead", conversation.Id.ToString());
             }
 
             await ScrollToBottom();
@@ -805,7 +838,7 @@
     {
         if (string.IsNullOrWhiteSpace(newMessage) || selectedConversation == null) return;
 
-        var baseUrl = "http://localhost:5057";
+        var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
         
         try
         {
@@ -822,18 +855,10 @@
             if (response.IsSuccessStatusCode)
             {
                 var savedMessage = await response.Content.ReadFromJsonAsync<MessageDto>();
-                
                 if (savedMessage != null)
                 {
                     savedMessage.IsMine = true;
                     messages.Add(savedMessage);
-                }
-                
-                if (hubConnection?.State == HubConnectionState.Connected)
-                {
-                    await hubConnection.SendAsync("SendMessage", 
-                        selectedConversation.OtherUserId.ToString(), 
-                        newMessage);
                 }
                 
                 newMessage = "";
@@ -847,6 +872,28 @@
         }
     }
 
+    private async Task AcceptIncomingCall()
+    {
+        if (incomingCall != null)
+        {
+            // ✅ Utiliser sessionStorage pour éviter la troncature de l'SDP dans l'URL
+            await JS.InvokeVoidAsync("sessionStorage.setItem", "pending_sdp", incomingCall.Sdp);
+            var url = $"/doctor/video-call/{incomingCall.CallerId}?sessionId={incomingCall.SessionId}";
+            incomingCall = null;
+            Navigation.NavigateTo(url);
+        }
+    }
+
+    private async Task RejectIncomingCall()
+    {
+        if (incomingCall != null && hubConnection != null)
+        {
+            await hubConnection.SendAsync("RejectCall", incomingCall.CallerId, incomingCall.SessionId);
+            incomingCall = null;
+            StateHasChanged();
+        }
+    }
+
     private async Task UseQuickReply(string reply)
     {
         newMessage = reply;
@@ -856,13 +903,9 @@
     private async Task OnKeyPress(KeyboardEventArgs e)
     {
         if (e.Key == "Enter" && !e.ShiftKey)
-        {
             await SendMessage();
-        }
         else if (!string.IsNullOrWhiteSpace(newMessage))
-        {
             await SendTypingNotification();
-        }
     }
 
     private async Task SendTypingNotification()
@@ -894,9 +937,7 @@
     private void StartVideoCall()
     {
         if (selectedConversation != null)
-        {
             Navigation.NavigateTo($"/doctor/video-call/{selectedConversation.OtherUserId}");
-        }
     }
 
     private async Task ClearHistory()
@@ -908,14 +949,8 @@
 
     private async Task ScrollToBottom()
     {
-        try
-        {
-            await JS.InvokeVoidAsync("scrollToBottom", messagesContainer);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Erreur scroll: {ex.Message}");
-        }
+        try { await JS.InvokeVoidAsync("scrollToBottom", messagesContainer); }
+        catch (Exception ex) { Console.WriteLine($"Erreur scroll: {ex.Message}"); }
     }
 
     private string GetInitials(string? name)
@@ -945,18 +980,11 @@
 
     public async ValueTask DisposeAsync()
     {
-        if (hubConnection != null)
-        {
-            await hubConnection.DisposeAsync();
-        }
-        if (typingTimer != null)
-        {
-            typingTimer.Stop();
-            typingTimer.Dispose();
-        }
+        if (hubConnection != null) await hubConnection.DisposeAsync();
+        if (typingTimer != null) { typingTimer.Stop(); typingTimer.Dispose(); }
     }
 
-    private class ConversationDto
+    public class ConversationDto
     {
         public Guid Id { get; set; }
         public Guid OtherUserId { get; set; }
@@ -967,7 +995,7 @@
         public bool IsOnline { get; set; }
     }
 
-    private class MessageDto
+    public class MessageDto
     {
         public string Id { get; set; } = "";
         public Guid SenderId { get; set; }
@@ -975,5 +1003,13 @@
         public DateTime SentAt { get; set; }
         public bool IsMine { get; set; }
         public bool IsRead { get; set; }
+    }
+
+    public class IncomingCallEvent
+    {
+        public string SessionId { get; set; } = "";
+        public string CallerId { get; set; } = "";
+        public string CallerName { get; set; } = "";
+        public string Sdp { get; set; } = "";
     }
 }

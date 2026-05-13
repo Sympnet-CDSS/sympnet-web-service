@@ -113,6 +113,64 @@ namespace SympNet.WebApi.Migrations
                     b.ToTable("BlockedSlots");
                 });
 
+            modelBuilder.Entity("SympNet.WebApi.Models.BlogPost", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AuthorName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("ReadingTime")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Views")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BlogPosts");
+                });
+
             modelBuilder.Entity("SympNet.WebApi.Models.ChatMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -205,6 +263,48 @@ namespace SympNet.WebApi.Migrations
                     b.HasIndex("DoctorId");
 
                     b.ToTable("Consultations");
+                });
+
+            modelBuilder.Entity("SympNet.WebApi.Models.ContactMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Topic")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ContactMessages");
                 });
 
             modelBuilder.Entity("SympNet.WebApi.Models.Conversation", b =>
@@ -383,6 +483,53 @@ namespace SympNet.WebApi.Migrations
                     b.ToTable("Message");
                 });
 
+            modelBuilder.Entity("SympNet.WebApi.Models.Notification", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ActionUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int?>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId1")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("UserId1");
+
+                    b.ToTable("Notifications");
+                });
+
             modelBuilder.Entity("SympNet.WebApi.Models.Ordonnance", b =>
                 {
                     b.Property<int>("Id")
@@ -467,11 +614,19 @@ namespace SympNet.WebApi.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("ChronicDiseases")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<int>("ConsultationCount")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CurrentMedications")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("timestamp with time zone");
@@ -760,6 +915,23 @@ namespace SympNet.WebApi.Migrations
                     b.Navigation("Receiver");
 
                     b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("SympNet.WebApi.Models.Notification", b =>
+                {
+                    b.HasOne("SympNet.WebApi.Models.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId");
+
+                    b.HasOne("SympNet.WebApi.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId1")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SympNet.WebApi.Models.Ordonnance", b =>

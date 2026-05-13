@@ -139,23 +139,11 @@ public class ChatHub : Hub
         await _notificationHub.Clients.Group($"user_{receiverId}").SendAsync("ReceiveNotification", notifData);
         await _notificationHub.Clients.Group($"doctor_user_{receiverId}").SendAsync("ReceiveNotification", notifData);
 
-        // ✅ Broadcast à tous les groupes possibles pour garantir la réception
-        // 1. Groupe de la conversation (ID unique partagé)
+        // ✅ Broadcast UNIQUE au groupe de la conversation
+        // Le client doit s'assurer de rejoindre "consultation_{conv.Id}"
         await Clients.Group($"consultation_{conv.Id}").SendAsync("ReceiveMessage", senderIdStr, senderName, senderRole, message, isVoice, DateTime.UtcNow.ToString("o"));
         
-        // 2. Groupe du destinataire (Partner ID)
-        await Clients.Group($"consultation_{receiverId}").SendAsync("ReceiveMessage", senderIdStr, senderName, senderRole, message, isVoice, DateTime.UtcNow.ToString("o"));
-        
-        // 3. Groupe de l'expéditeur (pour ses autres devices)
-        await Clients.Group($"consultation_{senderId}").SendAsync("ReceiveMessage", senderIdStr, senderName, senderRole, message, isVoice, DateTime.UtcNow.ToString("o"));
-        
-        // 4. Groupe initial passé par le client (si différent)
-        if (consultationId != conv.Id.ToString() && consultationId != receiverId.ToString() && consultationId != senderId.ToString())
-        {
-            await Clients.Group($"consultation_{consultationId}").SendAsync("ReceiveMessage", senderIdStr, senderName, senderRole, message, isVoice, DateTime.UtcNow.ToString("o"));
-        }
-
-        // ✅ Envoyer directement au receiver via UserId
+        // ✅ Optionnel: notifier spécifiquement le destinataire s'il n'est pas dans le salon
         await Clients.User(receiverId.ToString()).SendAsync("ReceiveMessage", senderIdStr, senderName, senderRole, message, isVoice, DateTime.UtcNow.ToString("o"));
     }
     else
@@ -209,6 +197,33 @@ public class ChatHub : Hub
     {
         var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         await Clients.User(targetUserId).SendAsync("ReceiveIceCandidate", senderId, candidate, sdpMid, sdpMLineIndex);
+    }
+
+    public async Task MarkAsRead(string conversationId)
+    {
+        if (Guid.TryParse(conversationId, out var convId))
+        {
+            var userIdStr = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                         ?? Context.User?.FindFirst("sub")?.Value;
+            
+            if (Guid.TryParse(userIdStr, out var userId))
+            {
+                var messages = _db.ChatMessages
+                    .Where(m => m.ConversationId == convId && m.SenderId != userId && !m.IsRead)
+                    .ToList();
+
+                foreach (var msg in messages) msg.IsRead = true;
+                _db.SaveChanges();
+
+                // Notifier l'autre utilisateur que ses messages ont été lus
+                var conv = _db.Conversations.Find(convId);
+                if (conv != null)
+                {
+                    var otherUserId = userId == conv.DoctorId ? conv.PatientId : conv.DoctorId;
+                    await Clients.User(otherUserId.ToString()).SendAsync("MessagesRead", convId.ToString());
+                }
+            }
+        }
     }
 
     public async Task RejectCall(string targetUserId, string sessionId)
