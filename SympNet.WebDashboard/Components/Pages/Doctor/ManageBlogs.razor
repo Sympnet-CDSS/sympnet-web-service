@@ -1,0 +1,244 @@
+@page "/doctor/manage-blogs"
+@layout DoctorLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject IConfiguration Config
+@inject NavigationManager Navigation
+
+<div class="manage-blogs-page">
+    <div class="page-header">
+        <div class="header-info">
+            <h1>Mes Articles</h1>
+            <p>Gérez et publiez vos articles sur le blog SympNet</p>
+        </div>
+        <button class="btn-create" @onclick='() => Navigation.NavigateTo("/doctor/create-blog")'>
+            <i class="fas fa-plus"></i> Nouvel Article
+        </button>
+    </div>
+
+    <div class="stats-overview">
+        <div class="stat-card">
+            <div class="stat-icon purple"><i class="fas fa-file-alt"></i></div>
+            <div class="stat-content">
+                <span class="stat-label">Total Articles</span>
+                <span class="stat-value">@blogPosts.Count</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue"><i class="fas fa-eye"></i></div>
+            <div class="stat-content">
+                <span class="stat-label">Vues Totales</span>
+                <span class="stat-value">@blogPosts.Sum(b => b.Views)</span>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-content">
+                <span class="stat-label">Publiés</span>
+                <span class="stat-value">@blogPosts.Count(b => b.IsPublished)</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="blogs-list-container">
+        @if (isLoading)
+        {
+            <div class="loading-state"><div class="spinner"></div><p>Chargement...</p></div>
+        }
+        else if (!blogPosts.Any())
+        {
+            <div class="empty-state">
+                <div class="empty-icon"><i class="fas fa-newspaper"></i></div>
+                <h3>Aucun article trouvé</h3>
+                <p>Commencez à partager votre expertise.</p>
+                <button class="btn-primary" @onclick='() => Navigation.NavigateTo("/doctor/create-blog")'>Créer mon premier article</button>
+            </div>
+        }
+        else
+        {
+            <div class="blogs-table-wrapper">
+                <table class="blogs-table">
+                    <thead>
+                        <tr>
+                            <th>Article</th>
+                            <th>Catégorie</th>
+                            <th>Date</th>
+                            <th>Vues</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var blog in blogPosts)
+                        {
+                            <tr>
+                                <td class="article-cell">
+                                    <img src="@(string.IsNullOrEmpty(blog.ImageUrl) ? "images/blog-placeholder.jpg" : blog.ImageUrl)" class="article-thumb" alt="" />
+                                    <div class="article-info">
+                                        <span class="article-title">@blog.Title</span>
+                                        <span class="article-summary">@blog.Summary</span>
+                                    </div>
+                                </td>
+                                <td><span class="category-badge">@blog.Category</span></td>
+                                <td>@blog.CreatedAt.ToString("dd MMM yyyy")</td>
+                                <td>@blog.Views</td>
+                                <td>
+                                    @if (blog.IsPublished)
+                                    {
+                                        <span class="status-badge published">Publié</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="status-badge draft">Brouillon</span>
+                                    }
+                                </td>
+                                <td class="actions-cell">
+                                    <button class="action-btn edit" @onclick="() => EditBlog(blog.Id)"><i class="fas fa-edit"></i></button>
+                                    <button class="action-btn delete" @onclick="() => ConfirmDelete(blog.Id)"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@if (showDeleteModal)
+{
+    <div class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-icon-wrap"><i class="fas fa-exclamation-triangle"></i></div>
+                <h3>Confirmer la suppression</h3>
+            </div>
+            <p>Êtes-vous sûr de vouloir supprimer cet article ? Cette action est irréversible.</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" @onclick="() => showDeleteModal = false">Annuler</button>
+                <button class="btn-delete-confirm" @onclick="DeleteBlog">Supprimer</button>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="toast-container">
+    @foreach (var toast in toasts)
+    {
+        <div class="toast @toast.Type">
+            <i class="@(toast.Type == "success" ? "fas fa-check-circle" : "fas fa-info-circle")"></i>
+            <span>@toast.Message</span>
+        </div>
+    }
+</div>
+
+<style>
+    .manage-blogs-page { animation: fadeIn 0.5s ease-out; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    .header-info h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; color: #111827; }
+    .btn-create { background: #0D9488; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; }
+    .stats-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
+    .stat-card { background: white; padding: 24px; border-radius: 20px; border: 1px solid rgba(13, 148, 136, 0.1); display: flex; align-items: center; gap: 20px; }
+    .stat-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .stat-icon.purple { background: #FAF5FF; color: #A855F7; }
+    .stat-icon.blue { background: #EFF6FF; color: #3B82F6; }
+    .stat-icon.green { background: #F0FDF4; color: #10B981; }
+    .stat-value { font-size: 24px; font-weight: 800; }
+    .blogs-list-container { background: white; border-radius: 24px; border: 1px solid rgba(13, 148, 136, 0.1); overflow: hidden; }
+    .blogs-table { width: 100%; border-collapse: collapse; }
+    .blogs-table th { padding: 20px 24px; background: #F9FAFB; text-align: left; font-size: 13px; color: #6B7280; }
+    .blogs-table td { padding: 20px 24px; border-bottom: 1px solid #F3F4F6; }
+    .article-cell { display: flex; align-items: center; gap: 16px; }
+    .article-thumb { width: 48px; height: 48px; border-radius: 10px; object-fit: cover; }
+    .article-title { font-weight: 700; color: #111827; display: block; }
+    .article-summary { font-size: 12px; color: #6B7280; }
+    .category-badge { background: #F3F4F6; padding: 4px 10px; border-radius: 6px; font-size: 12px; }
+    .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; }
+    .status-badge.published { background: #F0FDF4; color: #10B981; }
+    .status-badge.draft { background: #FFF7ED; color: #F97316; }
+    .action-btn { background: #F9FAFB; border: none; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; color: #6B7280; }
+    .action-btn.delete:hover { color: #EF4444; background: #FEF2F2; }
+
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+    .modal-card { background: white; border-radius: 24px; padding: 32px; width: 100%; max-width: 450px; text-align: center; }
+    .modal-icon-wrap { width: 64px; height: 64px; background: #FEF2F2; color: #EF4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 24px; }
+    .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 32px; }
+    .btn-cancel { background: #F3F4F6; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+    .btn-delete-confirm { background: #EF4444; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+
+    .toast-container { position: fixed; top: 30px; right: 30px; z-index: 2000; display: flex; flex-direction: column; gap: 12px; }
+    .toast { background: white; border-radius: 16px; padding: 16px 24px; display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-left: 4px solid #10B981; animation: slideIn 0.3s ease-out; }
+    .toast i { color: #10B981; }
+    .toast span { font-weight: 600; font-size: 14px; }
+    @@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+    @@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .spinner { width: 30px; height: 30px; border: 3px solid rgba(13,148,136,0.1); border-top-color: #0D9488; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
+    @@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+@code {
+    private List<BlogPost> blogPosts = new();
+    private bool isLoading = true;
+    private bool showDeleteModal = false;
+    private int? blogToDeleteId;
+    private List<Toast> toasts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBlogs();
+    }
+
+    private async Task LoadBlogs()
+    {
+        isLoading = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (!string.IsNullOrEmpty(token))
+            {
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                var result = await Http.GetFromJsonAsync<List<BlogPost>>($"{baseUrl}/api/blogposts/doctor");
+                if (result != null) blogPosts = result;
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+        finally { isLoading = false; }
+    }
+
+    private void EditBlog(int id) => Navigation.NavigateTo($"/doctor/edit-blog/{id}");
+
+    private void ConfirmDelete(int id)
+    {
+        blogToDeleteId = id;
+        showDeleteModal = true;
+    }
+
+    private async Task DeleteBlog()
+    {
+        if (blogToDeleteId == null) return;
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            var response = await Http.DeleteAsync($"{baseUrl}/api/blogposts/{blogToDeleteId}");
+            if (response.IsSuccessStatusCode)
+            {
+                blogPosts.RemoveAll(b => b.Id == blogToDeleteId);
+                showDeleteModal = false;
+                AddToast("Article supprimé avec succès", "success");
+            }
+        }
+        catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
+    }
+
+    private void AddToast(string message, string type)
+    {
+        var toast = new Toast { Message = message, Type = type };
+        toasts.Add(toast);
+        StateHasChanged();
+        Task.Delay(3000).ContinueWith(_ => { toasts.Remove(toast); InvokeAsync(StateHasChanged); });
+    }
+
+    public class Toast { public string Message { get; set; } = ""; public string Type { get; set; } = "success"; }
+    public class BlogPost { public int Id { get; set; } public string Title { get; set; } = ""; public string Summary { get; set; } = ""; public string ImageUrl { get; set; } = ""; public string Category { get; set; } = ""; public DateTime CreatedAt { get; set; } public int Views { get; set; } public bool IsPublished { get; set; } }
+}

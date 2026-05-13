@@ -219,19 +219,7 @@
         background: #0F766E;
     }
 
-    /* Footer */
-    .footer { background: #0D9488; color: white; padding: 60px 0 30px; }
-    .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 60px; }
-    .footer-col h4 { font-size: 18px; margin-bottom: 20px; font-weight: 600; }
-    .footer-links { list-style: none; }
-    .footer-links li { margin-bottom: 12px; }
-    .footer-links a { color: #CCFBF1; text-decoration: none; font-size: 14px; transition: 0.2s; }
-    .footer-links a:hover { color: white; }
-    .footer-newsletter-form { display: flex; margin-top: 16px; }
-    .footer-newsletter-form input { padding: 12px 16px; border: none; border-radius: 8px 0 0 8px; outline: none; width: 100%; }
-    .footer-newsletter-form button { background: #111827; color: white; border: none; padding: 0 20px; border-radius: 0 8px 8px 0; font-weight: 600; cursor: pointer; }
-    
-    .footer-bottom { text-align: center; padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); color: #CCFBF1; font-size: 14px; }
+
 </style>
 
 <header>
@@ -242,10 +230,10 @@
         </div>
         <div class="nav-links">
             <a href="/">Accueil</a>
-            <a href="#">Services</a>
+            <a href="/services">Services</a>
             <a href="/contact" class="active">Contactez-nous</a>
-            <a href="#">Aide</a>
-            <a href="#">Blog</a>
+            <a href="/help">Aide</a>
+            <a href="/blog">Blog</a>
         </div>
         <div class="nav-actions">
             <button class="btn-primary" @onclick="GoToLogin">Connexion</button>
@@ -320,64 +308,7 @@
     </section>
 </main>
 
-<footer class="footer">
-    <div class="container">
-        <div class="footer-grid">
-            <div class="footer-col" style="padding-right: 40px;">
-                <div class="logo" style="color: white; margin-bottom: 20px;">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                    </svg>
-                    HealthCare
-                </div>
-                <p style="color: #CCFBF1; font-size: 14px; margin-bottom: 20px;">Abonnez-vous à notre newsletter !</p>
-                <div class="footer-newsletter-form">
-                    <input type="email" placeholder="Entrez votre email" @bind="newsletterEmail" />
-                    <button @onclick="SubscribeNewsletter">S'abonner</button>
-                </div>
-            </div>
-            <div class="footer-col">
-                <h4>Produit</h4>
-                <ul class="footer-links">
-                    <li><a href="#">Fonctionnalités</a></li>
-                    <li><a href="#">Tarifs</a></li>
-                    <li><a href="#">Études de cas</a></li>
-                    <li><a href="#">Avis</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>Entreprise</h4>
-                <ul class="footer-links">
-                    <li><a href="#">À propos</a></li>
-                    <li><a href="/contact">Contactez-nous</a></li>
-                    <li><a href="#">Carrières</a></li>
-                    <li><a href="#">Culture</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>Support</h4>
-                <ul class="footer-links">
-                    <li><a href="#">Démarrage</a></li>
-                    <li><a href="#">Centre d'aide</a></li>
-                    <li><a href="#">État des serveurs</a></li>
-                    <li><a href="#">Signaler un bug</a></li>
-                </ul>
-            </div>
-            <div class="footer-col">
-                <h4>Suivez-nous</h4>
-                <ul class="footer-links">
-                    <li><a href="#">Facebook</a></li>
-                    <li><a href="#">Twitter</a></li>
-                    <li><a href="#">Instagram</a></li>
-                    <li><a href="#">LinkedIn</a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            Copyright © 2024 HealthCare. Tous droits réservés.
-        </div>
-    </div>
-</footer>
+<Footer />
 
 @code {
     private string firstName = "";
@@ -394,13 +325,40 @@
         Navigation.NavigateTo("/login");
     }
 
+    [Inject] private HttpClient Http { get; set; } = default!;
+
     private async Task SubmitContact()
     {
         if (acceptTerms)
         {
-            await JSRuntime.InvokeVoidAsync("alert", $"Merci {firstName} ! Votre message a été envoyé avec succès.");
-            // Reset form
-            firstName = ""; lastName = ""; email = ""; phone = ""; topic = ""; message = ""; acceptTerms = false;
+            try 
+            {
+                var payload = new 
+                {
+                    FirstName = firstName,
+                    LastName = lastName,
+                    Email = email,
+                    Phone = phone,
+                    Topic = topic,
+                    Message = message
+                };
+
+                var response = await Http.PostAsJsonAsync("api/ContactMessages", payload);
+                if (response.IsSuccessStatusCode)
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", $"Merci {firstName} ! Votre message a été envoyé avec succès. Notre équipe vous répondra bientôt.");
+                    // Reset form
+                    firstName = ""; lastName = ""; email = ""; phone = ""; topic = ""; message = ""; acceptTerms = false;
+                }
+                else
+                {
+                    await JSRuntime.InvokeVoidAsync("alert", "Désolé, une erreur est survenue lors de l'envoi du message. Veuillez réessayer plus tard.");
+                }
+            }
+            catch (Exception)
+            {
+                await JSRuntime.InvokeVoidAsync("alert", "Erreur de connexion au serveur.");
+            }
         }
     }
 
