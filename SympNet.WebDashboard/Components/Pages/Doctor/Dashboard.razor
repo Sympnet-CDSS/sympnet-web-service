@@ -1,4 +1,4 @@
-﻿@page "/doctor/dashboard"
+@page "/doctor/dashboard"
 @layout DoctorLayout
 @inject HttpClient Http
 @inject IJSRuntime JS
@@ -280,7 +280,7 @@
                 @foreach (var n in notifications.OrderByDescending(x => x.SentAt))
                 {
                     <div class="notif-item @(n.IsUrgent ? "urgent" : "") @(!n.IsRead ? "unread" : "")"
-                         @onclick="() => OpenAppointment(n.AppointmentId)">
+                         @onclick="() => OpenNotification(n)">
                         <div class="notif-item-title">
                             @(n.IsUrgent ? "🚨" : "📅") @n.Title
                             @if (n.IsUrgent)
@@ -524,7 +524,9 @@
                     AppointmentId = data.TryGetProperty("appointmentId", out var ai) ? ai.GetInt32()       : 0,
                     IsUrgent      = data.TryGetProperty("isUrgent",      out var u)  && u.GetBoolean(),
                     SentAt        = data.TryGetProperty("sentAt",        out var sa) ? sa.GetDateTime()    : DateTime.UtcNow,
-                    IsRead        = false
+                    IsRead        = false,
+                    Type          = data.TryGetProperty("type",     out var ty) ? ty.GetString()  ?? "" : "",
+                    CallerId      = data.TryGetProperty("callerId", out var cid) ? cid.GetString() : null
                 };
 
                 // Évite les doublons
@@ -560,6 +562,21 @@
     // ── Panneau ───────────────────────────────────────────────────────────────
     private void TogglePanel() { showPanel = !showPanel; StateHasChanged(); }
     private void ClosePanel()  { showPanel = false; StateHasChanged(); }
+
+    private void OpenNotification(NotificationItem n)
+    {
+        n.IsRead = true;
+        showPanel = false;
+        
+        if (n.Type == "VIDEO_CALL" && !string.IsNullOrEmpty(n.CallerId))
+        {
+            Navigation.NavigateTo($"/doctor/video-call/{n.CallerId}");
+        }
+        else if (n.AppointmentId > 0)
+        {
+            Navigation.NavigateTo($"/doctor/appointments/{n.AppointmentId}");
+        }
+    }
 
     private void OpenAppointment(int id)
     {
@@ -682,6 +699,8 @@
         public int      AppointmentId { get; set; }
         public bool     IsUrgent      { get; set; }
         public bool     IsRead        { get; set; }
+        public string   Type          { get; set; } = "";
+        public string?  CallerId      { get; set; }
         public DateTime SentAt        { get; set; }
     }
     public class ToastItem

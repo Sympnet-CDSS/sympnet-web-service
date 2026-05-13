@@ -15,6 +15,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddSignalR();
+builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, NameUserIdProvider>();
+
+// ... (configuration continue)
 
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -41,10 +44,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) &&
-                    path.StartsWithSegments("/hubs"))
+                
+                if (path.StartsWithSegments("/hubs"))
                 {
-                    context.Token = accessToken;
+                    Console.WriteLine($"[SignalR-Auth] Connection attempt to {path}. Token found in query: {!string.IsNullOrEmpty(accessToken)}");
+                    if (!string.IsNullOrEmpty(accessToken))
+                    {
+                        context.Token = accessToken;
+                    }
                 }
                 return Task.CompletedTask;
             }
@@ -61,12 +68,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("SignalRPolicy", policy =>
         policy
-            .WithOrigins(
-                "http://localhost:5002",   // Blazor dev
-                "https://localhost:5002",
-                "http://127.0.0.1:5002",
-                "https://127.0.0.1:5002"
-            )
+            .SetIsOriginAllowed(_ => true) // ✅ Autoriser toutes les origines en développement
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()); // ← obligatoire pour WebSocket
@@ -110,7 +112,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+// app.UseHttpsRedirection(); // ✅ Désactivé pour éviter les blocages SignalR en développement local
 
 // ✅ CORS avant Authentication
 app.UseCors("SignalRPolicy");
@@ -126,3 +128,12 @@ app.MapHub<NotificationHub>("/hubs/notifications");
 
 
 app.Run();
+
+public class NameUserIdProvider : Microsoft.AspNetCore.SignalR.IUserIdProvider
+{
+    public string? GetUserId(Microsoft.AspNetCore.SignalR.HubConnectionContext connection)
+    {
+        return connection.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+            ?? connection.User?.FindFirst("sub")?.Value;
+    }
+}

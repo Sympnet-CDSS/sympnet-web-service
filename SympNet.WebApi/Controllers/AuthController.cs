@@ -46,7 +46,8 @@ public class AuthController : ControllerBase
         var token = _jwt.GenerateToken(user);
         return Ok(new AuthResponseDto(token, user.Email, user.Role, user.Id, user.FullName));
     }
-
+    
+    
     // ── EXISTANT : Login web ───────────────────────────────────────────────
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)

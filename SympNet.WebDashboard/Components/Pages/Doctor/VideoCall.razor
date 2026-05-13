@@ -160,12 +160,24 @@
 
 @code {
     [Parameter] public Guid? TargetUserId { get; set; }
+    
+    // Paramètres venant du popup de layout
+    private string? querySessionId;
+    private string? queryCallerId;
+    private string? querySdp;
 
     private HubConnection? hubConnection;
     private DotNetObjectReference<VideoCall>? objRef;
 
     protected override async Task OnInitializedAsync()
     {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var query = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(uri.Query);
+        
+        if (query.TryGetValue("sessionId", out var sid)) querySessionId = sid;
+        if (query.TryGetValue("callerId", out var cid)) queryCallerId = cid;
+        if (query.TryGetValue("sdp", out var sdp)) querySdp = sdp;
+
         await InitializeSignalR();
         await InitializeWebRTC();
     }
@@ -183,9 +195,14 @@
             .WithAutomaticReconnect()
             .Build();
 
-        hubConnection.On<string, string>("ReceiveOffer", async (fromUserId, sdp) =>
+        hubConnection.On<string, string, string, string>("IncomingCall", async (sessionId, callerId, callerName, sdp) =>
         {
-            await JS.InvokeVoidAsync("webrtc.handleOffer", fromUserId, sdp);
+            // Ne rien faire ici si le popup global du layout s'en occupe déjà
+            // Sauf si on est déjà en appel avec cette personne
+            if (TargetUserId != null && TargetUserId.ToString() == callerId)
+            {
+                // Déjà géré par InitializeWebRTC si on vient du popup
+            }
         });
 
         hubConnection.On<string, string>("ReceiveAnswer", async (fromUserId, sdp) =>
@@ -198,27 +215,6 @@
             await JS.InvokeVoidAsync("webrtc.handleIceCandidate", fromUserId, candidate, sdpMid, sdpMLineIndex);
         });
 
-        hubConnection.On<IncomingCallData>("IncomingCall", async (data) =>
-        {
-            if (TargetUserId == null || TargetUserId.ToString() == data.CallerId.ToString())
-            {
-                bool accept = await JS.InvokeAsync<bool>("confirm", $"Appel entrant de {data.CallerName ?? "Patient"}");
-                if (accept)
-                {
-                    await hubConnection.SendAsync("AcceptCall", data.SessionId.ToString());
-                }
-                else
-                {
-                    await hubConnection.SendAsync("RejectCall", data.SessionId.ToString());
-                }
-            }
-        });
-
-        hubConnection.On<string>("CallAccepted", async (sessionId) =>
-        {
-            await JS.InvokeVoidAsync("webrtc.startCall");
-        });
-
         hubConnection.On<string>("CallRejected", async (sessionId) =>
         {
             await JS.InvokeVoidAsync("webrtc.endCall");
@@ -226,10 +222,10 @@
             Navigation.NavigateTo("/doctor/dashboard");
         });
 
-        hubConnection.On<CallEndData>("CallEnded", async (data) =>
+        hubConnection.On<string>("CallEnded", async (sessionId) =>
         {
             await JS.InvokeVoidAsync("webrtc.endCall");
-            await JS.InvokeVoidAsync("alert", $"Appel terminé - Durée: {data.Duration} secondes");
+            await JS.InvokeVoidAsync("alert", $"Appel terminé");
             Navigation.NavigateTo("/doctor/dashboard");
         });
 
@@ -241,8 +237,18 @@
         objRef = DotNetObjectReference.Create(this);
         await JS.InvokeVoidAsync("webrtc.init", objRef, hubConnection);
         
-        if (TargetUserId != null)
+        if (querySdp != null && queryCallerId != null)
         {
+            // ✅ On vient d'un appel accepté via le popup
+            if (hubConnection != null)
+            {
+                await hubConnection.SendAsync("AcceptCall", queryCallerId, querySessionId);
+            }
+            await JS.InvokeVoidAsync("webrtc.handleOffer", queryCallerId, querySdp);
+        }
+        else if (TargetUserId != null)
+        {
+            // ✅ On initie l'appel
             await JS.InvokeVoidAsync("webrtc.startCall", TargetUserId.ToString());
         }
     }

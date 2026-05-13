@@ -589,6 +589,7 @@
     private System.Timers.Timer? typingTimer;
     private ElementReference messagesContainer;
     private HubConnection? hubConnection;
+    private Guid currentUserId;
     private bool _isInitialized = false;
     
     private List<string> quickReplies = new()
@@ -623,36 +624,64 @@
         try
         {
             var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
-            hubConnection = new HubConnectionBuilder()
-                .WithUrl($"{baseUrl}/hubs/chat", options =>
+            if (!string.IsNullOrEmpty(token))
+            {
+                var parts = token.Split('.');
+                if (parts.Length > 1)
                 {
-                    options.AccessTokenProvider = () => Task.FromResult(token);
-                })
+                    var payload = parts[1];
+                    // Fix padding
+                    payload = payload.PadRight(payload.Length + (4 - payload.Length % 4) % 4, '=');
+                    var jsonBytes = Convert.FromBase64String(payload);
+                    var json = System.Text.Encoding.UTF8.GetString(jsonBytes);
+                    using var doc = System.Text.Json.JsonDocument.Parse(json);
+                    if (doc.RootElement.TryGetProperty("nameid", out var idProp))
+                    {
+                        currentUserId = Guid.Parse(idProp.GetString()!);
+                    }
+                }
+            }
+
+            hubConnection = new HubConnectionBuilder()
+                .WithUrl($"{baseUrl}/hubs/chat?access_token={token}") // ✅ Force le token dans la query pour plus de fiabilité
                 .WithAutomaticReconnect()
                 .Build();
 
             hubConnection.On<string, string, string, string, bool, string>("ReceiveMessage", async (senderId, senderName, senderRole, content, isVoice, sentAt) =>
             {
-                if (selectedConversation?.OtherUserId.ToString() == senderId)
+                // Si le message appartient à la conversation sélectionnée (qu'il vienne de nous ou de l'autre)
+                if (selectedConversation != null && (senderId == selectedConversation.OtherUserId.ToString() || senderId == currentUserId.ToString()))
                 {
-                    messages.Add(new MessageDto
+                    // Éviter les doublons si on a déjà ajouté le message localement
+                    if (!messages.Any(m => m.Content == content && Math.Abs((m.SentAt - DateTime.UtcNow).TotalSeconds) < 5))
                     {
-                        Id = "",
-                        Content = content,
-                        SentAt = DateTime.TryParse(sentAt, out var date) ? date : DateTime.UtcNow,
-                        IsMine = false,
-                        IsRead = false
-                    });
-                    await InvokeAsync(async () =>
-                    {
-                        StateHasChanged();
-                        await ScrollToBottom();
-                    });
+                        messages.Add(new MessageDto
+                        {
+                            Id = "",
+                            Content = content,
+                            SentAt = DateTime.TryParse(sentAt, out var date) ? date : DateTime.UtcNow,
+                            IsMine = senderId == currentUserId.ToString(),
+                            IsRead = false
+                        });
+                        await InvokeAsync(async () =>
+                        {
+                            StateHasChanged();
+                            await ScrollToBottom();
+                        });
+                    }
+                    
+                    // ✅ Mettre aussi à jour la liste des conversations pour le "Dernier message"
+                    await LoadConversations();
                 }
                 else
                 {
                     await LoadConversations();
                 }
+            });
+
+            hubConnection.On("UpdateConversationList", async () =>
+            {
+                await LoadConversations();
             });
 
             hubConnection.On<string>("UserOnline", (userId) =>
@@ -677,11 +706,11 @@
                 if (conv != null) conv.IsOnline = false;
             });
 
-            hubConnection.On<dynamic>("UserTyping", (data) =>
+            hubConnection.On<string, bool>("UserTyping", (userName, isTypingNow) =>
             {
-                if (selectedConversation?.OtherUserId.ToString() == data.userId.ToString())
+                if (selectedConversation?.OtherUserName == userName)
                 {
-                    isTyping = data.isTyping;
+                    isTyping = isTypingNow;
                     InvokeAsync(StateHasChanged);
                 }
             });
@@ -754,6 +783,13 @@
             }
             
             conversation.UnreadCount = 0;
+
+            // ✅ Rejoindre le groupe SignalR pour le temps réel
+            if (hubConnection?.State == HubConnectionState.Connected)
+            {
+                await hubConnection.InvokeAsync("JoinConsultation", conversation.Id.ToString());
+            }
+
             await ScrollToBottom();
         }
         catch (Exception ex)
@@ -922,6 +958,7 @@
 
     private class ConversationDto
     {
+        public Guid Id { get; set; }
         public Guid OtherUserId { get; set; }
         public string OtherUserName { get; set; } = "";
         public string? LastMessage { get; set; }
