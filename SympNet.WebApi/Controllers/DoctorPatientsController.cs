@@ -54,6 +54,7 @@ public class DoctorPatientsController : ControllerBase
                     ChronicDiseases = p.MedicalHistory, 
                     CurrentMedications = "",
                     ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
+                    PhotoUrl = p.User.PhotoUrl,
                     p.CreatedAt
                 })
                 .OrderByDescending(p => p.CreatedAt)
@@ -82,6 +83,7 @@ public class DoctorPatientsController : ControllerBase
                     ChronicDiseases = p.MedicalHistory,
                     CurrentMedications = "",
                     ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
+                    PhotoUrl = p.User.PhotoUrl,
                     p.CreatedAt
                 })
                 .OrderByDescending(p => p.CreatedAt)
@@ -115,6 +117,7 @@ public class DoctorPatientsController : ControllerBase
                     p.MedicalHistory,
                     ChronicDiseases = p.MedicalHistory,
                     CurrentMedications = "",
+                    PhotoUrl = p.User.PhotoUrl,
                     ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
                     Consultations = _db.Consultations
                         .Where(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId)
@@ -157,6 +160,7 @@ public class DoctorPatientsController : ControllerBase
                     p.MedicalHistory,
                     ChronicDiseases = p.MedicalHistory,
                     CurrentMedications = "",
+                    PhotoUrl = p.User.PhotoUrl,
                     ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
                     Consultations = _db.Consultations
                         .Where(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId)

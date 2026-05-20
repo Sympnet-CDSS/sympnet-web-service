@@ -1,6 +1,7 @@
 @page "/doctor/consultations"
 @layout SympNet.WebDashboard.Components.Layout.DoctorLayout
 @using System.Text.Json
+@using SympNet.WebDashboard.DTOs
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
@@ -381,14 +382,4 @@
         return (parts[0].Substring(0, 1) + parts[parts.Length - 1].Substring(0, 1)).ToUpper();
     }
 
-    public class ConsultationDto
-    {
-        public int Id { get; set; }
-        public string PatientName { get; set; } = "";
-        public string PatientEmail { get; set; } = "";
-        public string Diagnosis { get; set; } = "";
-        public double ConfidenceScore { get; set; }
-        public string Status { get; set; } = "";
-        public DateTime CreatedAt { get; set; }
-    }
 }

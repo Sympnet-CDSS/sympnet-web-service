@@ -2,6 +2,8 @@
 @page "/doctor/prescriptions/edit/{Id:int}"
 @layout SympNet.WebDashboard.Components.Layout.DoctorLayout
 @using System.Text.Json
+@using System.Timers
+@using SympNet.WebDashboard.DTOs
 @inject HttpClient Http
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
@@ -78,7 +80,7 @@
                                     <div class="med-grid">
                                         <div class="form-group">
                                             <label>Nom du médicament *</label>
-                                            <input type="text" class="form-control" @bind="med.Name" placeholder="Ex: Amoxicilline 1g" />
+                                            <input type="text" class="form-control" value="@med.Name" @oninput="@(e => OnDrugNameChanged(e, med))" placeholder="Ex: Amoxicilline 1g" />
                                         </div>
                                         <div class="form-group">
                                             <label>Posologie *</label>
@@ -559,9 +561,21 @@
     private List<MedicationDto> medications = new();
     private List<PatientDto> patients = new();
     private AIAlertResult? aiAlert = null;
+    private Timer _debounceTimer;
 
     protected override async Task OnInitializedAsync()
     {
+        _debounceTimer = new Timer(800);
+        _debounceTimer.AutoReset = false;
+        _debounceTimer.Elapsed += async (s, e) =>
+        {
+            await InvokeAsync(async () =>
+            {
+                await CheckWithAI();
+                StateHasChanged();
+            });
+        };
+
         try
         {
             var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
@@ -629,6 +643,20 @@
     {
         medications.Remove(med);
         isValidated = false;
+        _debounceTimer?.Stop();
+        _debounceTimer?.Start();
+    }
+
+    private void OnDrugNameChanged(ChangeEventArgs e, MedicationDto med)
+    {
+        med.Name = e.Value?.ToString() ?? "";
+        isValidated = false;
+        
+        _debounceTimer?.Stop();
+        if (med.Name.Length >= 3)
+        {
+            _debounceTimer?.Start();
+        }
     }
 
     private async Task CheckWithAI()
@@ -754,12 +782,6 @@
         public string? Notes { get; set; }
         public bool HasAIAlerts { get; set; }
         public string? AIAlertsJson { get; set; }
-    }
-
-    public class ConsultationDto
-    {
-        public int Id { get; set; }
-        public string Diagnosis { get; set; } = "";
     }
 
     public class MedicationDto

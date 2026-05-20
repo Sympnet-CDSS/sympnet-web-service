@@ -130,7 +130,7 @@
         <Navbar 
             UserName="@adminName" 
             UserInitial="@adminInitial" 
-            UserSubtitle="Administrateur" 
+            UserSubtitle="@adminSubtitle" 
             IsAdmin="true"
             SearchPlaceholder="Rechercher un message, un médecin..."
             OnProfileClick="GoToProfile" />
@@ -143,6 +143,8 @@
 @code {
     private string adminName = "Admin";
     private string adminInitial = "A";
+    private string adminSubtitle = "Administrateur";
+    private string adminEmail = "";
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -154,8 +156,14 @@
                 
                 if (!string.IsNullOrEmpty(userEmail))
                 {
+                    adminEmail = userEmail;
                     adminName = userEmail.Split('@')[0];
                     adminInitial = adminName.Length > 0 ? adminName[0].ToString().ToUpper() : "A";
+                    
+                    if (userEmail == "sirine.rezgui@ensi-uma.tn")
+                    {
+                        adminSubtitle = "Super Administrateur";
+                    }
                 }
                 
                 var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");

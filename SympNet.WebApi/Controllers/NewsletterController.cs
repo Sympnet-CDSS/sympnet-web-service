@@ -72,9 +72,11 @@ public class NewsletterController : ControllerBase
             _context.Notifications.Add(notification);
         }
         await _context.SaveChangesAsync();
+        Console.WriteLine($"Newsletter: Created notifications for {admins.Count} admins.");
 
         // Notify admins in real-time
         await _hubContext.Clients.Group("admins").SendAsync("ReceiveNotification");
+        Console.WriteLine("Newsletter: Sent real-time notification to 'admins' group.");
 
         try 
         {

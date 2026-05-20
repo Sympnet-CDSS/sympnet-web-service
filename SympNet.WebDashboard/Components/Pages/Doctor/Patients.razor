@@ -182,8 +182,15 @@
                         <tr>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 16px;">
-                                    <div class="patient-avatar" style="background: @initBg; color: @initCol;">
-                                        @(p.FirstName?.Length > 0 ? p.FirstName[0].ToString().ToUpper() : "")@(p.LastName?.Length > 0 ? p.LastName[0].ToString().ToUpper() : "")
+                                    <div class="patient-avatar" style="background: @initBg; color: @initCol; overflow: hidden;">
+                                        @if (!string.IsNullOrEmpty(p.PhotoUrl))
+                                        {
+                                            <img src="@(p.PhotoUrl.StartsWith("data:image") ? p.PhotoUrl : $"data:image/jpeg;base64,{p.PhotoUrl}")" style="width:100%;height:100%;object-fit:cover;" />
+                                        }
+                                        else
+                                        {
+                                            @(p.FirstName?.Length > 0 ? p.FirstName[0].ToString().ToUpper() : "")@(p.LastName?.Length > 0 ? p.LastName[0].ToString().ToUpper() : "")
+                                        }
                                     </div>
                                     <div class="p-name"><strong>@p.FirstName @p.LastName</strong></div>
                                 </div>
@@ -233,7 +240,14 @@
         <div class="modal-content" @onclick:stopPropagation>
             <div class="modal-header">
                 <h3>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+                    @if (!string.IsNullOrEmpty(selectedPatient.PhotoUrl))
+                    {
+                        <img src="@(selectedPatient.PhotoUrl.StartsWith("data:image") ? selectedPatient.PhotoUrl : $"data:image/jpeg;base64,{selectedPatient.PhotoUrl}")" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;" />
+                    }
+                    else
+                    {
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+                    }
                     @selectedPatient.FirstName @selectedPatient.LastName
                 </h3>
                 <button style="background:none;border:none;font-size:24px;cursor:pointer;" @onclick="CloseModal">&times;</button>
@@ -509,6 +523,7 @@
         public string ChronicDiseases { get; set; } = ""; 
         public string CurrentMedications { get; set; } = ""; 
         public int ConsultationCount { get; set; } 
+        public string? PhotoUrl { get; set; }
     }
     
     public class PatientDetailDto : PatientDto 

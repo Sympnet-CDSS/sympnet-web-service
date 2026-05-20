@@ -13,9 +13,11 @@ public class Doctor
     public string Speciality { get; set; } = string.Empty;
     public string LicenseNumber { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
+    public string? Bio { get; set; }
+    public int? GraduationYear { get; set; }
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  // ← AJOUTÉ
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  
     public int TotalConsultations { get; set; } = 0;
     public int TotalPatients { get; set; } = 0;
     

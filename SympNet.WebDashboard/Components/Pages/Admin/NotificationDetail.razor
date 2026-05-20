@@ -214,7 +214,6 @@
     @@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;700;800&display=swap');
 
     .notif-detail-page {
-        max-width: 960px;
         margin: 0 auto;
         padding: 24px 20px 60px;
         font-family: 'Bricolage Grotesque', sans-serif;
@@ -380,10 +379,15 @@
     .btn-send-reply {
         background: #0D9488; color: white; border: none;
         padding: 12px 28px; border-radius: 12px;
-        font-weight: 700; cursor: pointer; transition: 0.2s;
-        display: flex; align-items: center; gap: 8px;
+        font-weight: 800; cursor: pointer; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; align-items: center; justify-content: center; gap: 8px;
+        box-shadow: 0 4px 12px rgba(13, 148, 136, 0.2);
     }
-    .btn-send-reply:hover:not(:disabled) { background: #0F766E; }
+    .btn-send-reply:hover:not(:disabled) { 
+        background: #0F766E; 
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(13, 148, 136, 0.3);
+    }
     .btn-send-reply:disabled { opacity: 0.5; }
     
     .btn-cancel-link { background: none; border: none; color: #9CA3AF; font-weight: 600; cursor: pointer; }
@@ -490,23 +494,53 @@
                 Navigation.NavigateTo(isAdmin ? "/admin/notifications" : "/doctor/notifications");
             }
         }
-        catch (Exception ex) { ShowToast("Erreur lors de la suppression.", false); }
+        catch (Exception) { ShowToast("Erreur lors de la suppression.", false); }
     }
 
     private async Task SendReply()
     {
-        if (string.IsNullOrWhiteSpace(replyMessage)) return;
+        if (string.IsNullOrWhiteSpace(replyMessage) || message == null) return;
         sending = true;
         try
         {
-            // Simulation or real API call
-            await Task.Delay(1000);
-            ShowToast("Réponse envoyée avec succès !", true);
-            showReplyForm = false;
-            replyMessage = "";
-            if (message != null) message.IsRead = true;
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+
+            var targetEmail = string.IsNullOrEmpty(message.NewsletterEmail) 
+                ? (message.ContactMessage?.Email ?? message.Email) 
+                : message.NewsletterEmail;
+
+            var targetFirstName = message.Patient != null 
+                ? message.Patient.FirstName 
+                : (message.ContactMessage != null ? message.ContactMessage.FirstName : message.FirstName);
+
+            var replyRequest = new {
+                Email = targetEmail,
+                FirstName = targetFirstName,
+                ReplyMessage = replyMessage
+            };
+
+            var response = await Http.PostAsJsonAsync($"{baseUrl}/api/admin/notifications/{MessageId}/reply", replyRequest);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                ShowToast("Réponse envoyée avec succès !", true);
+                showReplyForm = false;
+                replyMessage = "";
+                message.IsRead = true;
+            }
+            else
+            {
+                var error = await response.Content.ReadFromJsonAsync<dynamic>();
+                ShowToast($"Erreur: {error?.message ?? "Inconnue"}", false);
+            }
         }
-        catch (Exception ex) { ShowToast("Erreur lors de l'envoi.", false); }
+        catch (Exception ex) 
+        { 
+            Console.WriteLine($"Error: {ex.Message}");
+            ShowToast("Erreur réseau lors de l'envoi.", false); 
+        }
         finally { sending = false; }
     }
 

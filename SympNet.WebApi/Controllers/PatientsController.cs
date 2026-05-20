@@ -40,6 +40,7 @@ public class PatientsController : ControllerBase
                     Gender = p.Gender,
                     ConsultationCount = p.ConsultationCount,
                     MedicalHistory = p.MedicalHistory,
+                    PhotoUrl = p.User.PhotoUrl,
                     ChronicConditions = string.IsNullOrEmpty(p.ChronicDiseases) ? new List<string>() : p.ChronicDiseases.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                     CurrentMedications = string.IsNullOrEmpty(p.CurrentMedications) ? new List<string>() : p.CurrentMedications.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
                     Allergies = string.IsNullOrEmpty(p.Allergies) ? new List<string>() : p.Allergies.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
@@ -65,6 +66,7 @@ public class PatientsController : ControllerBase
                     Gender = p.Gender,
                     ConsultationCount = p.ConsultationCount,
                     MedicalHistory = p.MedicalHistory,
+                    PhotoUrl = p.User.PhotoUrl,
                     Allergies = string.IsNullOrEmpty(p.Allergies) ? new List<string>() : p.Allergies.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList()
                 })
                 .OrderByDescending(p => p.Id)

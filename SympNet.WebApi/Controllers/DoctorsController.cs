@@ -32,16 +32,20 @@ public class DoctorsController : ControllerBase
             .Select(d => new DoctorDto
             {
                 Id = d.Id,
+                UserId = d.UserId,
                 Email = d.User.Email,
                 IsActive = d.User.IsActive,
                 FirstName = d.FirstName,
                 LastName = d.LastName,
                 Speciality = d.Speciality,
                 LicenseNumber = d.LicenseNumber,
+                Bio = d.Bio,
+                GraduationYear = d.GraduationYear,
                 Address = d.Address,
                 Latitude = d.Latitude ?? 0,
                 Longitude = d.Longitude ?? 0,
-                CreatedAt = d.CreatedAt
+                CreatedAt = d.CreatedAt,
+                PhotoUrl = d.User.PhotoUrl
             })
             .OrderByDescending(d => d.CreatedAt)
             .ToListAsync();

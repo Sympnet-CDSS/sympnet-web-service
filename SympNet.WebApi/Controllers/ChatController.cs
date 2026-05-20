@@ -60,6 +60,7 @@ namespace SympNet.WebApi.Controllers
                     Id = conv.Id,
                     conv.OtherUserId,
                     OtherUserName = otherUser?.FullName ?? "Utilisateur",
+                    OtherUserAvatar = otherUser?.PhotoUrl,
                     conv.LastMessage,
                     conv.LastMessageAt,
                     conv.UnreadCount,
@@ -219,6 +220,33 @@ namespace SympNet.WebApi.Controllers
                 .CountAsync();
 
             return Ok(new { unreadCount });
+        }
+
+        // POST: api/chat/conversations/{id}/read
+        [HttpPost("conversations/{id}/read")]
+        public async Task<IActionResult> MarkConversationAsRead(Guid id)
+        {
+            var userId = CurrentUserId;
+            var messages = await _db.ChatMessages
+                .Where(m => m.ConversationId == id && m.SenderId != userId && !m.IsRead)
+                .ToListAsync();
+
+            if (messages.Any())
+            {
+                foreach (var msg in messages)
+                {
+                    msg.IsRead = true;
+                }
+                await _db.SaveChangesAsync();
+                
+                var conv = await _db.Conversations.FindAsync(id);
+                if (conv != null)
+                {
+                    var otherUserId = userId == conv.DoctorId ? conv.PatientId : conv.DoctorId;
+                    await _hub.Clients.User(otherUserId.ToString()).SendAsync("MessagesRead", id.ToString());
+                }
+            }
+            return Ok();
         }
 
 

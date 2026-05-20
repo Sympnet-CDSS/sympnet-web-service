@@ -73,6 +73,46 @@ public class WorkingHoursController : ControllerBase
         return Ok(workingHours);
     }
 
+    // GET: api/workinghours/doctor/{doctorId}
+    [HttpGet("doctor/{doctorId}")]
+    [AllowAnonymous] // Ou [Authorize] si vous voulez restreindre aux patients connectés
+    public async Task<IActionResult> GetDoctorWorkingHours(int doctorId)
+    {
+        var raw = await _db.Set<WorkingHours>()
+            .Where(w => w.DoctorId == doctorId)
+            .OrderBy(w => w.DayOfWeek)
+            .ToListAsync();
+
+        if (!raw.Any())
+        {
+            var defaultHours = Enumerable.Range(1, 5).Select(i => new
+            {
+                Id = 0,
+                DayOfWeek = i,
+                DayName = GetDayName(i),
+                StartTime = "09:00",
+                EndTime = "17:00",
+                SlotDuration = 30,
+                IsActive = true
+            }).ToList<object>();
+
+            return Ok(defaultHours);
+        }
+
+        var workingHours = raw.Select(w => new
+        {
+            w.Id,
+            DayOfWeek = (int)w.DayOfWeek,
+            DayName = GetDayName((int)w.DayOfWeek),
+            StartTime = w.StartTime.ToString(@"HH\:mm"),
+            EndTime = w.EndTime.ToString(@"HH\:mm"),
+            w.SlotDuration,
+            w.IsActive
+        }).ToList();
+
+        return Ok(workingHours);
+    }
+
     // POST: api/workinghours
     [HttpPost]
     public async Task<IActionResult> CreateWorkingHours([FromBody] CreateWorkingHoursDto dto)

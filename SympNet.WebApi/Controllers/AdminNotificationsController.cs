@@ -13,10 +13,12 @@ namespace SympNet.WebApi.Controllers;
 public class AdminNotificationsController : ControllerBase
 {
     private readonly AppDbContext _context;
+    private readonly Services.EmailService _emailService;
 
-    public AdminNotificationsController(AppDbContext context)
+    public AdminNotificationsController(AppDbContext context, Services.EmailService emailService)
     {
         _context = context;
+        _emailService = emailService;
     }
 
     private Guid GetCurrentUserId()
@@ -33,6 +35,45 @@ public class AdminNotificationsController : ControllerBase
             .Where(n => n.UserId == userId)
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync();
+    }
+
+    [HttpPost("{id}/reply")]
+    public async Task<IActionResult> Reply(int id, [FromBody] ReplyRequest request)
+    {
+        var userId = GetCurrentUserId();
+        var notification = await _context.Notifications
+            .FirstOrDefaultAsync(n => n.Id == id && n.UserId == userId);
+
+        if (notification == null) return NotFound();
+
+        if (string.IsNullOrEmpty(request.Email))
+            return BadRequest(new { message = "Email destinataire manquant" });
+
+        try
+        {
+            await _emailService.SendContactReplyEmailAsync(
+                request.Email, 
+                request.FirstName ?? "Utilisateur", 
+                notification.Message, 
+                request.ReplyMessage
+            );
+
+            notification.IsRead = true;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Email envoyé avec succès" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Erreur lors de l'envoi: {ex.Message}" });
+        }
+    }
+
+    public class ReplyRequest
+    {
+        public string Email { get; set; } = "";
+        public string? FirstName { get; set; }
+        public string ReplyMessage { get; set; } = "";
     }
 
     [HttpGet("{id}")]

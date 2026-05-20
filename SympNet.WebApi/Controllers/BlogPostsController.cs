@@ -76,10 +76,26 @@ public class BlogPostsController : ControllerBase
             return NotFound();
         }
 
+        return blogPost;
+    }
+
+    // POST: api/blogposts/5/increment-view
+    [HttpPost("{id}/increment-view")]
+    public async Task<IActionResult> IncrementView(int id)
+    {
+        var blogPost = await _db.BlogPosts.FindAsync(id);
+        if (blogPost == null) return NotFound();
+
+        // Check if user is Admin or Doctor to avoid self-counting
+        var role = User.FindFirst(ClaimTypes.Role)?.Value;
+        if (role == "Admin" || role == "Doctor")
+        {
+            return Ok(new { message = "View not counted for staff" });
+        }
+
         blogPost.Views++;
         await _db.SaveChangesAsync();
-
-        return blogPost;
+        return Ok(new { views = blogPost.Views });
     }
 
     // POST: api/blogposts
