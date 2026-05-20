@@ -13,7 +13,7 @@
         <div class="notification-container">
             <div class="notification-icon @(showNotifications ? "active" : "")" @onclick="ToggleNotifications">
                 <i class="fas fa-bell"></i>
-                @if (unreadNotifications > 0)
+                @if (unreadNotifications > 0 && !showNotifications)
                 {
                     <span class="notification-badge">@unreadNotifications</span>
                 }

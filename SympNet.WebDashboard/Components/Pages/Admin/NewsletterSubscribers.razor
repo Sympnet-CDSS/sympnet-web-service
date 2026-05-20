@@ -241,7 +241,7 @@
                 ShowToast("Abonné supprimé avec succès", true);
             }
         }
-        catch (Exception ex) { ShowToast("Erreur lors de la suppression", false); }
+        catch (Exception) { ShowToast("Erreur lors de la suppression", false); }
     }
 
     private void ShowToast(string message, bool success)

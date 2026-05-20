@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "MNk/sTKKS6s=",
+  "dgSpecHash": "xqI1vgli5YU=",
   "success": true,
-  "projectFilePath": "C:\\Users\\lenovo\\Desktop\\sympnet-web-service\\SympNet.WebApi\\SympNet.WebApi.csproj",
+  "projectFilePath": "C:\\Users\\lenovo\\Desktop\\fin\\sympnet-web-service\\SympNet.WebApi\\SympNet.WebApi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\lenovo\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
     "C:\\Users\\lenovo\\.nuget\\packages\\bouncycastle.cryptography\\2.1.1\\bouncycastle.cryptography.2.1.1.nupkg.sha512",

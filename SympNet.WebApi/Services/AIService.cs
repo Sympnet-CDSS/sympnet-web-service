@@ -55,34 +55,42 @@ public class AIService : IAIService
             var resultStr = await response.Content.ReadAsStringAsync();
             var json = JsonDocument.Parse(resultStr).RootElement;
             
+            var hasInteractions = json.TryGetProperty("has_interactions", out var hi) && hi.GetBoolean();
+            var hasContraindications = json.TryGetProperty("contraindications", out var contras) && contras.GetArrayLength() > 0;
+            
             var alert = new OrdonnanceAlert
             {
-                HasAlerts = json.TryGetProperty("has_alerts", out var ha) && ha.GetBoolean(),
-                Summary = json.TryGetProperty("summary", out var summ) ? summ.GetString() ?? "" : "",
+                HasAlerts = hasInteractions || hasContraindications,
+                Summary = json.TryGetProperty("recommendation", out var rec) ? rec.GetString() ?? "" : "",
                 Alerts = new List<AlertItem>()
             };
             
-            if (json.TryGetProperty("alerts", out var alertsArr) && alertsArr.ValueKind == JsonValueKind.Array)
+            if (json.TryGetProperty("interactions", out var interactionsArr) && interactionsArr.ValueKind == JsonValueKind.Array)
             {
-                foreach (var a in alertsArr.EnumerateArray())
+                foreach (var i in interactionsArr.EnumerateArray())
                 {
-                    var item = new AlertItem
+                    var drug1 = i.TryGetProperty("drug_1", out var d1) ? d1.GetString() ?? "" : "";
+                    var drug2 = i.TryGetProperty("drug_2", out var d2) ? d2.GetString() ?? "" : "";
+                    alert.Alerts.Add(new AlertItem
                     {
-                        Type = a.TryGetProperty("type", out var type) ? type.GetString() ?? "" : "",
-                        Severity = a.TryGetProperty("severity", out var sev) ? sev.GetString() ?? "" : "",
-                        Message = a.TryGetProperty("message", out var msg) ? msg.GetString() ?? "" : "",
-                        InvolvedMedications = new List<string>()
-                    };
-                    
-                    if (a.TryGetProperty("involved_medications", out var invMeds) && invMeds.ValueKind == JsonValueKind.Array)
+                        Type = "Interaction Médicamenteuse",
+                        Severity = i.TryGetProperty("severity", out var sev) ? sev.GetString() ?? "modérée" : "modérée",
+                        Message = i.TryGetProperty("description", out var msg) ? msg.GetString() ?? "" : "",
+                        InvolvedMedications = new List<string> { drug1, drug2 }
+                    });
+                }
+            }
+
+            if (json.TryGetProperty("contraindications", out var contraArr) && contraArr.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var c in contraArr.EnumerateArray())
+                {
+                    alert.Alerts.Add(new AlertItem
                     {
-                        foreach (var m in invMeds.EnumerateArray())
-                        {
-                            var mStr = m.GetString();
-                            if (!string.IsNullOrEmpty(mStr)) item.InvolvedMedications.Add(mStr);
-                        }
-                    }
-                    alert.Alerts.Add(item);
+                        Type = "Contre-indication",
+                        Severity = "critique",
+                        Message = c.GetString() ?? ""
+                    });
                 }
             }
 
@@ -144,134 +152,21 @@ public class AIService : IAIService
     {
         try
         {
-            var diagnosticRequest = new AIDiagnosticRequest
-            {
-                patient_id = "chat_user",
-                text = request.Message,
-                allergies = new List<string>()
-            };
-
-            var response = await _httpClient.PostAsJsonAsync("/api/v1/diagnostic", diagnosticRequest);
+            var chatPayload = new { message = request.Message };
+            var response = await _httpClient.PostAsJsonAsync("/api/v1/chat/doctor", chatPayload);
+            
             if (response.IsSuccessStatusCode)
             {
-                var diagStr = await response.Content.ReadAsStringAsync();
-                var reply = "Analyse terminée.";
-                
-                try 
-                {
-                    var root = JsonDocument.Parse(diagStr).RootElement;
-                    var sb = new StringBuilder();
-
-                    sb.AppendLine("<div class='ai-response' style='font-family: inherit; font-size: 14px;'>");
-
-                    // 1. Symptômes
-                    var symptomNode = root.TryGetProperty("symptom_analysis", out var symptomAnalysis) ? symptomAnalysis : root;
-                    if (symptomNode.TryGetProperty("extracted_symptoms", out var symptoms) && symptoms.ValueKind == JsonValueKind.Array)
-                    {
-                        sb.AppendLine("<div style='margin-bottom: 12px;'>");
-                        sb.AppendLine("<strong style='color: #0D9488;'>Symptômes</strong><br/>");
-                        sb.AppendLine("<ul style='margin: 4px 0 0 0; padding-left: 20px; color: #374151;'>");
-                        foreach (var symp in symptoms.EnumerateArray())
-                        {
-                            sb.AppendLine($"<li>{symp.GetString()}</li>");
-                        }
-                        sb.AppendLine("</ul></div>");
-                    }
-
-                    // 2. Diagnostic IA
-                    string diagnosis = "Non déterminé";
-                    if (root.TryGetProperty("hypotheses", out var hypNode) && hypNode.TryGetProperty("generated_hypotheses", out var genHyp) && genHyp.ValueKind == JsonValueKind.Array && genHyp.GetArrayLength() > 0)
-                    {
-                        var firstHyp = genHyp[0];
-                        if (firstHyp.TryGetProperty("diagnosis", out var diagElement))
-                        {
-                            diagnosis = diagElement.GetString() ?? "Non déterminé";
-                        }
-                    }
-                    else if (symptomNode.TryGetProperty("specialty", out var s) && s.ValueKind == JsonValueKind.String)
-                    {
-                        diagnosis = s.GetString() ?? "Non déterminé";
-                    }
-                    
-                    sb.AppendLine("<div style='margin-bottom: 12px;'>");
-                    sb.AppendLine("<strong style='color: #0D9488;'>Diagnostic IA</strong><br/>");
-                    sb.AppendLine($"<div style='background: #E6F8F7; color: #0D6E6A; padding: 4px 10px; border-radius: 6px; display: inline-block; font-weight: 600; margin-top: 4px;'>{diagnosis.ToUpper()}</div>");
-                    sb.AppendLine("</div>");
-
-                    // 3. Score de confiance
-                    double confScore = 0;
-                    if (root.TryGetProperty("confidence", out var confNode) && confNode.TryGetProperty("final_score", out var finalScore))
-                    {
-                        confScore = finalScore.GetDouble() * 100;
-                    }
-                    else if (symptomNode.TryGetProperty("specialty_confidence", out var c))
-                    {
-                        confScore = c.GetDouble() * 100;
-                    }
-                    sb.AppendLine("<div style='margin-bottom: 12px;'>");
-                    sb.AppendLine("<strong style='color: #0D9488;'>Score de confiance</strong><br/>");
-                    sb.AppendLine($"<span style='font-weight: 600; color: #374151;'>{Math.Round(confScore)}%</span>");
-                    sb.AppendLine("</div>");
-
-                    // 4. Recommandations / Explications
-                    string explanation = "";
-                    if (root.TryGetProperty("explanation", out var expNode) && expNode.ValueKind == JsonValueKind.String)
-                    {
-                        explanation = expNode.GetString() ?? "";
-                    }
-                    else if (root.TryGetProperty("hypotheses", out var hNode) && hNode.TryGetProperty("generated_hypotheses", out var gHyp) && gHyp.ValueKind == JsonValueKind.Array && gHyp.GetArrayLength() > 0)
-                    {
-                        if (gHyp[0].TryGetProperty("explanation", out var expl))
-                        {
-                            explanation = expl.GetString() ?? "";
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(explanation))
-                    {
-                        sb.AppendLine("<div style='margin-bottom: 12px;'>");
-                        sb.AppendLine("<strong style='color: #0D9488;'>Recommandations / Explications</strong><br/>");
-                        // Split by period to make it look like a list if it's a paragraph
-                        var sentences = explanation.Split('.', StringSplitOptions.RemoveEmptyEntries);
-                        if (sentences.Length > 1)
-                        {
-                            sb.AppendLine("<ul style='margin: 4px 0 0 0; padding-left: 20px; color: #374151;'>");
-                            foreach (var sentence in sentences)
-                            {
-                                if (sentence.Trim().Length > 3)
-                                    sb.AppendLine($"<li>{sentence.Trim()}</li>");
-                            }
-                            sb.AppendLine("</ul>");
-                        }
-                        else
-                        {
-                            sb.AppendLine($"<div style='color: #374151; margin-top: 4px;'>{explanation}</div>");
-                        }
-                        sb.AppendLine("</div>");
-                    }
-
-                    sb.AppendLine("</div>");
-                    
-                    if (sb.Length > 200) { 
-                        reply = sb.ToString();
-                    }
-                }
-                catch 
-                {
-                    // Fallback if parsing fails
-                    var diagResult = JsonSerializer.Deserialize<AIDiagnosticResponse>(diagStr);
-                    if (diagResult?.explanation != null) reply = diagResult.explanation.ToString() ?? reply;
-                }
-
-                return new AIChatResponse { Reply = reply };
+                var result = await response.Content.ReadFromJsonAsync<AIChatResponse>();
+                return new AIChatResponse { Reply = result?.Reply ?? "Je n'ai pas pu générer de réponse." };
             }
             
-            return new AIChatResponse { Reply = "Je suis l'IA médicale. (Réponse simulée, MS1 non connecté)." };
+            return new AIChatResponse { Reply = "Je suis l'IA médicale. (Erreur de communication avec le modèle expert)." };
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Erreur chat IA");
-            return new AIChatResponse { Reply = "Je rencontre actuellement des difficultés à me connecter à mon serveur d'intelligence artificielle sur le port 8001." };
+            return new AIChatResponse { Reply = "Je rencontre actuellement des difficultés à me connecter à mon serveur d'intelligence artificielle sur le port 8000." };
         }
     }
 }

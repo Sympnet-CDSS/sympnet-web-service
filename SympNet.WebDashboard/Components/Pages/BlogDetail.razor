@@ -3,6 +3,7 @@
 @inject HttpClient Http
 @inject IConfiguration Config
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>@(post?.Title ?? "Article") - SympNet</PageTitle>
 
@@ -113,6 +114,19 @@
         {
             var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
             post = await Http.GetFromJsonAsync<BlogPost>($"{baseUrl}/api/blogposts/{Id}");
+            
+            if (post != null)
+            {
+                // Track view if not already viewed in this session
+                var sessionKey = $"viewed_blog_{Id}";
+                var alreadyViewed = await JS.InvokeAsync<string>("sessionStorage.getItem", sessionKey);
+                
+                if (string.IsNullOrEmpty(alreadyViewed))
+                {
+                    await Http.PostAsync($"{baseUrl}/api/blogposts/{Id}/increment-view", null);
+                    await JS.InvokeVoidAsync("sessionStorage.setItem", sessionKey, "true");
+                }
+            }
         }
         catch (Exception ex) { Console.WriteLine($"Error: {ex.Message}"); }
     }

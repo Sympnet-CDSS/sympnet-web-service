@@ -15,7 +15,7 @@ public class Doctor
     public string Address { get; set; } = string.Empty;
     public double? Latitude { get; set; }
     public double? Longitude { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  // ← AJOUTÉ
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  
     public int TotalConsultations { get; set; } = 0;
     public int TotalPatients { get; set; } = 0;
     

@@ -48,74 +48,166 @@
     .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 32px; }
     .stat-card { 
         background: white; 
-        border-radius: 24px; 
-        padding: 24px; 
-        border: 1px solid rgba(13,148,136,0.1);
-        transition: all 0.3s;
+        border-radius: 28px; 
+        padding: 28px; 
+        border: 1px solid rgba(13,148,136,0.05);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         cursor: pointer;
         position: relative;
         overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.01);
     }
-    .stat-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: linear-gradient(90deg, #0D9488, #14B8A6);
-        transform: scaleX(0);
-        transition: transform 0.3s;
+    .stat-card:hover { 
+        transform: translateY(-6px); 
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 10px 10px -5px rgba(0, 0, 0, 0.02);
+        border-color: rgba(13,148,136,0.2);
     }
-    .stat-card:hover::before { transform: scaleX(1); }
-    .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1); }
     .stat-icon { 
-        width: 52px; 
-        height: 52px; 
-        border-radius: 16px; 
+        width: 56px; 
+        height: 56px; 
+        border-radius: 18px; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
-        margin-bottom: 16px; 
+        margin-bottom: 20px;
+        transition: 0.3s;
     }
-    .stat-icon svg { width: 26px; height: 26px; }
-    .stat-icon.doctors { background: rgba(13,148,136,0.12); color: #0D9488; }
-    .stat-icon.patients { background: rgba(16,185,129,0.12); color: #10B981; }
-    .stat-icon.users { background: rgba(59,130,246,0.12); color: #3B82F6; }
-    .stat-icon.active { background: rgba(34,197,94,0.12); color: #22C55E; }
-    .stat-value { font-size: 36px; font-weight: 800; color: #1F2937; margin-bottom: 4px; }
-    .stat-label { font-size: 14px; color: #6B7280; }
-    .stat-trend { font-size: 12px; display: flex; align-items: center; gap: 4px; margin-top: 8px; }
-    .stat-trend.up { color: #10B981; }
-    .stat-trend.down { color: #EF4444; }
+    .stat-card:hover .stat-icon { transform: scale(1.1) rotate(5deg); }
+    .stat-icon svg { width: 28px; height: 28px; }
+    .stat-icon.doctors { background: linear-gradient(135deg, #F0FDFA, #CCFBF1); color: #0D9488; }
+    .stat-icon.patients { background: linear-gradient(135deg, #F0FDF4, #DCFCE7); color: #10B981; }
+    .stat-icon.users { background: linear-gradient(135deg, #EFF6FF, #DBEAFE); color: #3B82F6; }
+    .stat-icon.active { background: linear-gradient(135deg, #F0FDF4, #DCFCE7); color: #22C55E; }
+    .stat-value { font-size: 38px; font-weight: 800; color: #0F172A; margin-bottom: 4px; letter-spacing: -1px; }
+    .stat-label { font-size: 14px; font-weight: 600; color: #64748B; }
+    .stat-trend { font-size: 12px; font-weight: 700; display: flex; align-items: center; gap: 4px; margin-top: 12px; padding: 4px 8px; border-radius: 8px; width: fit-content; }
+    .stat-trend.up { background: #ECFDF5; color: #059669; }
+    .stat-trend.down { background: #FEF2F2; color: #DC2626; }
     
     /* Charts Grid */
     .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
-    .chart-card { background: white; border-radius: 24px; padding: 24px; border: 1px solid rgba(13,148,136,0.1); }
-    .chart-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: #1F2937; }
-    .chart-title svg { width: 20px; height: 20px; color: #0D9488; }
+    .chart-card { 
+        background: white; 
+        border-radius: 28px; 
+        padding: 32px; 
+        border: 1px solid rgba(13,148,136,0.05); 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+    }
+    .chart-title { font-size: 18px; font-weight: 800; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; color: #0F172A; }
+    .chart-title svg { width: 22px; height: 22px; color: #0D9488; }
     
     /* Progress Bar */
-    .progress-bar { background: #E5E7EB; border-radius: 10px; height: 8px; overflow: hidden; }
-    .progress-fill { background: linear-gradient(90deg, #0D9488, #14B8A6); height: 100%; border-radius: 10px; transition: width 0.5s; }
+    .progress-bar { background: #F1F5F9; border-radius: 12px; height: 10px; overflow: hidden; position: relative; }
+    .progress-fill { 
+        background: linear-gradient(90deg, #0D9488, #14B8A6); 
+        height: 100%; 
+        border-radius: 12px; 
+        transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); 
+        position: relative;
+    }
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0) 100%);
+        animation: shimmer 2s infinite;
+    }
+    @@keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
     
     /* Users Table */
-    .users-card { background: white; border-radius: 24px; border: 1px solid rgba(13,148,136,0.1); overflow: hidden; margin-bottom: 32px; }
-    .users-header { padding: 20px 24px; border-bottom: 1px solid #E5E7EB; display: flex; justify-content: space-between; align-items: center; }
-    .users-header h3 { font-size: 18px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; }
-    .users-header a { color: #0D9488; text-decoration: none; font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 4px; }
-    .user-item { padding: 16px 24px; border-bottom: 1px solid #F3F4F6; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s; }
-    .user-item:hover { background: #F9FAFB; }
-    .user-info { display: flex; align-items: center; gap: 12px; flex: 1; }
-    .user-avatar { width: 44px; height: 44px; border-radius: 12px; background: linear-gradient(135deg, #0D9488, #14B8A6); display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 16px; }
-    .user-details h4 { font-size: 15px; font-weight: 700; margin: 0; color: #1F2937; }
-    .user-details p { font-size: 12px; color: #6B7280; margin: 2px 0 0; }
-    .user-status { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .status-active { background: #D1FAE5; color: #10B981; }
-    .status-inactive { background: #FEE2E2; color: #EF4444; }
-    .user-role { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; background: #EFF6FF; color: #3B82F6; }
-    .user-role.doctor { background: #E6F8F7; color: #0D9488; }
-    .user-role.patient { background: #F0FDF4; color: #10B981; }
+    .users-card { 
+        background: white; 
+        border-radius: 28px; 
+        border: 1px solid rgba(13,148,136,0.08); 
+        overflow: hidden; 
+        box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+        display: flex;
+        flex-direction: column;
+    }
+    .users-header { 
+        padding: 24px 28px; 
+        border-bottom: 1px solid #F1F5F9; 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        background: #FAFAFA;
+    }
+    .users-header h3 { 
+        font-size: 17px; 
+        font-weight: 800; 
+        margin: 0; 
+        display: flex; 
+        align-items: center; 
+        gap: 12px; 
+        color: #0F172A;
+    }
+    .users-header h3 svg { color: #0D9488; }
+    .users-header a { 
+        color: #0D9488; 
+        text-decoration: none; 
+        font-size: 13px; 
+        font-weight: 700; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center; 
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 10px;
+        transition: 0.2s;
+    }
+    .users-header a:hover { background: rgba(13,148,136,0.08); transform: translateX(2px); }
+    
+    .user-list { padding: 0; }
+    .user-item { 
+        padding: 18px 28px; 
+        border-bottom: 1px solid #F8FAFC; 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        transition: all 0.2s; 
+        cursor: pointer;
+    }
+    .user-item:last-child { border-bottom: none; }
+    .user-item:hover { background: #F8FBFA; padding-left: 32px; }
+    
+    .user-info { display: flex; align-items: center; gap: 16px; flex: 1; }
+    .user-avatar { 
+        width: 48px; 
+        height: 48px; 
+        border-radius: 14px; 
+        background: linear-gradient(135deg, #0D9488, #14B8A6); 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        color: white; 
+        font-weight: 800; 
+        font-size: 16px;
+        box-shadow: 0 4px 10px rgba(13,148,136,0.15);
+    }
+    .user-avatar.notif {
+        background: #F0FDFA;
+        color: #0D9488;
+        box-shadow: none;
+        border: 1px solid #CCFBF1;
+    }
+    
+    .user-details h4 { font-size: 15px; font-weight: 800; margin: 0; color: #1E293B; }
+    .user-details p { font-size: 13px; color: #64748B; margin: 3px 0 0; line-height: 1.4; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    
+    .status-badges { display: flex; align-items: center; gap: 8px; }
+    .user-status { padding: 5px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+    .status-active { background: #ECFDF5; color: #10B981; }
+    .status-inactive { background: #FEF2F2; color: #EF4444; }
+    .status-new { background: #FFFBEB; color: #D97706; }
+    .status-read { background: #F8FAFC; color: #94A3B8; }
+    
+    .user-role { padding: 5px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid transparent; }
+    .role-doctor { background: #F0FDF4; color: #16A34A; border-color: #DCFCE7; }
+    .role-patient { background: #F0F9FF; color: #0284C7; border-color: #E0F2FE; }
+    .role-admin { background: #F5F3FF; color: #7C3AED; border-color: #EDE9FE; }
     
     /* Spinner */
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 400px; flex-direction: column; gap: 20px; }
@@ -283,94 +375,100 @@
             <div class="users-card">
             <div class="users-header">
                 <h3>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
                         <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
                     </svg>
                     Notifications récentes
                 </h3>
                 <a @onclick='() => Navigation.NavigateTo("/admin/notifications")'>
-                    Voir tout
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    Explorer
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                 </a>
             </div>
-            @if (recentNotifications.Any())
-            {
-                @foreach (var notif in recentNotifications)
+            <div class="user-list">
+                @if (recentNotifications.Any())
                 {
-                    <div class="user-item" @onclick="() => ViewNotif(notif)" style="cursor: pointer;">
-                        <div class="user-info">
-                            <div class="user-avatar" style="background: rgba(13,148,136,0.1); color: #0D9488;">
-                                <i class="fas fa-info-circle"></i>
+                    @foreach (var notif in recentNotifications)
+                    {
+                        <div class="user-item" @onclick="() => ViewNotif(notif)">
+                            <div class="user-info">
+                                <div class="user-avatar notif">
+                                    <i class="fas fa-bell"></i>
+                                </div>
+                                <div class="user-details">
+                                    <h4>@notif.Title</h4>
+                                    <p>@notif.Message</p>
+                                </div>
                             </div>
-                            <div class="user-details">
-                                <h4>@notif.Title</h4>
-                                <p>@notif.Message</p>
+                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                                <span class="user-status @(notif.IsRead ? "status-read" : "status-new")">
+                                    @if (!notif.IsRead) { <span style="width: 6px; height: 6px; background: #D97706; border-radius: 50%;"></span> }
+                                    @(notif.IsRead ? "Archives" : "Nouveau")
+                                </span>
+                                <span style="font-size: 11px; font-weight: 600; color: #94A3B8;">@notif.CreatedAt.ToString("HH:mm")</span>
                             </div>
                         </div>
-                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                            <span class="user-status @(notif.IsRead ? "status-active" : "status-inactive")" style="background: @(notif.IsRead ? "#F3F4F6" : "#FEF3C7"); color: @(notif.IsRead ? "#6B7280" : "#D97706");">
-                                @(notif.IsRead ? "Lu" : "Nouveau")
-                            </span>
-                            <span style="font-size: 11px; color: #9CA3AF;">@notif.CreatedAt.ToString("g")</span>
-                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <i class="far fa-bell-slash" style="font-size: 32px; margin-bottom: 12px; opacity: 0.3;"></i>
+                        <p style="color: #94A3B8; font-weight: 500;">Aucune alerte pour le moment</p>
                     </div>
                 }
-            }
-            else
-            {
-                <div class="empty-state" style="padding: 40px;">
-                    <i class="far fa-bell-slash" style="font-size: 32px; margin-bottom: 12px; opacity: 0.5;"></i>
-                    <p>Aucune notification récente</p>
-                </div>
-            }
+            </div>
             </div>
 
             <!-- Recent Users -->
             <div class="users-card" style="margin-bottom: 0;">
             <div class="users-header">
                 <h3>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                         <circle cx="12" cy="7" r="4"/>
                     </svg>
                     Derniers utilisateurs
                 </h3>
                 <a @onclick="GoToDoctors">
-                    Voir tout
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+                    Gérer
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                 </a>
             </div>
-            @if (recentUsers.Any())
-            {
-                @foreach (var user in recentUsers)
+            <div class="user-list">
+                @if (recentUsers.Any())
                 {
-                    <div class="user-item">
-                        <div class="user-info">
-                            <div class="user-avatar">@user.Initial</div>
-                            <div class="user-details">
-                                <h4>@user.Name</h4>
-                                <p>@user.Email</p>
+                    @foreach (var user in recentUsers)
+                    {
+                        <div class="user-item">
+                            <div class="user-info">
+                                <div class="user-avatar @(user.Role.ToLower())">@user.Initial</div>
+                                <div class="user-details">
+                                    <h4>@user.Name</h4>
+                                    <p>@user.Email</p>
+                                </div>
+                            </div>
+                            <div class="status-badges">
+                                <span class="user-role role-@(user.Role.ToLower())">
+                                    @(user.Role == "Doctor" ? "Médecin" : (user.Role == "Patient" ? "Patient" : "Admin"))
+                                </span>
+                                <span class="user-status @(user.IsActive ? "status-active" : "status-inactive")">
+                                    <span style="width: 6px; height: 6px; background: currentColor; border-radius: 50%;"></span>
+                                    @(user.IsActive ? "En ligne" : "Hors ligne")
+                                </span>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <span class="user-role @(user.Role == "Doctor" ? "doctor" : (user.Role == "Patient" ? "patient" : ""))">
-                                @(user.Role == "Doctor" ? "Médecin" : (user.Role == "Patient" ? "Patient" : "Admin"))
-                            </span>
-                            <span class="user-status @(user.IsActive ? "status-active" : "status-inactive")">
-                                @(user.IsActive ? "Actif" : "Inactif")
-                            </span>
-                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="opacity: 0.3;"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <p style="color: #94A3B8; font-weight: 500;">Aucun utilisateur inscrit</p>
                     </div>
                 }
-            }
-            else
-            {
-                <div class="empty-state" style="padding: 40px;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                    <p>Aucun utilisateur récent</p>
-                </div>
-            }
+            </div>
             </div>
         </div>
     }

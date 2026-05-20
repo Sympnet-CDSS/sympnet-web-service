@@ -185,11 +185,11 @@ public class AdminController : ControllerBase
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
-        var totalUsers = await _db.Users.CountAsync();
+        var totalUsers = await _db.Users.CountAsync(u => u.Role != "Admin");
         var totalDoctors = await _db.Users.CountAsync(u => u.Role == "Doctor");
         var totalPatients = await _db.Users.CountAsync(u => u.Role == "Patient");
         var totalAdmins = await _db.Users.CountAsync(u => u.Role == "Admin");
-        var activeUsers = await _db.Users.CountAsync(u => u.IsActive);
+        var activeUsers = await _db.Users.CountAsync(u => u.IsActive && u.Role != "Admin");
         var inactiveUsers = totalUsers - activeUsers;
 
         // Stats par mois (pour le graphique)
