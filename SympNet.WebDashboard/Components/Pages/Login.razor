@@ -264,8 +264,15 @@ a{text-decoration:none;color:inherit}
 
             if (!response.IsSuccessStatusCode)
             {
-                var json = JsonDocument.Parse(data);
-                errorMsg = json.RootElement.TryGetProperty("message", out var msg) ? msg.GetString() : "Identifiants incorrects.";
+                try
+                {
+                    var json = JsonDocument.Parse(data);
+                    errorMsg = json.RootElement.TryGetProperty("message", out var msg) ? msg.GetString() : "Identifiants incorrects.";
+                }
+                catch (JsonException)
+                {
+                    errorMsg = $"Erreur {(int)response.StatusCode}: Le serveur API est injoignable ou l'URL Ngrok est invalide.";
+                }
                 return;
             }
 

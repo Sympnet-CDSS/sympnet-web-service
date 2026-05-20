@@ -37,15 +37,51 @@
                 <div class="card premium-card">
                     <h3><i class="fas fa-user-injured"></i> Informations Patient</h3>
                     <div class="form-group">
-                        <label>Sélectionner le patient *</label>
-                        <select class="form-control" @bind="selectedPatientId">
-                            <option value="0">-- Choisir un patient --</option>
-                            @foreach (var patient in patients)
-                            {
-                                <option value="@patient.Id">@patient.FirstName @patient.LastName</option>
-                            }
-                        </select>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <label style="margin:0;">Sélection du patient *</label>
+                            <button class="btn-text" @onclick="() => isNewPatientMode = !isNewPatientMode" type="button">
+                                <i class="fas @(isNewPatientMode ? "fa-list" : "fa-user-plus")"></i> 
+                                @(isNewPatientMode ? "Choisir existant" : "Nouveau patient")
+                            </button>
+                        </div>
+
+                        @if (isNewPatientMode)
+                        {
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+                                <div class="form-group" style="margin:0;">
+                                    <input type="text" class="form-control" @bind="newPatientName" placeholder="Nom complet" />
+                                </div>
+                                <div class="form-group" style="margin:0;">
+                                    <input type="email" class="form-control" @bind="newPatientEmail" placeholder="Email du patient" />
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <select class="form-control" @onchange="OnPatientSelected">
+                                <option value="0">-- Choisir un patient --</option>
+                                @foreach (var patient in patients)
+                                {
+                                    <option value="@patient.Id">@patient.FirstName @patient.LastName</option>
+                                }
+                            </select>
+                        }
                     </div>
+
+                    @if (currentPatient != null && (!string.IsNullOrEmpty(currentPatient.Allergies) || !string.IsNullOrEmpty(currentPatient.ChronicDiseases)))
+                    {
+                        <div class="patient-alert-box">
+                            <div class="alert-title"><i class="fas fa-exclamation-circle"></i> Rappel Médical</div>
+                            @if (!string.IsNullOrEmpty(currentPatient.Allergies))
+                            {
+                                <div class="alert-item"><strong>Allergies:</strong> @currentPatient.Allergies</div>
+                            }
+                            @if (!string.IsNullOrEmpty(currentPatient.ChronicDiseases))
+                            {
+                                <div class="alert-item"><strong>Maladies Chroniques:</strong> @currentPatient.ChronicDiseases</div>
+                            }
+                        </div>
+                    }
                 </div>
 
                 <!-- 2. Motif et Symptômes -->
@@ -249,6 +285,9 @@
 
     .btn-icon-danger { background: #FEF2F2; color: #EF4444; width: 36px; height: 36px; padding: 0; justify-content: center; border-radius: 10px; }
     .btn-icon-danger:hover { background: #EF4444; color: white; }
+    
+    .btn-text { background: none; border: none; color: var(--primary); font-size: 13px; font-weight: 700; padding: 4px 8px; cursor: pointer; }
+    .btn-text:hover { text-decoration: underline; }
 
     .editor-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
     @@media (max-width: 992px) { .editor-grid { grid-template-columns: 1fr; } }
@@ -313,6 +352,19 @@
 
     .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: var(--text-muted); }
     .spinner { width: 40px; height: 40px; border: 3px solid #E2E8F0; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px; }
+    
+    .patient-alert-box { 
+        background: #FFFBEB; 
+        border: 1px solid #F59E0B; 
+        border-radius: 12px; 
+        padding: 16px; 
+        margin-top: 16px; 
+        animation: slideDown 0.3s ease-out;
+    }
+    .alert-title { color: #D97706; font-weight: 700; font-size: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .patient-alert-box .alert-item { font-size: 13px; color: #92400E; margin-bottom: 4px; }
+    
+    @@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     @@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 
@@ -324,8 +376,12 @@
     private bool isSaving = false;
     private bool isRecording = false;
     private bool isCheckingAI = false;
+    private bool isNewPatientMode = false;
 
     private int selectedPatientId = 0;
+    private string newPatientName = "";
+    private string newPatientEmail = "";
+    private PatientDto? currentPatient = null;
     private string diagnosis = "";
     private string symptoms = "";
     private string notes = "";
@@ -363,6 +419,26 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task OnPatientSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int id))
+        {
+            selectedPatientId = id;
+            if (id > 0)
+            {
+                var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                
+                currentPatient = await Http.GetFromJsonAsync<PatientDto>($"{baseUrl}/api/doctorpatients/{id}");
+            }
+            else
+            {
+                currentPatient = null;
+            }
         }
     }
 
@@ -431,7 +507,12 @@
             {
                 PatientId = selectedPatientId.ToString(),
                 Diagnosis = diagnosis,
-                Medications = medications
+                Medications = medications,
+                PatientHistory = new {
+                    Allergies = currentPatient?.Allergies ?? "",
+                    ChronicConditions = currentPatient?.ChronicDiseases ?? "",
+                    CurrentMedications = currentPatient?.CurrentMedications ?? ""
+                }
             };
 
             var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
@@ -469,14 +550,39 @@
 
     private async Task SaveAll()
     {
-        if (selectedPatientId == 0 || string.IsNullOrWhiteSpace(diagnosis))
+        if (!isNewPatientMode && selectedPatientId == 0)
         {
-            await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un patient et saisir un diagnostic.");
+            await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un patient.");
             return;
         }
 
-        var selectedPatient = patients.FirstOrDefault(p => p.Id == selectedPatientId);
-        if (selectedPatient == null) return;
+        if (isNewPatientMode && (string.IsNullOrWhiteSpace(newPatientName) || string.IsNullOrWhiteSpace(newPatientEmail)))
+        {
+            await JS.InvokeVoidAsync("alert", "Veuillez saisir le nom et l'email du nouveau patient.");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(diagnosis))
+        {
+            await JS.InvokeVoidAsync("alert", "Veuillez saisir un diagnostic.");
+            return;
+        }
+
+        string pName = "";
+        string pEmail = "";
+
+        if (isNewPatientMode)
+        {
+            pName = newPatientName;
+            pEmail = newPatientEmail;
+        }
+        else
+        {
+            var selectedPatient = patients.FirstOrDefault(p => p.Id == selectedPatientId);
+            if (selectedPatient == null) return;
+            pName = $"{selectedPatient.FirstName} {selectedPatient.LastName}";
+            pEmail = selectedPatient.Email;
+        }
 
         isSaving = true;
         StateHasChanged();
@@ -490,8 +596,8 @@
             // 1. Sauvegarder la Consultation
             var consultationReq = new
             {
-                patientName = $"{selectedPatient.FirstName} {selectedPatient.LastName}",
-                patientEmail = selectedPatient.Email,
+                patientName = pName,
+                patientEmail = pEmail,
                 symptoms = symptoms,
                 diagnosis = diagnosis,
                 recommendations = "Saisie manuelle",
@@ -512,7 +618,7 @@
             {
                 var ordReq = new
                 {
-                    PatientId = selectedPatientId,
+                    PatientId = createdCons.PatientId, // Utiliser l'ID retourné par la création de consultation
                     ConsultationId = createdCons.ConsultationId,
                     Diagnosis = diagnosis,
                     MedicationsJson = JsonSerializer.Serialize(medications),
@@ -556,6 +662,10 @@
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
         public string Email { get; set; } = "";
+        public string Allergies { get; set; } = "";
+        public string MedicalHistory { get; set; } = "";
+        public string ChronicDiseases { get; set; } = "";
+        public string CurrentMedications { get; set; } = "";
     }
 
     public class MedicationDto
@@ -583,5 +693,6 @@
     public class ConsultationResultDto
     {
         public int ConsultationId { get; set; }
+        public int PatientId { get; set; }
     }
 }

@@ -18,11 +18,15 @@ namespace SympNet.WebApi.Controllers
     {
         private readonly AppDbContext _db;
         private readonly IHubContext<SympNet.WebApi.Hubs.ChatHub> _hub;
+        private readonly IHubContext<SympNet.WebApi.Hubs.NotificationHub> _notificationHub;
 
-        public ChatController(AppDbContext db, IHubContext<SympNet.WebApi.Hubs.ChatHub> hub) 
+        public ChatController(AppDbContext db, 
+            IHubContext<SympNet.WebApi.Hubs.ChatHub> hub,
+            IHubContext<SympNet.WebApi.Hubs.NotificationHub> notificationHub) 
         {
             _db = db;
             _hub = hub;
+            _notificationHub = notificationHub;
         }
 
         private Guid CurrentUserId =>
@@ -39,6 +43,7 @@ namespace SympNet.WebApi.Controllers
                 .Where(c => c.DoctorId == userId || c.PatientId == userId)
                 .Select(c => new
                 {
+                    Id = c.Id,
                     OtherUserId = c.DoctorId == userId ? c.PatientId : c.DoctorId,
                     LastMessage = c.Messages.OrderByDescending(m => m.SentAt).Select(m => m.Content).FirstOrDefault(),
                     LastMessageAt = c.LastMessageAt ?? c.CreatedAt,
@@ -52,12 +57,14 @@ namespace SympNet.WebApi.Controllers
                 var otherUser = await _db.Users.FindAsync(conv.OtherUserId);
                 result.Add(new
                 {
+                    Id = conv.Id,
                     conv.OtherUserId,
                     OtherUserName = otherUser?.FullName ?? "Utilisateur",
+                    OtherUserAvatar = otherUser?.PhotoUrl,
                     conv.LastMessage,
                     conv.LastMessageAt,
                     conv.UnreadCount,
-                    IsOnline = false
+                    IsOnline = SympNet.WebApi.Hubs.ChatHub.IsUserOnline(conv.OtherUserId.ToString())
                 });
             }
             
@@ -82,17 +89,18 @@ namespace SympNet.WebApi.Controllers
 
             _db.Conversations.Add(conv);
             await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetMessages), new { otherUserId = dto.PatientId == CurrentUserId ? dto.DoctorId : dto.PatientId }, conv);
+            return CreatedAtAction(nameof(GetMessages), new { id = dto.PatientId == CurrentUserId ? dto.DoctorId : dto.PatientId }, conv);
         }
 
-        // GET: api/chat/conversations/{otherUserId}/messages
-        [HttpGet("conversations/{otherUserId}/messages")]
-        public async Task<IActionResult> GetMessages(Guid otherUserId, int page = 1, int pageSize = 30)
+        // GET: api/chat/conversations/{id}/messages
+        [HttpGet("conversations/{id}/messages")]
+        public async Task<IActionResult> GetMessages(Guid id, int page = 1, int pageSize = 30)
         {
             var userId = CurrentUserId;
             var conv = await _db.Conversations
-                .FirstOrDefaultAsync(c => (c.DoctorId == userId && c.PatientId == otherUserId) || 
-                                          (c.DoctorId == otherUserId && c.PatientId == userId));
+                .FirstOrDefaultAsync(c => (c.Id == id && (c.DoctorId == userId || c.PatientId == userId)) || 
+                                          (c.DoctorId == userId && c.PatientId == id) || 
+                                          (c.DoctorId == id && c.PatientId == userId));
             if (conv == null) return NotFound();
 
             var messages = await _db.ChatMessages
@@ -160,15 +168,33 @@ namespace SympNet.WebApi.Controllers
             conversation.LastMessageAt = DateTime.UtcNow;
             await _db.SaveChangesAsync();
             
-            // Broadcast via SignalR directly to ReceiverId
+            var senderName = senderUser?.FullName ?? "Utilisateur";
+
+            // ✅ UNSEUL BROADCAST : au groupe de la conversation
+            await _hub.Clients.Group($"consultation_{conversation.Id}")
+                .SendAsync("ReceiveMessage", senderId.ToString(), senderName, message.SenderRole, message.Content, false, message.SentAt.ToString("o"));
+            
+            // ✅ Notifier spécifiquement l'autre utilisateur via son groupe personnel au cas où il n'est pas dans le salon
             await _hub.Clients.User(dto.ReceiverId.ToString())
-                .SendAsync("ReceiveMessage",
-                    senderId.ToString(),
-                    senderUser?.FullName ?? "Utilisateur",
-                    message.SenderRole,
-                    message.Content,
-                    false, // isVoice
-                    message.SentAt.ToString("o"));
+                .SendAsync("ReceiveMessage", senderId.ToString(), senderName, message.SenderRole, message.Content, false, message.SentAt.ToString("o"));
+
+            // ✅ Real-time notifications for the dashboard (Match Dashboard.razor format)
+            var notifData = new
+            {
+                id = 0,
+                title = $"Nouveau message de {senderName}",
+                message = dto.Content,
+                appointmentId = 0,
+                isUrgent = false,
+                sentAt = DateTime.UtcNow,
+                type = "CHAT"
+            };
+
+            await _notificationHub.Clients.Group($"user_{dto.ReceiverId}")
+                .SendAsync("ReceiveNotification", notifData);
+            
+            await _notificationHub.Clients.Group($"doctor_user_{dto.ReceiverId}")
+                .SendAsync("ReceiveNotification", notifData);
             
             return Ok(new
             {
@@ -196,19 +222,34 @@ namespace SympNet.WebApi.Controllers
             return Ok(new { unreadCount });
         }
 
-        // GET: api/chat/calls/history
-        [HttpGet("calls/history")]
-        public async Task<IActionResult> GetCallHistory()
+        // POST: api/chat/conversations/{id}/read
+        [HttpPost("conversations/{id}/read")]
+        public async Task<IActionResult> MarkConversationAsRead(Guid id)
         {
             var userId = CurrentUserId;
-            var calls = await _db.VideoCallSessions
-                .Where(s => s.InitiatorId == userId || s.ReceiverId == userId)
-                .OrderByDescending(s => s.StartedAt)
-                .Take(50)
+            var messages = await _db.ChatMessages
+                .Where(m => m.ConversationId == id && m.SenderId != userId && !m.IsRead)
                 .ToListAsync();
 
-            return Ok(calls);
+            if (messages.Any())
+            {
+                foreach (var msg in messages)
+                {
+                    msg.IsRead = true;
+                }
+                await _db.SaveChangesAsync();
+                
+                var conv = await _db.Conversations.FindAsync(id);
+                if (conv != null)
+                {
+                    var otherUserId = userId == conv.DoctorId ? conv.PatientId : conv.DoctorId;
+                    await _hub.Clients.User(otherUserId.ToString()).SendAsync("MessagesRead", id.ToString());
+                }
+            }
+            return Ok();
         }
+
+
     }
 
     // DTOs

@@ -73,14 +73,21 @@
                     <div class="info-value">@(string.IsNullOrEmpty(licenseNumber) ? "12345-TN" : licenseNumber)</div>
                 </div>
                 <div class="info-item">
-                    <label>Années d'expérience</label>
-                    <div class="info-value">15 ans</div>
+                    <label>Année de diplôme</label>
+                    <div class="info-value">@(graduationYear.HasValue ? graduationYear.Value.ToString() : "—")</div>
                 </div>
                 <div class="info-item">
                     <label>Langues</label>
                     <div class="info-value">Français, Arabe, Anglais</div>
                 </div>
             </div>
+        </div>
+
+        <div class="profile-card">
+            <h3>À propos</h3>
+            <p style="font-size: 14px; color: #4B5563; line-height: 1.6;">
+                @(string.IsNullOrEmpty(bio) ? "Aucune description fournie." : bio)
+            </p>
         </div>
 
         <div class="profile-card">
@@ -147,7 +154,9 @@
                     <div class="form-group"><label>Email</label><input type="email" @bind="email" disabled class="disabled-input" /></div>
                     <div class="form-group"><label>Spécialité</label><input type="text" @bind="speciality" /></div>
                     <div class="form-group"><label>Numéro d'ordre (RPPS)</label><input type="text" @bind="licenseNumber" /></div>
+                    <div class="form-group"><label>Année de diplôme</label><input type="number" @bind="graduationYear" /></div>
                     <div class="form-group"><label>Adresse du cabinet</label><textarea rows="2" @bind="address"></textarea></div>
+                    <div class="form-group"><label>À propos (Bio)</label><textarea rows="3" @bind="bio"></textarea></div>
                 </div>
 
                 <div class="form-section">
@@ -486,6 +495,8 @@
     private string speciality = "";
     private string licenseNumber = "";
     private string address = "";
+    private string bio = "";
+    private int? graduationYear = null;
     private string currentPassword = "";
     private string newPassword = "";
     private string confirmPassword = "";
@@ -522,6 +533,8 @@
                     speciality = profile.Speciality;
                     licenseNumber = profile.LicenseNumber;
                     address = profile.Address ?? "";
+                    bio = profile.Bio ?? "";
+                    graduationYear = profile.GraduationYear;
                     photoUrl = profile.PhotoUrl ?? "";
                     StateHasChanged();
                 }
@@ -556,7 +569,9 @@
                 LastName = lastName,
                 Speciality = speciality,
                 LicenseNumber = licenseNumber,
-                Address = address
+                Address = address,
+                Bio = bio,
+                GraduationYear = graduationYear
             });
 
             if (!updateResponse.IsSuccessStatusCode)
@@ -664,6 +679,8 @@
         public string Speciality { get; set; } = "";
         public string LicenseNumber { get; set; } = "";
         public string Address { get; set; } = "";
+        public string Bio { get; set; } = "";
+        public int? GraduationYear { get; set; }
         public string PhotoUrl { get; set; } = "";
     }
 }

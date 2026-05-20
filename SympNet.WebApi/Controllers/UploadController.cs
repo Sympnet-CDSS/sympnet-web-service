@@ -44,34 +44,20 @@ public class UploadController : ControllerBase
         if (user == null)
             return NotFound(new { message = "Utilisateur non trouvé" });
 
-        var uploadsFolder = Path.Combine(_env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot"), "uploads", "avatars");
-        if (!Directory.Exists(uploadsFolder))
-            Directory.CreateDirectory(uploadsFolder);
-
-        var uniqueFileName = $"{userId}_{Guid.NewGuid()}{extension}";
-        var filePath = Path.Combine(uploadsFolder, uniqueFileName);
-
-        using (var fileStream = new FileStream(filePath, FileMode.Create))
+        using (var memoryStream = new MemoryStream())
         {
-            await file.CopyToAsync(fileStream);
+            await file.CopyToAsync(memoryStream);
+            var fileBytes = memoryStream.ToArray();
+            var base64String = Convert.ToBase64String(fileBytes);
+            
+            // Format de type de contenu pour être consistant et directement affichable
+            var photoUrl = $"data:{file.ContentType};base64,{base64String}";
+            
+            user.PhotoUrl = photoUrl;
+            await _db.SaveChangesAsync();
+
+            return Ok(new { photoUrl = photoUrl, message = "Photo mise à jour avec succès" });
         }
-
-        // Supprimer l'ancienne photo si elle existe
-        if (!string.IsNullOrEmpty(user.PhotoUrl))
-        {
-            var oldFileName = Path.GetFileName(new Uri(user.PhotoUrl).LocalPath);
-            var oldFilePath = Path.Combine(uploadsFolder, oldFileName);
-            if (System.IO.File.Exists(oldFilePath))
-            {
-                System.IO.File.Delete(oldFilePath);
-            }
-        }
-
-        var photoUrl = $"{Request.Scheme}://{Request.Host}/uploads/avatars/{uniqueFileName}";
-        user.PhotoUrl = photoUrl;
-        await _db.SaveChangesAsync();
-
-        return Ok(new { photoUrl = photoUrl, message = "Photo mise à jour avec succès" });
     }
 
     [HttpPost("blog-image")]

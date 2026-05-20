@@ -138,7 +138,9 @@
                             </div>
                         }
 
-                        <button class="btn-primary w-100 mt-4"><i class="fas fa-file-pdf"></i> Télécharger l'ordonnance</button>
+                        <a href="@GetDownloadUrl()" target="_blank" class="btn-primary w-100 mt-4">
+                            <i class="fas fa-file-pdf"></i> Télécharger l'ordonnance
+                        </a>
                     </div>
                 }
                 else
@@ -182,7 +184,7 @@
     
     .status-badge { display: inline-flex; align-items: center; gap: 6px; background: #ECFDF5; color: #10B981; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600; }
     
-    .btn-primary { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(13,148,136,0.2); }
+    .btn-primary { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(13,148,136,0.2); text-decoration: none; }
     .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(13,148,136,0.3); }
     
     .btn-secondary { background: #FFFFFF; color: var(--text-main); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 12px; font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
@@ -242,6 +244,12 @@
     private OrdonnanceDto? ordonnance;
     private bool isLoading = true;
     private bool isEditing = false;
+
+    private string GetDownloadUrl()
+    {
+        var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+        return $"{baseUrl}/api/ordonnances/{ordonnance?.Id}/pdf?format=print";
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
