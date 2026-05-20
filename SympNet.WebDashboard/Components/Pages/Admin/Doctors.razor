@@ -180,10 +180,14 @@
                     <div class="form-group"><label>Prénom</label><input type="text" @bind="newDoctor.FirstName" /></div>
                     <div class="form-group"><label>Nom</label><input type="text" @bind="newDoctor.LastName" /></div>
                 </div>
-                <div class="form-group"><label>Email</label><input type="email" @bind="newDoctor.Email" /></div>
-                <div class="form-group"><label>Spécialité</label><select @bind="newDoctor.Speciality"><option>Médecine Générale</option><option>Cardiologie</option><option>Dermatologie</option><option>Neurologie</option><option>Pédiatrie</option></select></div>
-                <div class="form-group"><label>RPPS</label><input type="text" @bind="newDoctor.LicenseNumber" /></div>
-                <div class="form-group"><label>Adresse</label><textarea rows="2" @bind="newDoctor.Address"></textarea></div>
+                <div class="form-row">
+                    <div class="form-group"><label>Email</label><input type="email" @bind="newDoctor.Email" /></div>
+                    <div class="form-group"><label>Téléphone</label><input type="tel" @bind="newDoctor.PhoneNumber" /></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Spécialité</label><select @bind="newDoctor.Speciality"><option>Médecine Générale</option><option>Cardiologie</option><option>Dermatologie</option><option>Neurologie</option><option>Pédiatrie</option></select></div>
+                    <div class="form-group"><label>RPPS</label><input type="text" @bind="newDoctor.LicenseNumber" /></div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" @onclick="() => showModal = false">Annuler</button>
@@ -448,6 +452,7 @@ private void OpenConfirmModalForDelete(int id, string? firstName, string lastNam
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
         public string Speciality { get; set; } = "";
+        public string PhoneNumber { get; set; } = "";
         public string LicenseNumber { get; set; } = "";
         public string Address { get; set; } = "";
         public DateTime CreatedAt { get; set; }
@@ -459,6 +464,7 @@ private void OpenConfirmModalForDelete(int id, string? firstName, string lastNam
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
         public string Speciality { get; set; } = "Médecine Générale";
+        public string PhoneNumber { get; set; } = "";
         public string LicenseNumber { get; set; } = "";
         public string Address { get; set; } = "";
     }

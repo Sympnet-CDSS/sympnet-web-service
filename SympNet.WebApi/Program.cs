@@ -181,6 +181,7 @@ CREATE TABLE IF NOT EXISTS ""NewsletterSubscribers"" (
 );
 ALTER TABLE ""Doctors"" ADD COLUMN IF NOT EXISTS ""Bio"" text;
 ALTER TABLE ""Doctors"" ADD COLUMN IF NOT EXISTS ""GraduationYear"" integer;
+ALTER TABLE ""Doctors"" ADD COLUMN IF NOT EXISTS ""PhoneNumber"" text;
 ");
     }
     catch (Exception ex)
