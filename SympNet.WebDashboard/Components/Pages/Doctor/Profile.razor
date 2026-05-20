@@ -4,6 +4,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject IConfiguration Config
+@implements IDisposable
 
 <PageTitle>SympNet — Mon profil</PageTitle>
 
@@ -139,28 +140,43 @@
     <div class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Modifier le profil</h3>
+                <h3><i class="fas fa-user-edit" style="color:#0D9488; margin-right:8px;"></i> Modifier le profil</h3>
                 <button class="close-btn" @onclick="() => showEditModal = false">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
             </div>
             <div class="modal-body">
                 <div class="form-section">
-                    <div class="form-section-title">Informations personnelles</div>
+                    <div class="form-section-title"><i class="fas fa-id-card"></i> Informations personnelles</div>
                     <div class="form-row">
                         <div class="form-group"><label>Prénom</label><input type="text" @bind="firstName" /></div>
                         <div class="form-group"><label>Nom</label><input type="text" @bind="lastName" /></div>
                     </div>
-                    <div class="form-group"><label>Email</label><input type="email" @bind="email" disabled class="disabled-input" /></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Email</label><input type="email" @bind="email" disabled class="disabled-input" /></div>
+                        <div class="form-group"><label>Numéro de téléphone</label><input type="tel" @bind="phoneNumber" /></div>
+                    </div>
                     <div class="form-group"><label>Spécialité</label><input type="text" @bind="speciality" /></div>
                     <div class="form-group"><label>Numéro d'ordre (RPPS)</label><input type="text" @bind="licenseNumber" /></div>
                     <div class="form-group"><label>Année de diplôme</label><input type="number" @bind="graduationYear" /></div>
-                    <div class="form-group"><label>Adresse du cabinet</label><textarea rows="2" @bind="address"></textarea></div>
+                    <div class="form-group">
+                        <label>Adresse du cabinet</label>
+                        <button type="button" class="btn-locate-me" @onclick="LocateMe" disabled="@isLocating">
+                            @if (isLocating) {
+                                <span class="spinner" style="width:18px; height:18px;"></span><span class="btn-text">Localisation en cours...</span>
+                            } else {
+                                <span class="icon-circle"><i class="fas fa-map-marker-alt"></i></span>
+                                <span class="btn-text">Utiliser ma position actuelle</span>
+                            }
+                        </button>
+                        <textarea rows="2" @bind="address" id="cabinetAddress"></textarea>
+                        <div id="map" style="height: 250px; width: 100%; margin-top: 10px; border-radius: 8px; display: none; z-index: 1;"></div>
+                    </div>
                     <div class="form-group"><label>À propos (Bio)</label><textarea rows="3" @bind="bio"></textarea></div>
                 </div>
 
                 <div class="form-section">
-                    <div class="form-section-title">Sécurité</div>
+                    <div class="form-section-title"><i class="fas fa-lock"></i> Sécurité</div>
                     <div class="form-group"><label>Mot de passe actuel</label><input type="password" @bind="currentPassword" placeholder="••••••••" /></div>
                     <div class="form-row">
                         <div class="form-group"><label>Nouveau mot de passe</label><input type="password" @bind="newPassword" placeholder="••••••••" /></div>
@@ -397,76 +413,129 @@
         animation: fadeIn 0.2s ease;
     }
     .modal-content {
-        background: white;
-        border-radius: 20px;
+        background: #FAFAFA;
+        border-radius: 24px;
         width: 100%;
-        max-width: 600px;
+        max-width: 680px;
         max-height: 90vh;
         display: flex;
         flex-direction: column;
-        animation: slideUp 0.3s ease;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        box-shadow: 0 24px 48px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.05);
+        overflow: hidden;
     }
     .modal-header {
-        padding: 24px;
+        padding: 24px 32px;
+        background: white;
         border-bottom: 1px solid #E5E7EB;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        z-index: 10;
     }
-    .modal-header h3 { margin: 0; font-size: 18px; font-weight: 700; color: #111827; }
+    .modal-header h3 { margin: 0; font-size: 22px; font-weight: 800; color: #111827; display: flex; align-items: center; }
     .close-btn {
-        background: none; border: none; color: #9CA3AF; cursor: pointer;
-        display: flex; align-items: center; justify-content: center; padding: 4px;
-        border-radius: 50%; transition: 0.2s;
+        background: #F3F4F6; border: none; color: #6B7280; cursor: pointer;
+        display: flex; align-items: center; justify-content: center; padding: 8px;
+        border-radius: 50%; transition: all 0.2s;
     }
-    .close-btn:hover { background: #F3F4F6; color: #111827; }
+    .close-btn:hover { background: #E5E7EB; color: #111827; transform: rotate(90deg); }
     
     .modal-body {
-        padding: 24px;
+        padding: 32px;
         overflow-y: auto;
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
     }
-    .form-section { margin-bottom: 32px; }
-    .form-section:last-child { margin-bottom: 0; }
+    .form-section {
+        background: white;
+        padding: 24px;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        border: 1px solid #E5E7EB;
+    }
     .form-section-title {
-        font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 16px;
-        padding-bottom: 8px; border-bottom: 1px solid #F3F4F6;
+        font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 20px;
+        padding-bottom: 12px; border-bottom: 2px solid #F3F4F6;
+        display: flex; align-items: center; gap: 8px;
     }
-    .form-group { margin-bottom: 16px; }
+    .form-section-title i { color: #0D9488; font-size: 18px; }
+    .form-group { margin-bottom: 20px; }
     .form-group label {
-        display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;
+        display: block; font-size: 14px; font-weight: 600; color: #4B5563; margin-bottom: 8px;
     }
     .form-group input, .form-group textarea {
-        width: 100%; padding: 10px 14px; border: 1px solid #D1D5DB; border-radius: 8px;
-        font-size: 14px; outline: none; transition: 0.2s;
+        width: 100%; padding: 12px 16px; border: 1.5px solid #D1D5DB; border-radius: 12px;
+        font-size: 15px; outline: none; transition: all 0.2s; background: #F9FAFB;
     }
     .form-group input:focus, .form-group textarea:focus {
-        border-color: #0D9488; box-shadow: 0 0 0 3px rgba(13,148,136,0.1);
+        border-color: #0D9488; background: white; box-shadow: 0 0 0 4px rgba(13,148,136,0.1);
     }
-    .disabled-input { background: #F3F4F6; color: #6B7280; cursor: not-allowed; }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .disabled-input { background: #E5E7EB !important; color: #6B7280; cursor: not-allowed; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
     .modal-footer {
-        padding: 20px 24px;
+        padding: 24px 32px;
+        background: white;
         border-top: 1px solid #E5E7EB;
         display: flex;
         justify-content: flex-end;
-        gap: 12px;
+        gap: 16px;
     }
     .btn-cancel {
-        background: white; border: 1px solid #D1D5DB; color: #374151;
-        padding: 10px 20px; border-radius: 8px; font-weight: 600; font-size: 14px;
-        cursor: pointer; transition: 0.2s;
+        background: white; border: 1.5px solid #D1D5DB; color: #374151;
+        padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 15px;
+        cursor: pointer; transition: all 0.2s;
     }
-    .btn-cancel:hover { background: #F9FAFB; }
+    .btn-cancel:hover { background: #F3F4F6; border-color: #9CA3AF; }
     .btn-save {
-        background: #0D9488; color: white; border: none;
-        padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;
-        cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 8px;
+        background: linear-gradient(135deg, #0D9488, #14B8A6); color: white; border: none;
+        padding: 12px 28px; border-radius: 12px; font-weight: 600; font-size: 15px;
+        cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+        box-shadow: 0 4px 12px rgba(13,148,136,0.2);
     }
     .btn-save:hover:not(:disabled) { background: #0F766E; }
     .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-locate-me {
+        background: #108A76;
+        color: white; 
+        border: none; 
+        padding: 10px 20px; 
+        border-radius: 12px;
+        font-size: 15px; 
+        font-weight: 700; 
+        cursor: pointer; 
+        display: flex; 
+        align-items: center;
+        gap: 12px; 
+        margin-bottom: 12px; 
+        width: 100%; 
+        justify-content: center; 
+        transition: all 0.3s ease;
+        box-shadow: 0 8px 24px rgba(16, 138, 118, 0.25);
+    }
+    .btn-locate-me:hover:not(:disabled) { 
+        background: #0E7867; 
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px rgba(16, 138, 118, 0.35);
+    }
+    .btn-locate-me:disabled { opacity: 0.7; cursor: not-allowed; }
+    .btn-locate-me .icon-circle {
+        background: rgba(255, 255, 255, 0.2);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+    }
+    .btn-locate-me .btn-text {
+        letter-spacing: 0.3px;
+    }
 
     .spinner {
         width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3);
@@ -493,6 +562,7 @@
     private string firstName = "";
     private string lastName = "";
     private string speciality = "";
+    private string phoneNumber = "";
     private string licenseNumber = "";
     private string address = "";
     private string bio = "";
@@ -506,6 +576,19 @@
     private bool showEditModal = false;
     private string successMessage = "";
     private string errorMessage = "";
+    
+    private bool isLocating = false;
+    private DotNetObjectReference<Profile>? objRef;
+
+    protected override void OnInitialized()
+    {
+        objRef = DotNetObjectReference.Create(this);
+    }
+
+    public void Dispose()
+    {
+        objRef?.Dispose();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -531,6 +614,7 @@
                     firstName = profile.FirstName;
                     lastName = profile.LastName;
                     speciality = profile.Speciality;
+                    phoneNumber = profile.PhoneNumber ?? "";
                     licenseNumber = profile.LicenseNumber;
                     address = profile.Address ?? "";
                     bio = profile.Bio ?? "";
@@ -568,6 +652,7 @@
                 FirstName = firstName,
                 LastName = lastName,
                 Speciality = speciality,
+                PhoneNumber = phoneNumber,
                 LicenseNumber = licenseNumber,
                 Address = address,
                 Bio = bio,
@@ -626,6 +711,43 @@
         await InvokeAsync(StateHasChanged);
     }
 
+    private async Task LocateMe()
+    {
+        isLocating = true;
+        errorMessage = "";
+        successMessage = "";
+        StateHasChanged();
+        
+        try
+        {
+            var result = await JS.InvokeAsync<LocationResult>("window.initMap", objRef);
+            if(result != null && !string.IsNullOrEmpty(result.Address))
+            {
+                address = result.Address;
+                successMessage = "✓ Adresse détectée automatiquement ! Vous pouvez ajuster le marqueur sur la carte.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur de géolocalisation: {ex.Message}";
+        }
+        finally
+        {
+            isLocating = false;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void UpdateLocation(double lat, double lng, string newAddress)
+    {
+        if(!string.IsNullOrEmpty(newAddress))
+        {
+            address = newAddress;
+            StateHasChanged();
+        }
+    }
+
     private async Task UploadPhoto(InputFileChangeEventArgs e)
     {
         var file = e.File;
@@ -677,10 +799,18 @@
         public string FirstName { get; set; } = "";
         public string LastName { get; set; } = "";
         public string Speciality { get; set; } = "";
+        public string PhoneNumber { get; set; } = "";
         public string LicenseNumber { get; set; } = "";
         public string Address { get; set; } = "";
         public string Bio { get; set; } = "";
         public int? GraduationYear { get; set; }
         public string PhotoUrl { get; set; } = "";
+    }
+
+    public class LocationResult
+    {
+        public double Lat { get; set; }
+        public double Lng { get; set; }
+        public string Address { get; set; } = "";
     }
 }
