@@ -117,6 +117,9 @@ a{text-decoration:none;color:inherit}
 .lerr{padding:11px 14px;background:var(--reb);border:1px solid #FECACA;border-radius:10px;font-size:13px;color:var(--re);display:flex;align-items:center;gap:8px;margin-bottom:12px}
 .lerr svg{width:15px;height:15px;flex-shrink:0}
 
+.btn-return{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ind);margin-bottom:24px;transition:color .2s;text-decoration:none}
+.btn-return:hover{color:var(--bdd)}
+
 @@media(max-width:820px){.ll{display:none}.lr{width:100%}}
 </style>
 
@@ -145,6 +148,11 @@ a{text-decoration:none;color:inherit}
   <!-- RIGHT -->
   <div class="lr">
     <div class="lcard">
+
+      <!-- Return Button -->
+      <a href="/" class="btn-return">
+        <i class="fas fa-arrow-left"></i> Retour à l'accueil
+      </a>
 
       <!-- Role Switch -->
       <div class="role-switch">
@@ -272,12 +280,6 @@ a{text-decoration:none;color:inherit}
             var result = JsonDocument.Parse(data);
             var returnedRole = result.RootElement.GetProperty("role").GetString()?.ToLower();
             var token = result.RootElement.GetProperty("token").GetString();
-
-            if (returnedRole != role)
-            {
-                errorMsg = $"Ce compte est {returnedRole}. Sélectionnez le bon onglet.";
-                return;
-            }
 
             // Stocker le token et le rôle dans localStorage
             await JS.InvokeVoidAsync("localStorage.setItem", "sympnet_token", token);

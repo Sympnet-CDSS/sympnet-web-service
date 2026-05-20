@@ -23,6 +23,7 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetAllUsers()
     {
         var users = await _db.Users
+            .Where(u => u.Email != "sirine.rezgui@ensi-uma.tn")
             .Select(u => new
             {
                 u.Id,
@@ -185,11 +186,13 @@ public class AdminController : ControllerBase
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
-        var totalUsers = await _db.Users.CountAsync(u => u.Role != "Admin");
-        var totalDoctors = await _db.Users.CountAsync(u => u.Role == "Doctor");
-        var totalPatients = await _db.Users.CountAsync(u => u.Role == "Patient");
-        var totalAdmins = await _db.Users.CountAsync(u => u.Role == "Admin");
-        var activeUsers = await _db.Users.CountAsync(u => u.IsActive && u.Role != "Admin");
+        var baseQuery = _db.Users.Where(u => u.Email != "sirine.rezgui@ensi-uma.tn");
+        
+        var totalUsers = await baseQuery.CountAsync(u => u.Role != "Admin");
+        var totalDoctors = await baseQuery.CountAsync(u => u.Role == "Doctor");
+        var totalPatients = await baseQuery.CountAsync(u => u.Role == "Patient");
+        var totalAdmins = await baseQuery.CountAsync(u => u.Role == "Admin");
+        var activeUsers = await baseQuery.CountAsync(u => u.IsActive && u.Role != "Admin");
         var inactiveUsers = totalUsers - activeUsers;
 
         // Stats par mois (pour le graphique)
@@ -198,7 +201,7 @@ public class AdminController : ControllerBase
             .Select(date => new
             {
                 Month = date.ToString("MMM yyyy"),
-                Count = _db.Users.Count(u => u.CreatedAt.Year == date.Year && u.CreatedAt.Month == date.Month)
+                Count = baseQuery.Count(u => u.CreatedAt.Year == date.Year && u.CreatedAt.Month == date.Month)
             })
             .OrderBy(x => x.Month)
             .ToList();

@@ -6,7 +6,7 @@
 <div class="navbar-container">
     <div class="navbar-search">
         <i class="fas fa-search"></i>
-        <input type="text" placeholder="@SearchPlaceholder" @bind="searchQuery" @bind:event="oninput" />
+        <input type="text" placeholder="@SearchPlaceholder" @bind="searchQuery" @bind:event="oninput" @onkeyup="HandleSearch" />
     </div>
 
     <div class="navbar-actions">
@@ -121,6 +121,7 @@
     }
 
     .navbar-actions { display: flex; align-items: center; gap: 24px; }
+    
     .notification-container { position: relative; }
     .notification-icon {
         width: 42px; height: 42px; border-radius: 12px; background: white;
@@ -322,7 +323,14 @@
     private async Task ToggleNotifications()
     {
         showNotifications = !showNotifications;
-        if (showNotifications) await LoadNotifications();
+        if (showNotifications) 
+        {
+            await LoadNotifications();
+            if (IsAdmin && unreadNotifications > 0)
+            {
+                await MarkAllAsRead();
+            }
+        }
     }
 
     private async Task MarkAllAsRead()
@@ -391,6 +399,17 @@
     { 
         showNotifications = false; 
         Navigation.NavigateTo(IsAdmin ? "/admin/notifications" : "/doctor/notifications"); 
+    }
+
+    private void HandleSearch(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(searchQuery))
+        {
+            if (IsAdmin)
+                Navigation.NavigateTo($"/admin/patients"); // On peut ajouter le query param plus tard si on implémente
+            else
+                Navigation.NavigateTo($"/doctor/patients");
+        }
     }
 
     private string GetTimeAgo(DateTime dateTime)

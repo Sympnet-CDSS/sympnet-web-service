@@ -52,7 +52,8 @@ public class DoctorProfileController : ControllerBase
             doctor.TotalConsultations,
             doctor.TotalPatients,
             PhotoUrl = doctor.User.PhotoUrl,
-            IsActive = doctor.User.IsActive
+            IsActive = doctor.User.IsActive,
+            IsAvailable = doctor.IsAvailable
         });
     }
 

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SympNet.WebApi.Models;
 
@@ -18,6 +19,9 @@ public class Doctor
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;  
     public int TotalConsultations { get; set; } = 0;
     public int TotalPatients { get; set; } = 0;
+    
+    [NotMapped]
+    public bool IsAvailable { get; set; } = true;
     
     public Guid UserId { get; set; }
     public User User { get; set; } = null!;

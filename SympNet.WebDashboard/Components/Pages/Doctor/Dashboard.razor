@@ -176,7 +176,7 @@
     .manage-link { color: #0D9488; font-size: 14px; font-weight: 700; text-decoration: none; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 8px; transition: 0.2s; }
     .manage-link:hover { background: rgba(13,148,136,0.05); }
 
-    .highlights-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 32px; }
+    .highlights-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 32px; }
     .highlight-card {
         background: white;
         border-radius: 24px;
@@ -445,6 +445,15 @@ else
                         <p>Consultations</p>
                     </div>
                 </div>
+                <div class="banner-stat-card" style="cursor: pointer;" @onclick="ToggleAvailability">
+                    <div class="banner-stat-icon" style="background: @(isAvailable ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)"); color: @(isAvailable ? "#10B981" : "#EF4444");">
+                        <i class="fas @(isAvailable ? "fa-check-circle" : "fa-times-circle")"></i>
+                    </div>
+                    <div class="banner-stat-info">
+                        <h3>@(isAvailable ? "En Ligne" : "Hors Ligne")</h3>
+                        <p>Disponibilité</p>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -462,10 +471,6 @@ else
                     <div class="highlight-card confirm">
                         <h2>@toConfirmCount</h2>
                         <p>À confirmer</p>
-                    </div>
-                    <div class="highlight-card live">
-                        <h2>@liveSessionsCount</h2>
-                        <p>Téléconsultations</p>
                     </div>
                 </div>
 
@@ -515,10 +520,11 @@ else
                         <div class="calendar-day-name">S</div>
                         <div class="calendar-day-name">D</div>
                         
-                        @for (int i = 1; i <= 30; i++)
+                        @for (int i = 1; i <= DateTime.DaysInMonth(DateTime.Now.Year, DateTime.Now.Month); i++)
                         {
                             bool isToday = i == DateTime.Now.Day;
-                            bool hasEvent = i % 5 == 0;
+                            var currentDate = new DateTime(DateTime.Now.Year, DateTime.Now.Month, i);
+                            bool hasEvent = appointmentDates.Any(d => d.Date == currentDate.Date);
                             <div class="calendar-day @(isToday ? "active" : "") @(hasEvent ? "has-event" : "")">@i</div>
                         }
                     </div>
@@ -539,6 +545,8 @@ else
     private int    patientGrowth      = 0;
     private int    consultationGrowth = 0;
     private bool   isLoading          = true;
+    private bool   isAvailable        = true;
+    private int    doctorId           = 0;
 
     // Nouvelles statistiques pour l'UI
     private int reviewsCount = 0;
@@ -551,6 +559,7 @@ else
     private List<PathologyStat>      topPathologies      = new();
     private List<MonthlyStat>        monthlyActivity     = new();
     private List<RecentConsultation> recentConsultations = new();
+    private List<DateTime>           appointmentDates    = new();
 
     private List<NotificationItem> notifications = new();
     private List<ToastItem>        activeToasts  = new();
@@ -677,6 +686,8 @@ else
             var profile = await Http.GetFromJsonAsync<DoctorProfileDto>($"{baseUrl}/api/doctorprofile");
             if (profile != null)
             {
+                doctorId = profile.Id;
+                isAvailable = profile.IsAvailable;
                 doctorName = $"{profile.FirstName} {profile.LastName}".Trim();
                 if (string.IsNullOrWhiteSpace(doctorName)) doctorName = "Médecin";
             }
@@ -720,6 +731,15 @@ else
                     })
                     .OrderBy(x => x.Order).ToList();
             }
+
+            var appointments = await Http.GetFromJsonAsync<List<DoctorAppointmentDto>>($"{baseUrl}/api/appointments/doctor/{doctorId}");
+            if (appointments != null)
+            {
+                appointmentDates = appointments.Select(a => a.DateTime).ToList();
+                toConfirmCount = appointments.Count(a => a.Status == "En attente");
+                todayConsultations = appointments.Count(a => a.DateTime.Date == DateTime.Today);
+                liveSessionsCount = appointments.Count(a => a.Type == "Teleconsultation" && a.DateTime.Date == DateTime.Today);
+            }
         }
         catch (Exception ex)
         {
@@ -731,6 +751,26 @@ else
     private void GoToPatients()                => Navigation.NavigateTo("/doctor/patients");
     private void GoToConsultations()           => Navigation.NavigateTo("/doctor/consultations");
     private void GoToConsultationDetail(int id)=> Navigation.NavigateTo($"/doctor/consultation/{id}");
+
+    private async Task ToggleAvailability()
+    {
+        isAvailable = !isAvailable;
+        try
+        {
+            await Http.PutAsJsonAsync($"{baseUrl}/api/doctors/{doctorId}/availability", new { IsAvailable = isAvailable });
+            var toastMsg = isAvailable ? "Vous êtes maintenant disponible pour les patients." : "Vous êtes maintenant hors ligne.";
+            activeToasts.Add(new ToastItem { Title = "Statut mis à jour", Message = toastMsg, IsUrgent = false });
+            StateHasChanged();
+            await Task.Delay(3000);
+            activeToasts.RemoveAt(activeToasts.Count - 1);
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("console.error", $"Erreur update dispo: {ex.Message}");
+            isAvailable = !isAvailable; // rollback
+        }
+    }
 
     private string GetMonthName(int m) => m switch
     {
@@ -745,12 +785,13 @@ else
     }
 
     // ── DTOs ──────────────────────────────────────────────────────────────────
-    public class DoctorProfileDto    { public string FirstName { get; set; } = ""; public string LastName { get; set; } = ""; }
+    public class DoctorProfileDto    { public int Id { get; set; } public string FirstName { get; set; } = ""; public string LastName { get; set; } = ""; public bool IsAvailable { get; set; } }
     public class StatsDto            { public int totalPatients { get; set; } public int todayConsultations { get; set; } public int totalConsultations { get; set; } }
     public class ConsultationFullDto { public int Id { get; set; } public string PatientName { get; set; } = ""; public string Diagnosis { get; set; } = ""; public double? ConfidenceScore { get; set; } public DateTime CreatedAt { get; set; } }
     public class PathologyStat       { public string Name { get; set; } = ""; public int Count { get; set; } }
     public class MonthlyStat         { public string Name { get; set; } = ""; public int Count { get; set; } public int Order { get; set; } }
     public class RecentConsultation  { public int Id { get; set; } public string PatientName { get; set; } = ""; public string Diagnosis { get; set; } = ""; public double ConfidenceScore { get; set; } public DateTime CreatedAt { get; set; } }
+    public class DoctorAppointmentDto { public int Id { get; set; } public DateTime DateTime { get; set; } public string Status { get; set; } = ""; public string Type { get; set; } = ""; }
 
     public class NotificationItem
     {

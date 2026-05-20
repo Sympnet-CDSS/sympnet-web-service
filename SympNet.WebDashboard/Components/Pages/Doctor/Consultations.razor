@@ -42,9 +42,9 @@
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
                 <input type="text" placeholder="Rechercher par patient ou diagnostic..." @bind="searchTerm" @bind:event="oninput" />
             </div>
-            <button class="filter-btn">
+            <button class="filter-btn" @onclick="ToggleFilter">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                Filtrer
+                Trier: @(sortAscending ? "Plus ancien" : "Plus récent")
             </button>
         </div>
 
@@ -288,14 +288,24 @@
     private void GoToNewConsultation() => Navigation.NavigateTo("/doctor/consultations/new");
     private void GoToConsultation(int id) => Navigation.NavigateTo($"/doctor/consultation/{id}");
 
-    // Note: Ne répète pas la consultation pour le même patient si souhaité
-    // Dans la consigne, il était mentionné de ne pas répéter la card (maintenant c'est une liste).
-    // Affichons toutes les consultations, mais on peut les grouper par patient si on veut.
-    private List<ConsultationDto> filteredConsultations => consultations
-        .Where(c => string.IsNullOrEmpty(searchTerm) ||
-                   c.PatientName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
-                   c.Diagnosis.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
-        .ToList();
+    private bool sortAscending = false;
+
+    private List<ConsultationDto> filteredConsultations 
+    {
+        get 
+        {
+            var query = consultations.Where(c => string.IsNullOrEmpty(searchTerm) ||
+                       c.PatientName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                       (!string.IsNullOrEmpty(c.Diagnosis) && c.Diagnosis.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)));
+            
+            return sortAscending ? query.OrderBy(c => c.CreatedAt).ToList() : query.OrderByDescending(c => c.CreatedAt).ToList();
+        }
+    }
+
+    private void ToggleFilter()
+    {
+        sortAscending = !sortAscending;
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
