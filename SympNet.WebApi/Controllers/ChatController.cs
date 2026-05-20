@@ -63,7 +63,7 @@ namespace SympNet.WebApi.Controllers
                     conv.LastMessage,
                     conv.LastMessageAt,
                     conv.UnreadCount,
-                    IsOnline = false
+                    IsOnline = SympNet.WebApi.Hubs.ChatHub.IsUserOnline(conv.OtherUserId.ToString())
                 });
             }
             
@@ -221,19 +221,7 @@ namespace SympNet.WebApi.Controllers
             return Ok(new { unreadCount });
         }
 
-        // GET: api/chat/calls/history
-        [HttpGet("calls/history")]
-        public async Task<IActionResult> GetCallHistory()
-        {
-            var userId = CurrentUserId;
-            var calls = await _db.VideoCallSessions
-                .Where(s => s.InitiatorId == userId || s.ReceiverId == userId)
-                .OrderByDescending(s => s.StartedAt)
-                .Take(50)
-                .ToListAsync();
 
-            return Ok(calls);
-        }
     }
 
     // DTOs

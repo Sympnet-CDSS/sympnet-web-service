@@ -13,11 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("SympNet.WebDashboard")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-<<<<<<< HEAD
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+64c88e3dd64baf46e1caabb97ca8d48ce9fe4a28")]
-=======
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+87ed6706ed82620312c4f39992ff5261adfe2569")]
->>>>>>> b1def7a5680c01836b76b5e6d36a61d314977bf4
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+b2fbed551997d95e49f9c8b85356d9fbef40922e")]
 [assembly: System.Reflection.AssemblyProductAttribute("SympNet.WebDashboard")]
 [assembly: System.Reflection.AssemblyTitleAttribute("SympNet.WebDashboard")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

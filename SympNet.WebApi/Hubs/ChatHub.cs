@@ -16,11 +16,50 @@ public class ChatHub : Hub
         _notificationHub = notificationHub;
     }
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.HashSet<string>> _onlineUsers = 
+        new System.Collections.Concurrent.ConcurrentDictionary<string, System.Collections.Generic.HashSet<string>>();
+
+    public static bool IsUserOnline(string userId)
+    {
+        return _onlineUsers.TryGetValue(userId, out var connections) && connections.Count > 0;
+    }
+
     public override async Task OnConnectedAsync()
     {
         var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.User?.FindFirst("sub")?.Value;
-        Console.WriteLine($" SignalR connected: {userId}");
+        if (!string.IsNullOrEmpty(userId))
+        {
+            var connections = _onlineUsers.GetOrAdd(userId, _ => new System.Collections.Generic.HashSet<string>());
+            lock (connections)
+            {
+                connections.Add(Context.ConnectionId);
+            }
+            Console.WriteLine($"[SignalR] User connected: {userId} (connections: {connections.Count})");
+            await Clients.All.SendAsync("UserOnline", userId);
+        }
         await base.OnConnectedAsync();
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.User?.FindFirst("sub")?.Value;
+        if (!string.IsNullOrEmpty(userId))
+        {
+            if (_onlineUsers.TryGetValue(userId, out var connections))
+            {
+                lock (connections)
+                {
+                    connections.Remove(Context.ConnectionId);
+                }
+                Console.WriteLine($"[SignalR] User disconnected: {userId} (connections remaining: {connections.Count})");
+                if (connections.Count == 0)
+                {
+                    _onlineUsers.TryRemove(userId, out _);
+                    await Clients.All.SendAsync("UserOffline", userId);
+                }
+            }
+        }
+        await base.OnDisconnectedAsync(exception);
     }
 
     //  Consultation rooms 
@@ -153,51 +192,7 @@ public class ChatHub : Hub
     }
 }
 
-    //  WebRTC Signaling 
 
-    public async Task SendOffer(string targetUserId, string sdp)
-    {
-        var callerId   = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var callerName = Context.User?.FindFirst(ClaimTypes.Name)?.Value;
-        var sessionId  = Guid.NewGuid().ToString();
-
-        Console.WriteLine($"[SignalR] SendOffer from {callerId} to {targetUserId}. Session: {sessionId}");
-
-        await Clients.User(targetUserId).SendAsync("IncomingCall", sessionId, callerId, callerName, sdp);
-
-        // ✅ Notifier également via le Hub de Notifications pour faire "sonner" le dashboard/mobile
-        var callNotif = new
-        {
-            id            = 0,
-            title         = $"Appel entrant de {callerName}",
-            message       = "Téléconsultation lancée",
-            appointmentId = 0,
-            isUrgent      = true,
-            sentAt        = DateTime.UtcNow,
-            type          = "VIDEO_CALL",
-            sessionId     = sessionId,
-            callerId      = callerId
-        };
-        await _notificationHub.Clients.Group($"user_{targetUserId}").SendAsync("ReceiveNotification", callNotif);
-        await _notificationHub.Clients.Group($"doctor_user_{targetUserId}").SendAsync("ReceiveNotification", callNotif);
-    }
-
-    public async Task AcceptCall(string targetUserId, string sessionId)
-    {
-        await Clients.User(targetUserId).SendAsync("CallAccepted", sessionId);
-    }
-
-    public async Task SendAnswer(string targetUserId, string sdp)
-    {
-        var answererId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        await Clients.User(targetUserId).SendAsync("ReceiveAnswer", answererId, sdp);
-    }
-
-    public async Task SendIceCandidate(string targetUserId, string candidate, string sdpMid, int sdpMLineIndex)
-    {
-        var senderId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        await Clients.User(targetUserId).SendAsync("ReceiveIceCandidate", senderId, candidate, sdpMid, sdpMLineIndex);
-    }
 
     public async Task MarkAsRead(string conversationId)
     {
@@ -226,13 +221,5 @@ public class ChatHub : Hub
         }
     }
 
-    public async Task RejectCall(string targetUserId, string sessionId)
-    {
-        await Clients.User(targetUserId).SendAsync("CallRejected", sessionId);
-    }
 
-    public async Task EndCall(string targetUserId, string sessionId)
-    {
-        await Clients.User(targetUserId).SendAsync("CallEnded", sessionId);
-    }
 }

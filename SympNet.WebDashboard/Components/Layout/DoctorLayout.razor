@@ -28,7 +28,7 @@
         font-size: 20px; color: white;
     }
     .doctor-logo-text h2 {
-        font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;
+        font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 800;
         background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         margin: 0;
@@ -98,9 +98,7 @@
         <span class="badge">@unreadCount</span>
     }
 </div>
-<div class="doctor-nav-item @(IsActive("/doctor/video-call") ? "active" : "")" @onclick="GoToVideoCall">
-    <i class="fas fa-video"></i><span>Téléconsultation</span>
-</div>
+
             <div class="doctor-nav-label">Planification</div>
 <div class="doctor-nav-item @(IsActive("/doctor/agenda") ? "active" : "")" @onclick="GoToAgenda">
     <i class="fas fa-calendar-alt"></i><span>Mon agenda</span>
@@ -138,29 +136,7 @@
     <ChatbotBubble />
 </div>
 
-@if (showCallModal)
-{
-    <div class="call-overlay" style="position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 10001; display: flex; align-items: center; justify-content: center;">
-        <div class="call-modal" style="background: white; border-radius: 24px; padding: 40px; width: 400px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
-            <div class="call-avatar" style="width: 100px; height: 100px; background: #0D9488; border-radius: 50%; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; color: white; font-size: 40px;">
-                <i class="fas fa-user"></i>
-            </div>
-            <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Appel Entrant</h3>
-            <p style="color: #6B7280; margin-bottom: 32px;">Le patient <strong>@incomingCallerName</strong> souhaite démarrer la téléconsultation.</p>
-            
-            <div style="display: flex; gap: 16px; justify-content: center;">
-                <button @onclick="RejectIncomingCall" style="flex: 1; padding: 14px; background: #FEE2E2; color: #EF4444; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
-                    <i class="fas fa-times"></i> Refuser
-                </button>
-                <button @onclick="AcceptIncomingCall" style="flex: 1; padding: 14px; background: #0D9488; color: white; border: none; border-radius: 12px; font-weight: 600; cursor: pointer;">
-                    <i class="fas fa-phone"></i> Répondre
-                </button>
-            </div>
-        </div>
-    </div>
-    
-    <audio id="ringtone" autoplay loop src="/sounds/ringtone.mp3" style="display:none;"></audio>
-}
+
 
 <div class="toast-container" style="position: fixed; bottom: 30px; right: 30px; z-index: 10000; display: flex; flex-direction: column; gap: 12px;">
     @foreach (var toast in toasts)
@@ -185,12 +161,7 @@
     private List<ToastMessage> toasts = new();
     private int nextToastId = 1;
     
-    // Call UI State
-    private bool showCallModal = false;
-    private string incomingCallerName = "";
-    private string incomingSessionId = "";
-    private string incomingCallerId = "";
-    private string incomingSdp = "";
+
 
     public class ToastMessage
     {
@@ -304,8 +275,7 @@ private async Task InitializeSignalR(string token)
         await _hubConnection.StartAsync();
         Console.WriteLine("DoctorLayout NotificationHub connected");
 
-        // ✅ Aussi se connecter au ChatHub pour les appels entrants partout
-        await InitializeChatHub(token);
+
     }
     catch (Exception ex)
     {
@@ -313,58 +283,7 @@ private async Task InitializeSignalR(string token)
     }
 }
 
-private async Task InitializeChatHub(string token)
-{
-    try
-    {
-        var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
-        _chatHubConnection = new HubConnectionBuilder()
-            .WithUrl($"{baseUrl}/hubs/chat", options =>
-            {
-                options.AccessTokenProvider = () => Task.FromResult(token)!;
-            })
-            .WithAutomaticReconnect()
-            .Build();
 
-        _chatHubConnection.On<string, string, string, string>("IncomingCall", (sessionId, callerId, callerName, sdp) =>
-        {
-            if (Navigation.Uri.Contains("/doctor/video-call")) return;
-
-            incomingSessionId = sessionId;
-            incomingCallerId = callerId;
-            incomingCallerName = callerName;
-            incomingSdp = sdp;
-            showCallModal = true;
-            InvokeAsync(StateHasChanged);
-        });
-
-        await _chatHubConnection.StartAsync();
-        Console.WriteLine("DoctorLayout ChatHub connected (for calls)");
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine($"Error starting ChatHub in Layout: {ex.Message}");
-    }
-}
-
-private async Task AcceptIncomingCall()
-{
-    showCallModal = false;
-    // ✅ Utiliser sessionStorage pour éviter la troncature de l'SDP dans l'URL
-    await JS.InvokeVoidAsync("sessionStorage.setItem", "pending_sdp", incomingSdp);
-    
-    // Rediriger vers la page d'appel avec les paramètres (sans SDP)
-    Navigation.NavigateTo($"/doctor/video-call?sessionId={incomingSessionId}&callerId={incomingCallerId}");
-}
-
-private async Task RejectIncomingCall()
-{
-    if (_chatHubConnection != null)
-    {
-        await _chatHubConnection.InvokeAsync("RejectCall", incomingCallerId, incomingSessionId);
-    }
-    showCallModal = false;
-}
 private async Task LoadUnreadCount()
 {
     var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
@@ -405,7 +324,7 @@ private async Task LoadUnreadCount()
     private void GoToProfile() => Navigation.NavigateTo("/doctor/profile");
     private void GoToAgenda() => Navigation.NavigateTo("/doctor/agenda");
     private void GoToChat() => Navigation.NavigateTo("/doctor/chat");
-    private void GoToVideoCall() => Navigation.NavigateTo("/doctor/video-call");
+
     private void GoToManageBlogs() => Navigation.NavigateTo("/doctor/manage-blogs");
 
     private async Task Logout()

@@ -523,9 +523,7 @@
                     </div>
                 </div>
                 <div class="chat-actions">
-                    <button class="chat-action-btn" @onclick="StartVideoCall" title="Appel vidéo">
-                        <i class="fas fa-video"></i>
-                    </button>
+
                     <button class="chat-action-btn" @onclick="ClearHistory" title="Effacer l'historique">
                         <i class="fas fa-trash-alt"></i>
                     </button>
@@ -584,28 +582,7 @@
     }
 </div>
 
-@if (incomingCall != null)
-{
-    <div class="incoming-call-overlay">
-        <div class="incoming-call-modal">
-            <div class="pulse-ring"></div>
-            <div class="caller-avatar">
-                @GetInitials(incomingCall.CallerName)
-            </div>
-            <h3>Appel vidéo entrant</h3>
-            <p>Le patient <strong>@incomingCall.CallerName</strong> vous appelle...</p>
-            
-            <div class="call-actions">
-                <button class="accept-btn" @onclick="AcceptIncomingCall">
-                    <i class="fas fa-video"></i> Accepter
-                </button>
-                <button class="reject-btn" @onclick="RejectIncomingCall">
-                    <i class="fas fa-phone-slash"></i> Refuser
-                </button>
-            </div>
-        </div>
-    </div>
-}
+
 
 @code {
     private List<ConversationDto> conversations = new();
@@ -620,7 +597,7 @@
     private ElementReference messagesContainer;
     private HubConnection? hubConnection;
     private Guid currentUserId;
-    private IncomingCallEvent? incomingCall;
+
 
     private List<ConversationDto> filteredConversations => conversations
         .Where(c => string.IsNullOrEmpty(searchTerm) || 
@@ -745,17 +722,7 @@
                 }
             });
 
-            hubConnection.On<string, string, string, string>("IncomingCall", (sessionId, callerId, callerName, sdp) =>
-            {
-                incomingCall = new IncomingCallEvent
-                {
-                    SessionId = sessionId,
-                    CallerId = callerId,
-                    CallerName = callerName,
-                    Sdp = sdp
-                };
-                InvokeAsync(StateHasChanged);
-            });
+
 
             await hubConnection.StartAsync();
         }
@@ -872,27 +839,7 @@
         }
     }
 
-    private async Task AcceptIncomingCall()
-    {
-        if (incomingCall != null)
-        {
-            // ✅ Utiliser sessionStorage pour éviter la troncature de l'SDP dans l'URL
-            await JS.InvokeVoidAsync("sessionStorage.setItem", "pending_sdp", incomingCall.Sdp);
-            var url = $"/doctor/video-call/{incomingCall.CallerId}?sessionId={incomingCall.SessionId}";
-            incomingCall = null;
-            Navigation.NavigateTo(url);
-        }
-    }
 
-    private async Task RejectIncomingCall()
-    {
-        if (incomingCall != null && hubConnection != null)
-        {
-            await hubConnection.SendAsync("RejectCall", incomingCall.CallerId, incomingCall.SessionId);
-            incomingCall = null;
-            StateHasChanged();
-        }
-    }
 
     private async Task UseQuickReply(string reply)
     {
@@ -934,11 +881,7 @@
         typingTimer.Start();
     }
 
-    private void StartVideoCall()
-    {
-        if (selectedConversation != null)
-            Navigation.NavigateTo($"/doctor/video-call/{selectedConversation.OtherUserId}");
-    }
+
 
     private async Task ClearHistory()
     {
@@ -1004,16 +947,6 @@
         public bool IsMine { get; set; }
         public bool IsRead { get; set; }
     }
-<<<<<<< HEAD
 
-    public class IncomingCallEvent
-    {
-        public string SessionId { get; set; } = "";
-        public string CallerId { get; set; } = "";
-        public string CallerName { get; set; } = "";
-        public string Sdp { get; set; } = "";
-    }
+
 }
-=======
-}
->>>>>>> b1def7a5680c01836b76b5e6d36a61d314977bf4

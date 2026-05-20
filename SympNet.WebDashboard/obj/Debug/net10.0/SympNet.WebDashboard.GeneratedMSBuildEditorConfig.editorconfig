@@ -166,10 +166,6 @@ build_metadata.AdditionalFiles.CssScope =
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcUHJvZmlsZS5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
 
-[C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Doctor/VideoCall.razor]
-build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xEb2N0b3JcVmlkZW9DYWxsLnJhem9y
-build_metadata.AdditionalFiles.CssScope = 
-
 [C:/Users/Yasmine/Documents/Symp/sympnet-web-service/SympNet.WebDashboard/Components/Pages/Error.razor]
 build_metadata.AdditionalFiles.TargetPath = Q29tcG9uZW50c1xQYWdlc1xFcnJvci5yYXpvcg==
 build_metadata.AdditionalFiles.CssScope = 
