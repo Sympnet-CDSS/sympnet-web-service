@@ -113,7 +113,6 @@
     @@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&display=swap');
 
     .notifications-page {
-        max-width: 1000px;
         margin: 0 auto;
         padding: 0 20px 40px;
         font-family: 'Bricolage Grotesque', sans-serif;
@@ -312,7 +311,7 @@
             foreach (var n in notifications) n.IsRead = true;
             ShowToast("Toutes les notifications marquées comme lues", true);
         }
-        catch (Exception ex) { ShowToast("Erreur lors de l'opération", false); }
+        catch (Exception) { ShowToast("Erreur lors de l'opération", false); }
     }
 
     private void ConfirmDelete(int id)
@@ -336,7 +335,7 @@
                 ShowToast("Notification supprimée avec succès", true);
             }
         }
-        catch (Exception ex) { ShowToast("Erreur lors de la suppression", false); }
+        catch (Exception) { ShowToast("Erreur lors de la suppression", false); }
     }
 
     private void ViewDetail(UnifiedNotif notif)
