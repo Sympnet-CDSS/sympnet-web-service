@@ -140,9 +140,6 @@
             <button class="btn-action btn-message" @onclick='() => showReplyForm = !showReplyForm'>
                 <i class="far fa-comment-dots"></i> Envoyer un message
             </button>
-            <button class="btn-action btn-video" @onclick='() => Navigation.NavigateTo("/doctor/video-call")'>
-                <i class="fas fa-video"></i> Démarrer vidéo consultation
-            </button>
         </div>
 
         <!-- Formulaire de Réponse -->
@@ -201,14 +198,13 @@
     .grid-item span { font-size: 14px; font-weight: 700; color: #111827; }
 
     /* Action Buttons */
-    .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 30px; }
+    .action-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 30px; }
     .btn-action { height: 50px; border-radius: 14px; border: none; font-weight: 700; font-size: 15px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; }
     .btn-action:hover { transform: translateY(-2px); opacity: 0.9; }
     
     .btn-accept { background: #10B981; color: white; }
     .btn-refuse { background: white; border: 1px solid #FECACA; color: #EF4444; }
     .btn-message { background: #0D9488; color: white; }
-    .btn-video { background: #2563EB; color: white; }
 
     /* Reply Section */
     .reply-section h4 { font-size: 16px; font-weight: 800; color: #111827; margin: 0 0 16px; }

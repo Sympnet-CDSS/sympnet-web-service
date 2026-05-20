@@ -19,6 +19,7 @@ public class PatientDto
     public DateTime CreatedAt { get; set; }
     public bool IsActive { get; set; }
     public int ConsultationCount { get; set; }
+    public string? PhotoUrl { get; set; }
 }
 
 public class UpdatePatientDto
@@ -35,6 +36,7 @@ public class UpdatePatientDto
     public List<string>? ChronicConditions { get; set; }
     public List<string>? CurrentMedications { get; set; }
     public string? EmergencyContact { get; set; }
+    public string? PhotoUrl { get; set; }
 }
 
 public class CreatePatientDto

@@ -9,18 +9,23 @@ public class NotificationHub : Hub
 {
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+                  ?? Context.User?.FindFirst("sub")?.Value;
         var role = Context.User?.FindFirst(ClaimTypes.Role)?.Value;
 
-        if (userId != null)
+        if (!string.IsNullOrEmpty(userId))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
 
-            if (role == "Doctor")
+            if (role != null && role.Equals("Doctor", StringComparison.OrdinalIgnoreCase))
+            {
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"doctor_user_{userId}");
+            }
 
             if (role == "Admin")
+            {
                 await Groups.AddToGroupAsync(Context.ConnectionId, "admins");
+            }
         }
 
         await base.OnConnectedAsync();

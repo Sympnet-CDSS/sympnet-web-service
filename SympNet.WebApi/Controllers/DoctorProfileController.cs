@@ -46,6 +46,8 @@ public class DoctorProfileController : ControllerBase
             doctor.LastName,
             doctor.Speciality,
             doctor.LicenseNumber,
+            doctor.Bio,
+            doctor.GraduationYear,
             doctor.Address,
             doctor.Latitude,
             doctor.Longitude,
@@ -91,6 +93,8 @@ public class DoctorProfileController : ControllerBase
         if (!string.IsNullOrEmpty(dto.LastName)) doctor.LastName = dto.LastName;
         if (!string.IsNullOrEmpty(dto.Speciality)) doctor.Speciality = dto.Speciality;
         if (!string.IsNullOrEmpty(dto.LicenseNumber)) doctor.LicenseNumber = dto.LicenseNumber;
+        if (dto.Bio != null) doctor.Bio = dto.Bio;
+        if (dto.GraduationYear.HasValue) doctor.GraduationYear = dto.GraduationYear.Value;
         if (!string.IsNullOrEmpty(dto.Address)) doctor.Address = dto.Address;
         
         await _db.SaveChangesAsync();

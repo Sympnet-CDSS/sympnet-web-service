@@ -32,12 +32,15 @@ public class DoctorsController : ControllerBase
             .Select(d => new DoctorDto
             {
                 Id = d.Id,
+                UserId = d.UserId,
                 Email = d.User.Email,
                 IsActive = d.User.IsActive,
                 FirstName = d.FirstName,
                 LastName = d.LastName,
                 Speciality = d.Speciality,
                 LicenseNumber = d.LicenseNumber,
+                Bio = d.Bio,
+                GraduationYear = d.GraduationYear,
                 Address = d.Address,
                 Latitude = d.Latitude ?? 0,
                 Longitude = d.Longitude ?? 0,
@@ -53,6 +56,59 @@ public class DoctorsController : ControllerBase
             .ToListAsync();
 
         return Ok(doctors);
+    }
+
+    // GET: api/doctors/{id}
+    [AllowAnonymous]
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetDoctorById(int id)
+    {
+        var doctor = await _db.Doctors
+            .Include(d => d.User)
+            .FirstOrDefaultAsync(d => d.Id == id);
+
+        if (doctor == null) return NotFound(new { message = "Médecin non trouvé" });
+
+        var ratings = await _db.DoctorRatings
+            .Where(r => r.DoctorId == id && r.IsModerated)
+            .Join(_db.Patients, r => r.PatientId, p => p.Id, (r, p) => new { r, p })
+            .Join(_db.Users, rp => rp.p.UserId, u => u.Id, (rp, u) => new DoctorRatingDto
+            {
+                Id = rp.r.Id,
+                Score = rp.r.Score,
+                Comment = rp.r.Comment,
+                PatientName = u.FullName,
+                CreatedAt = rp.r.CreatedAt
+            })
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+
+        var averageRating = ratings.Any() ? ratings.Average(r => (double)r.Score) : 0;
+
+        var result = new DoctorProfileDto
+        {
+            Id = doctor.Id,
+            UserId = doctor.UserId,
+            Email = doctor.User.Email,
+            IsActive = doctor.User.IsActive,
+            FirstName = doctor.FirstName,
+            LastName = doctor.LastName,
+            Speciality = doctor.Speciality,
+            LicenseNumber = doctor.LicenseNumber,
+            Bio = doctor.Bio,
+            GraduationYear = doctor.GraduationYear,
+            Address = doctor.Address,
+            Latitude = doctor.Latitude ?? 0,
+            Longitude = doctor.Longitude ?? 0,
+            CreatedAt = doctor.CreatedAt,
+            IsAvailable = doctor.IsAvailable,
+            PhotoUrl = doctor.User.PhotoUrl,
+            AverageRating = averageRating,
+            TotalRatings = ratings.Count,
+            Ratings = ratings
+        };
+
+        return Ok(result);
     }
 
     // POST: api/doctors

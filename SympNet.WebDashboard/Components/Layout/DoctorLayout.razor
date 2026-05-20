@@ -28,7 +28,7 @@
         font-size: 20px; color: white;
     }
     .doctor-logo-text h2 {
-        font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700;
+        font-family: 'Bricolage Grotesque', sans-serif; font-size: 26px; font-weight: 800;
         background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent;
         margin: 0;
@@ -98,9 +98,7 @@
         <span class="badge">@unreadCount</span>
     }
 </div>
-<div class="doctor-nav-item @(IsActive("/doctor/video-call") ? "active" : "")" @onclick="GoToVideoCall">
-    <i class="fas fa-video"></i><span>Téléconsultation</span>
-</div>
+
             <div class="doctor-nav-label">Planification</div>
 <div class="doctor-nav-item @(IsActive("/doctor/agenda") ? "active" : "")" @onclick="GoToAgenda">
     <i class="fas fa-calendar-alt"></i><span>Mon agenda</span>
@@ -138,6 +136,8 @@
     <ChatbotBubble />
 </div>
 
+
+
 <div class="toast-container" style="position: fixed; bottom: 30px; right: 30px; z-index: 10000; display: flex; flex-direction: column; gap: 12px;">
     @foreach (var toast in toasts)
     {
@@ -157,8 +157,11 @@
     private string doctorSpeciality = "Médecin généraliste";
     private int unreadCount = 0; 
     private HubConnection? _hubConnection;
+    private HubConnection? _chatHubConnection;
     private List<ToastMessage> toasts = new();
     private int nextToastId = 1;
+    
+
 
     public class ToastMessage
     {
@@ -255,14 +258,32 @@ private async Task InitializeSignalR(string token)
             });
         });
 
+        _hubConnection.On<JsonElement>("ReceiveNotification", (notif) =>
+        {
+            var title = notif.TryGetProperty("title", out var t) ? t.GetString() : "Notification";
+            var message = notif.TryGetProperty("message", out var m) ? m.GetString() : "";
+            var type = notif.TryGetProperty("type", out var ty) ? ty.GetString() : "info";
+
+            InvokeAsync(() =>
+            {
+                ShowToast(title ?? "Notification", message ?? "", type == "VIDEO_CALL" ? "warning" : "info");
+                _ = LoadUnreadCount();
+                StateHasChanged();
+            });
+        });
+
         await _hubConnection.StartAsync();
         Console.WriteLine("DoctorLayout NotificationHub connected");
+
+
     }
     catch (Exception ex)
     {
         Console.WriteLine($"Error starting SignalR: {ex.Message}");
     }
 }
+
+
 private async Task LoadUnreadCount()
 {
     var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
@@ -303,7 +324,7 @@ private async Task LoadUnreadCount()
     private void GoToProfile() => Navigation.NavigateTo("/doctor/profile");
     private void GoToAgenda() => Navigation.NavigateTo("/doctor/agenda");
     private void GoToChat() => Navigation.NavigateTo("/doctor/chat");
-    private void GoToVideoCall() => Navigation.NavigateTo("/doctor/video-call");
+
     private void GoToManageBlogs() => Navigation.NavigateTo("/doctor/manage-blogs");
 
     private async Task Logout()

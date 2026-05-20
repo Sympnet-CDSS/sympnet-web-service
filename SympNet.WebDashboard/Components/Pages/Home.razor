@@ -306,7 +306,7 @@
             {
                 @foreach (var doc in filteredDoctors)
                 {
-                    <div class="doctor-card" @onclick="() => GoToLogin()">
+                    <div class="doctor-card" @onclick="() => GoToDoctorProfile(doc.Id)">
                         <div class="doctor-photo-container">
                             <div class="doctor-top-left-icon"><i class="fas fa-user-md"></i></div>
                             <div class="doctor-status-badge @(doc.IsAvailable ? "available" : "unavailable")">
@@ -502,6 +502,11 @@
         else
             searchSpecialty = spec;
         FilterDoctors();
+    }
+
+    private void GoToDoctorProfile(int id)
+    {
+        Navigation.NavigateTo($"/doctor-profile/{id}");
     }
 
     private void GoToLogin()

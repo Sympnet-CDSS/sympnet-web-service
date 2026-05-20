@@ -180,6 +180,7 @@ public class ConsultationsController : ControllerBase
         return Ok(new { 
             message = "Consultation enregistrée avec succès", 
             consultationId = consultation.Id,
+            patientId = patient.Id,
             patientCreated = patient != null 
         });
     }

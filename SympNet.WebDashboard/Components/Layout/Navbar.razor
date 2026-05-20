@@ -326,7 +326,7 @@
         if (showNotifications) 
         {
             await LoadNotifications();
-            if (IsAdmin && unreadNotifications > 0)
+            if (unreadNotifications > 0)
             {
                 await MarkAllAsRead();
             }

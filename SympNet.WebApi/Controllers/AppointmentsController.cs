@@ -147,6 +147,19 @@ public class AppointmentsController : ControllerBase
         return Ok(appointments);
     }
 
+    // ── GET api/appointments/doctor/{doctorId}/booked-slots ─────────────────────
+    [HttpGet("doctor/{doctorId}/booked-slots")]
+    [Authorize]
+    public async Task<IActionResult> GetBookedSlots(int doctorId)
+    {
+        var bookedSlots = await _db.Appointments
+            .Where(a => a.DoctorId == doctorId && a.Status != "Annulé")
+            .Select(a => a.DateTime)
+            .ToListAsync();
+
+        return Ok(bookedSlots);
+    }
+
     // ── GET api/appointments/confirmed ───────────────────────────────────────
     // ✅ Vérifie si un rendez-vous confirmé existe entre patient et docteur
     [HttpGet("confirmed")]

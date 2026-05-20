@@ -82,6 +82,14 @@
               "target": "Package",
               "version": "[8.0.0, )"
             },
+            "QRCoder": {
+              "target": "Package",
+              "version": "[1.4.3, )"
+            },
+            "QuestPDF": {
+              "target": "Package",
+              "version": "[2024.3.4, )"
+            },
             "Swashbuckle.AspNetCore": {
               "target": "Package",
               "version": "[6.5.0, )"

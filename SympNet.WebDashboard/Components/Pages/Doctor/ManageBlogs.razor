@@ -7,10 +7,12 @@
 
 <div class="manage-blogs-page">
     <div class="page-header">
-        <div class="header-info">
-            <h1>Mes Articles</h1>
-            <p>Gérez et publiez vos articles sur le blog SympNet</p>
-        </div>
+        <h1>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+            </svg>
+            Mes Articles
+        </h1>
         <button class="btn-create" @onclick='() => Navigation.NavigateTo("/doctor/create-blog")'>
             <i class="fas fa-plus"></i> Nouvel Article
         </button>
@@ -134,8 +136,9 @@
 
 <style>
     .manage-blogs-page { animation: fadeIn 0.5s ease-out; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-    .header-info h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; color: #111827; }
+    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 28px; }
+    .page-header h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; color: #1F2937; margin: 0; display: flex; align-items: center; gap: 12px; }
+    .page-header h1 svg { color: #0D9488; }
     .btn-create { background: #0D9488; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; }
     .stats-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
     .stat-card { background: white; padding: 24px; border-radius: 20px; border: 1px solid rgba(13, 148, 136, 0.1); display: flex; align-items: center; gap: 20px; }

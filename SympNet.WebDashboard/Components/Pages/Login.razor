@@ -53,7 +53,6 @@ a{text-decoration:none;color:inherit}
 .ll-nm{font-family:var(--fh);font-size:27px;font-weight:800;color:#fff;letter-spacing:-.5px;line-height:1}
 .ll-tg{font-size:10px;color:rgba(255,255,255,.5);margin-top:4px}
 .ll-center{flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:2}
-.pill-wrap{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:6px 14px 6px 8px;margin-bottom:22px;backdrop-filter:blur(6px)}
 .pill-dot{width:7px;height:7px;border-radius:50%;background:#4ade80}
 .pill-txt{font-size:12px;font-weight:600;color:rgba(255,255,255,.85)}
 .ll-h{font-family:var(--fh);font-size:clamp(36px,4vw,54px);font-weight:800;color:#fff;line-height:1.05;letter-spacing:-1.5px;margin-bottom:16px}
@@ -87,7 +86,7 @@ a{text-decoration:none;color:inherit}
 .rb-icon svg{width:18px;height:18px;color:white}
 .rb-txt{font-size:13px}
 .rb-txt.admin .badge-title{font-weight:700;color:var(--bdd)}
-.rb-txt.doctor .badge-title{font-weight:700;color:#1D4ED8}
+.rb-txt.doctor .badge-title{font-weight:700;color:var(--bdd)}
 .badge-sub{font-size:11.5px;color:var(--inf);margin-top:2px}
 
 .form-title{font-family:var(--fh);font-size:24px;font-weight:800;color:var(--ink);letter-spacing:-.6px;margin-bottom:4px}
@@ -134,7 +133,6 @@ a{text-decoration:none;color:inherit}
       <div><div class="ll-nm">SympNet</div><div class="ll-tg">Système Intelligent de Support Décisionnel Clinique</div></div>
     </div>
     <div class="ll-center">
-      <div class="pill-wrap"><div class="pill-dot"></div><span class="pill-txt" id="pill-txt">Admin Portal</span></div>
       <h1 class="ll-h">Platform<br/><em>Control</em><br/>Center</h1>
       <p class="ll-p">Gérez les médecins, supervisez la plateforme et surveillez l'activité clinique de SympNet.</p>
       <div class="feats">
@@ -272,8 +270,15 @@ a{text-decoration:none;color:inherit}
 
             if (!response.IsSuccessStatusCode)
             {
-                var json = JsonDocument.Parse(data);
-                errorMsg = json.RootElement.TryGetProperty("message", out var msg) ? msg.GetString() : "Identifiants incorrects.";
+                try
+                {
+                    var json = JsonDocument.Parse(data);
+                    errorMsg = json.RootElement.TryGetProperty("message", out var msg) ? msg.GetString() : "Identifiants incorrects.";
+                }
+                catch (JsonException)
+                {
+                    errorMsg = $"Erreur {(int)response.StatusCode}: Le serveur API est injoignable ou l'URL Ngrok est invalide.";
+                }
                 return;
             }
 

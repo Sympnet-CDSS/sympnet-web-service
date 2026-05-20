@@ -32,16 +32,4 @@ namespace SympNet.WebApi.Models
         // Navigation
         public Conversation? Conversation { get; set; }
     }
-
-    public class VideoCallSession
-    {
-        public Guid Id { get; set; } = Guid.NewGuid();
-        public Guid ConversationId { get; set; }
-        public Guid InitiatorId { get; set; }
-        public Guid ReceiverId { get; set; }
-        public string Status { get; set; } = "pending"; // pending | active | ended | missed
-        public DateTime StartedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? EndedAt { get; set; }
-        public int? DurationSeconds { get; set; }
-    }
 }

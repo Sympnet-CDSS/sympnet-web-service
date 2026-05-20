@@ -16,7 +16,6 @@ public class AppDbContext : DbContext
     public DbSet<BlockedSlot> BlockedSlots => Set<BlockedSlot>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
-    public DbSet<VideoCallSession> VideoCallSessions => Set<VideoCallSession>();
     public DbSet<Ordonnance> Ordonnances => Set<Ordonnance>();
     public DbSet<DoctorNotification> DoctorNotifications => Set<DoctorNotification>();
     public DbSet<PatientNotification> PatientNotifications { get; set; }

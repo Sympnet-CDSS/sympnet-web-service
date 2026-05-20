@@ -1,0 +1,201 @@
+@page "/doctor/patients/{Id:int}/report"
+@layout SympNet.WebDashboard.Components.Layout.EmptyLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject IConfiguration Config
+
+<PageTitle>Rapport Médical - SympNet</PageTitle>
+
+<div class="report-container">
+    @if (isLoading)
+    {
+        <div class="loading">Préparation du rapport...</div>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="error">@errorMessage</div>
+    }
+    else if (patient != null && doctor != null)
+    {
+        <div class="report-header">
+            <div class="clinic-info">
+                <h1>SympNet</h1>
+                <p>Plateforme de Diagnostic IA</p>
+            </div>
+            <div class="doctor-info">
+                <h2>Dr. @doctor.FirstName @doctor.LastName</h2>
+                <p>@doctor.Speciality</p>
+                <p>N° Ordre: @doctor.LicenseNumber</p>
+                <p>@doctor.Address</p>
+                <p>@doctor.Email</p>
+            </div>
+        </div>
+
+        <div class="report-title">
+            <h2>DOSSIER MÉDICAL COMPLET</h2>
+            <p>Date d'édition : @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
+        </div>
+
+        <div class="patient-section">
+            <h3>INFORMATIONS DU PATIENT</h3>
+            <div class="info-grid">
+                <div class="info-item"><span class="label">Nom:</span> @patient.LastName</div>
+                <div class="info-item"><span class="label">Prénom:</span> @patient.FirstName</div>
+                <div class="info-item"><span class="label">Date de Naissance:</span> @patient.DateOfBirth.ToString("dd/MM/yyyy") (@(DateTime.Now.Year - patient.DateOfBirth.Year) ans)</div>
+                <div class="info-item"><span class="label">Sexe:</span> @(patient.Gender == "M" ? "Masculin" : "Féminin")</div>
+                <div class="info-item"><span class="label">Email:</span> @patient.Email</div>
+                <div class="info-item"><span class="label">Téléphone:</span> @patient.PhoneNumber</div>
+                <div class="info-item"><span class="label">Groupe Sanguin:</span> @(string.IsNullOrEmpty(patient.BloodType) ? "Non renseigné" : patient.BloodType)</div>
+            </div>
+        </div>
+
+        <div class="medical-section">
+            <h3>ANTÉCÉDENTS MÉDICAUX</h3>
+            <div class="background-info">
+                <p><span class="label">Allergies:</span> @(string.IsNullOrEmpty(patient.Allergies) ? "Aucune" : patient.Allergies)</p>
+                <p><span class="label">Maladies Chroniques:</span> @(string.IsNullOrEmpty(patient.ChronicDiseases) ? "Aucune" : patient.ChronicDiseases)</p>
+                <p><span class="label">Historique:</span> @(string.IsNullOrEmpty(patient.MedicalHistory) ? "Aucun" : patient.MedicalHistory)</p>
+                <p><span class="label">Traitements en cours:</span> @(string.IsNullOrEmpty(patient.CurrentMedications) ? "Aucun" : patient.CurrentMedications)</p>
+            </div>
+        </div>
+
+        <div class="consultations-section">
+            <h3>HISTORIQUE DES CONSULTATIONS (@patient.Consultations.Count)</h3>
+            @if (patient.Consultations.Any())
+            {
+                @foreach (var c in patient.Consultations.OrderByDescending(x => x.CreatedAt))
+                {
+                    <div class="consultation-item">
+                        <h4>Consultation du @c.CreatedAt.ToString("dd/MM/yyyy à HH:mm")</h4>
+                        <div class="c-details">
+                            <p><strong>Diagnostic:</strong> @c.Diagnosis</p>
+                            <p><strong>Symptômes:</strong> @c.Symptoms</p>
+                            <p><strong>Recommandations:</strong> @((MarkupString)c.Recommendations.Replace("\n", "<br>"))</p>
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <p>Aucune consultation enregistrée.</p>
+            }
+        </div>
+
+        <div class="report-footer">
+            <div class="signature-box">
+                <p>Signature et Cachet du Médecin</p>
+                <div class="signature-space"></div>
+            </div>
+        </div>
+
+        <div class="no-print actions">
+            <button class="btn-print" @onclick="Print">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                Imprimer le rapport
+            </button>
+            <button class="btn-close" @onclick="Close">Fermer</button>
+        </div>
+    }
+</div>
+
+<style>
+    body { background: #f3f4f6; margin: 0; padding: 20px; font-family: 'Inter', system-ui, sans-serif; }
+    .report-container { background: white; max-width: 800px; margin: 0 auto; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); color: #111827; }
+    .loading, .error { text-align: center; padding: 40px; font-size: 18px; }
+    .error { color: #EF4444; }
+
+    .report-header { display: flex; justify-content: space-between; border-bottom: 2px solid #0D9488; padding-bottom: 20px; margin-bottom: 30px; }
+    .clinic-info h1 { margin: 0; color: #0D9488; font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; }
+    .clinic-info p { margin: 4px 0 0; color: #6B7280; font-size: 14px; }
+    .doctor-info { text-align: right; }
+    .doctor-info h2 { margin: 0 0 4px; font-size: 18px; color: #1F2937; }
+    .doctor-info p { margin: 2px 0; font-size: 13px; color: #4B5563; }
+
+    .report-title { text-align: center; margin-bottom: 40px; }
+    .report-title h2 { margin: 0 0 8px; font-size: 22px; letter-spacing: 1px; color: #1F2937; }
+    .report-title p { margin: 0; color: #6B7280; font-size: 14px; }
+
+    .patient-section, .medical-section, .consultations-section { margin-bottom: 30px; }
+    h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #0D9488; border-bottom: 1px solid #E5E7EB; padding-bottom: 8px; margin-bottom: 16px; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 14px; }
+    .label { font-weight: 600; color: #374151; display: inline-block; width: 140px; }
+    
+    .background-info p { margin: 8px 0; font-size: 14px; }
+    
+    .consultation-item { border: 1px solid #E5E7EB; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: #FAFAFA; }
+    .consultation-item h4 { margin: 0 0 12px; font-size: 14px; color: #1F2937; }
+    .c-details p { margin: 6px 0; font-size: 13px; line-height: 1.5; }
+
+    .report-footer { margin-top: 60px; display: flex; justify-content: flex-end; }
+    .signature-box { text-align: center; width: 250px; }
+    .signature-box p { margin: 0 0 10px; font-weight: 600; font-size: 14px; }
+    .signature-space { height: 100px; border-bottom: 1px dashed #D1D5DB; }
+
+    .actions { text-align: center; margin-top: 40px; display: flex; justify-content: center; gap: 16px; }
+    .btn-print { background: #0D9488; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .btn-close { background: #F3F4F6; color: #4B5563; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
+
+    @@media print {
+        body { background: white; padding: 0; }
+        .report-container { box-shadow: none; max-width: 100%; padding: 0; }
+        .no-print { display: none !important; }
+        .consultation-item { page-break-inside: avoid; }
+    }
+</style>
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private SympNet.WebDashboard.Components.Pages.Doctor.Patients.PatientDetailDto? patient;
+    private SympNet.WebDashboard.Components.Pages.Doctor.Profile.DoctorProfileResponse? doctor;
+    
+    private bool isLoading = true;
+    private string? errorMessage = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            if (string.IsNullOrEmpty(token))
+            {
+                errorMessage = "Non authentifié.";
+                return;
+            }
+
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+
+            // Load Doctor
+            doctor = await Http.GetFromJsonAsync<SympNet.WebDashboard.Components.Pages.Doctor.Profile.DoctorProfileResponse>($"{baseUrl}/api/doctorprofile");
+
+            // Load Patient
+            patient = await Http.GetFromJsonAsync<SympNet.WebDashboard.Components.Pages.Doctor.Patients.PatientDetailDto>($"{baseUrl}/api/doctorpatients/{Id}");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Erreur: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task Print()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    private async Task Close()
+    {
+        await JS.InvokeVoidAsync("window.close");
+    }
+}

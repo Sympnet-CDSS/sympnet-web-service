@@ -182,8 +182,15 @@
                         <tr>
                             <td>
                                 <div style="display: flex; align-items: center; gap: 16px;">
-                                    <div class="patient-avatar" style="background: @initBg; color: @initCol;">
-                                        @(p.FirstName?.Length > 0 ? p.FirstName[0].ToString().ToUpper() : "")@(p.LastName?.Length > 0 ? p.LastName[0].ToString().ToUpper() : "")
+                                    <div class="patient-avatar" style="background: @initBg; color: @initCol; overflow: hidden;">
+                                        @if (!string.IsNullOrEmpty(p.PhotoUrl))
+                                        {
+                                            <img src="@(p.PhotoUrl.StartsWith("data:image") ? p.PhotoUrl : $"data:image/jpeg;base64,{p.PhotoUrl}")" style="width:100%;height:100%;object-fit:cover;" />
+                                        }
+                                        else
+                                        {
+                                            @(p.FirstName?.Length > 0 ? p.FirstName[0].ToString().ToUpper() : "")@(p.LastName?.Length > 0 ? p.LastName[0].ToString().ToUpper() : "")
+                                        }
                                     </div>
                                     <div class="p-name"><strong>@p.FirstName @p.LastName</strong></div>
                                 </div>
@@ -233,20 +240,51 @@
         <div class="modal-content" @onclick:stopPropagation>
             <div class="modal-header">
                 <h3>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+                    @if (!string.IsNullOrEmpty(selectedPatient.PhotoUrl))
+                    {
+                        <img src="@(selectedPatient.PhotoUrl.StartsWith("data:image") ? selectedPatient.PhotoUrl : $"data:image/jpeg;base64,{selectedPatient.PhotoUrl}")" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;" />
+                    }
+                    else
+                    {
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+                    }
                     @selectedPatient.FirstName @selectedPatient.LastName
                 </h3>
                 <button style="background:none;border:none;font-size:24px;cursor:pointer;" @onclick="CloseModal">&times;</button>
             </div>
             <div class="modal-body">
-                <div class="info-row"><div class="info-label">Email</div><div class="info-value">@selectedPatient.Email</div></div>
-                <div class="info-row"><div class="info-label">Téléphone</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.PhoneNumber) ? "Non renseigné" : selectedPatient.PhoneNumber)</div></div>
-                <div class="info-row"><div class="info-label">Date naissance</div><div class="info-value">@selectedPatient.DateOfBirth.ToString("dd/MM/yyyy")</div></div>
-                <div class="info-row"><div class="info-label">Âge</div><div class="info-value">@(DateTime.Now.Year - selectedPatient.DateOfBirth.Year) ans</div></div>
-                <div class="info-row"><div class="info-label">Genre</div><div class="info-value">@(selectedPatient.Gender == "M" ? "Homme" : "Femme")</div></div>
-                <div class="info-row"><div class="info-label">Groupe sanguin</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.BloodType) ? "Non renseigné" : selectedPatient.BloodType)</div></div>
-                <div class="info-row"><div class="info-label">Allergies</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.Allergies) ? "Aucune" : selectedPatient.Allergies)</div></div>
-                <div class="info-row"><div class="info-label">Antécédents</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.MedicalHistory) ? "Aucun" : selectedPatient.MedicalHistory)</div></div>
+                @if (isEditMode)
+                {
+                    <div class="form-group">
+                        <label>Allergies (séparées par des virgules)</label>
+                        <input type="text" class="form-control" @bind="editingPatient.Allergies" />
+                    </div>
+                    <div class="form-group">
+                        <label>Antécédents médicaux</label>
+                        <textarea class="form-control" rows="2" @bind="editingPatient.MedicalHistory"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Maladies Chroniques (séparées par des virgules)</label>
+                        <input type="text" class="form-control" @bind="editingPatient.ChronicDiseases" />
+                    </div>
+                    <div class="form-group">
+                        <label>Médicaments Actuels (séparés par des virgules)</label>
+                        <input type="text" class="form-control" @bind="editingPatient.CurrentMedications" />
+                    </div>
+                }
+                else
+                {
+                    <div class="info-row"><div class="info-label">Email</div><div class="info-value">@selectedPatient.Email</div></div>
+                    <div class="info-row"><div class="info-label">Téléphone</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.PhoneNumber) ? "Non renseigné" : selectedPatient.PhoneNumber)</div></div>
+                    <div class="info-row"><div class="info-label">Date naissance</div><div class="info-value">@selectedPatient.DateOfBirth.ToString("dd/MM/yyyy")</div></div>
+                    <div class="info-row"><div class="info-label">Âge</div><div class="info-value">@(DateTime.Now.Year - selectedPatient.DateOfBirth.Year) ans</div></div>
+                    <div class="info-row"><div class="info-label">Genre</div><div class="info-value">@(selectedPatient.Gender == "M" ? "Homme" : "Femme")</div></div>
+                    <div class="info-row"><div class="info-label">Groupe sanguin</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.BloodType) ? "Non renseigné" : selectedPatient.BloodType)</div></div>
+                    <div class="info-row"><div class="info-label">Allergies</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.Allergies) ? "Aucune" : selectedPatient.Allergies)</div></div>
+                    <div class="info-row"><div class="info-label">Antécédents</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.MedicalHistory) ? "Aucun" : selectedPatient.MedicalHistory)</div></div>
+                    <div class="info-row"><div class="info-label">Maladies Chroniques</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.ChronicDiseases) ? "Aucune" : selectedPatient.ChronicDiseases)</div></div>
+                    <div class="info-row"><div class="info-label">Médicaments</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.CurrentMedications) ? "Aucun" : selectedPatient.CurrentMedications)</div></div>
+                }
                 
                 @if (selectedPatient.Consultations != null && selectedPatient.Consultations.Any())
                 {
@@ -293,7 +331,23 @@
                 }
             </div>
             <div class="modal-footer">
-                <button class="btn-close" @onclick="CloseModal">Fermer</button>
+                @if (isEditMode)
+                {
+                    <button class="action-btn" @onclick="SavePatientChanges" disabled="@isSaving">
+                        <i class="fas fa-save"></i> Enregistrer les modifications
+                    </button>
+                    <button class="btn-close" @onclick="() => isEditMode = false">Annuler</button>
+                }
+                else
+                {
+                    <button class="action-btn" style="background:#4B5563;" @onclick="EnableEditMode">
+                        <i class="fas fa-edit"></i> Modifier le dossier
+                    </button>
+                    <button class="action-btn" style="background:#10B981;" @onclick="PrintReport">
+                        <i class="fas fa-print"></i> Rapport Complet
+                    </button>
+                    <button class="btn-close" @onclick="CloseModal">Fermer</button>
+                }
             </div>
         </div>
     </div>
@@ -302,8 +356,11 @@
 @code {
     private List<PatientDto> patients = new();
     private PatientDetailDto? selectedPatient = null;
+    private PatientDto editingPatient = new();
     private string searchTerm = "";
     private bool isLoading = true;
+    private bool isEditMode = false;
+    private bool isSaving = false;
     private string? errorMessage = null;
 
     private bool sortAscending = false;
@@ -395,12 +452,86 @@
     private void CloseModal() 
     { 
         selectedPatient = null; 
+        isEditMode = false;
         StateHasChanged(); 
+    }
+
+    private void EnableEditMode()
+    {
+        if (selectedPatient != null)
+        {
+            editingPatient = new PatientDto
+            {
+                Id = selectedPatient.Id,
+                FirstName = selectedPatient.FirstName,
+                LastName = selectedPatient.LastName,
+                Allergies = selectedPatient.Allergies,
+                MedicalHistory = selectedPatient.MedicalHistory,
+                ChronicDiseases = selectedPatient.ChronicDiseases,
+                CurrentMedications = selectedPatient.CurrentMedications
+            };
+            isEditMode = true;
+        }
+    }
+
+    private async Task SavePatientChanges()
+    {
+        if (selectedPatient == null) return;
+        isSaving = true;
+        
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+
+            // On crée un objet anonyme pour le PUT
+            var updateData = new {
+                MedicalHistory = editingPatient.MedicalHistory,
+                Allergies = editingPatient.Allergies,
+                ChronicDiseases = editingPatient.ChronicDiseases,
+                CurrentMedications = editingPatient.CurrentMedications
+            };
+
+            var response = await Http.PutAsJsonAsync($"{baseUrl}/api/patients/{selectedPatient.Id}/medical-background", updateData);
+            if (response.IsSuccessStatusCode)
+            {
+                // Mettre à jour l'affichage local
+                selectedPatient.MedicalHistory = editingPatient.MedicalHistory;
+                selectedPatient.Allergies = editingPatient.Allergies;
+                selectedPatient.ChronicDiseases = editingPatient.ChronicDiseases;
+                selectedPatient.CurrentMedications = editingPatient.CurrentMedications;
+                
+                isEditMode = false;
+                await JS.InvokeVoidAsync("alert", "Dossier médical mis à jour avec succès !");
+            }
+            else
+            {
+                await JS.InvokeVoidAsync("alert", "Erreur lors de la sauvegarde.");
+            }
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
     }
 
     private void GoToNewConsultation(int patientId)
     {
         Navigation.NavigateTo($"/doctor/consultations/new?patientId={patientId}");
+    }
+
+    private async Task PrintReport()
+    {
+        if (selectedPatient != null)
+        {
+            await JS.InvokeVoidAsync("window.open", $"/doctor/patients/{selectedPatient.Id}/report", "_blank");
+        }
     }
 
     private void GoToChat()
@@ -420,7 +551,10 @@
         public string BloodType { get; set; } = ""; 
         public string Allergies { get; set; } = ""; 
         public string MedicalHistory { get; set; } = ""; 
+        public string ChronicDiseases { get; set; } = ""; 
+        public string CurrentMedications { get; set; } = ""; 
         public int ConsultationCount { get; set; } 
+        public string? PhotoUrl { get; set; }
     }
     
     public class PatientDetailDto : PatientDto 
