@@ -45,6 +45,7 @@ public class DoctorProfileController : ControllerBase
             doctor.FirstName,
             doctor.LastName,
             doctor.Speciality,
+            doctor.PhoneNumber,
             doctor.LicenseNumber,
             doctor.Bio,
             doctor.GraduationYear,
@@ -92,6 +93,7 @@ public class DoctorProfileController : ControllerBase
         if (!string.IsNullOrEmpty(dto.FirstName)) doctor.FirstName = dto.FirstName;
         if (!string.IsNullOrEmpty(dto.LastName)) doctor.LastName = dto.LastName;
         if (!string.IsNullOrEmpty(dto.Speciality)) doctor.Speciality = dto.Speciality;
+        if (dto.PhoneNumber != null) doctor.PhoneNumber = dto.PhoneNumber;
         if (!string.IsNullOrEmpty(dto.LicenseNumber)) doctor.LicenseNumber = dto.LicenseNumber;
         if (dto.Bio != null) doctor.Bio = dto.Bio;
         if (dto.GraduationYear.HasValue) doctor.GraduationYear = dto.GraduationYear.Value;

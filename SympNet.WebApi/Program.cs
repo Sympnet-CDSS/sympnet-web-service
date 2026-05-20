@@ -197,6 +197,7 @@ ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""Allergies"" text DEFAULT '';
 ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""MedicalHistory"" text DEFAULT '';
 ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""ChronicDiseases"" text DEFAULT '';
 ALTER TABLE ""Patients"" ADD COLUMN IF NOT EXISTS ""CurrentMedications"" text DEFAULT '';
+ALTER TABLE ""Doctors"" ADD COLUMN IF NOT EXISTS ""PhoneNumber"" text;
 ");
     }
     catch (Exception ex)
