@@ -1,8 +1,10 @@
 version: "3.9"
 services:
-  backend:
-    build: .
-    image: sympnet-backend:latest
+  backend-api:
+    build: 
+      context: .
+      dockerfile: Dockerfile.api
+    image: sympnet-api:latest
     ports:
       - "5057:8080"
     environment:
@@ -13,6 +15,21 @@ services:
       - db
     networks:
       - sympnet-network
+
+  dashboard:
+    build: 
+      context: .
+      dockerfile: Dockerfile.dashboard
+    image: sympnet-dashboard:latest
+    ports:
+      - "5002:8080"
+    environment:
+      ApiSettings__BaseUrl: "http://backend-api:8080"
+    depends_on:
+      - backend-api
+    networks:
+      - sympnet-network
+
   db:
     image: postgres:15-alpine
     environment:
@@ -25,6 +42,7 @@ services:
       - pgdata:/var/lib/postgresql/data
     networks:
       - sympnet-network
+
   prometheus:
     image: prom/prometheus
     volumes:
@@ -33,12 +51,14 @@ services:
       - "9090:9090"
     networks:
       - sympnet-network
+
   grafana:
     image: grafana/grafana
     ports:
       - "3001:3000"
     networks:
       - sympnet-network
+
 volumes:
   pgdata:
 networks:
