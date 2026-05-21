@@ -369,6 +369,9 @@
 </style>
 
 @code {
+    [CascadingParameter]
+    public SympNet.WebDashboard.Components.Layout.DoctorLayout Layout { get; set; } = default!;
+
     [SupplyParameterFromQuery]
     public int? patientId { get; set; }
 
@@ -552,19 +555,19 @@
     {
         if (!isNewPatientMode && selectedPatientId == 0)
         {
-            await JS.InvokeVoidAsync("alert", "Veuillez sélectionner un patient.");
+            Layout.ShowToast("Attention", "Veuillez sélectionner un patient.", "warning");
             return;
         }
 
         if (isNewPatientMode && (string.IsNullOrWhiteSpace(newPatientName) || string.IsNullOrWhiteSpace(newPatientEmail)))
         {
-            await JS.InvokeVoidAsync("alert", "Veuillez saisir le nom et l'email du nouveau patient.");
+            Layout.ShowToast("Attention", "Veuillez saisir le nom et l'email du nouveau patient.", "warning");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(diagnosis))
         {
-            await JS.InvokeVoidAsync("alert", "Veuillez saisir un diagnostic.");
+            Layout.ShowToast("Attention", "Veuillez saisir un diagnostic.", "warning");
             return;
         }
 
@@ -607,7 +610,7 @@
             var consResponse = await Http.PostAsJsonAsync($"{baseUrl}/api/consultations", consultationReq);
             if (!consResponse.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("alert", "Erreur lors de l'enregistrement de la consultation.");
+                Layout.ShowToast("Erreur", "Erreur lors de l'enregistrement de la consultation.", "error");
                 return;
             }
 
@@ -630,19 +633,19 @@
                 var ordResponse = await Http.PostAsJsonAsync($"{baseUrl}/api/ordonnances", ordReq);
                 if (!ordResponse.IsSuccessStatusCode)
                 {
-                    await JS.InvokeVoidAsync("alert", "Consultation sauvegardée mais erreur pour l'ordonnance.");
+                    Layout.ShowToast("Erreur partielle", "Consultation sauvegardée mais erreur pour l'ordonnance.", "warning");
                     return;
                 }
             }
 
             // Rediriger vers la liste des consultations
-            await JS.InvokeVoidAsync("alert", "Consultation et ordonnance enregistrées avec succès !");
+            Layout.ShowToast("Succès", "Consultation et ordonnance enregistrées avec succès !", "success");
             Navigation.NavigateTo("/doctor/consultations");
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Erreur: {ex.Message}");
-            await JS.InvokeVoidAsync("alert", "Une erreur est survenue lors de l'enregistrement.");
+            Layout.ShowToast("Erreur", "Une erreur est survenue lors de l'enregistrement.", "error");
         }
         finally
         {

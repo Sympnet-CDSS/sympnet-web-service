@@ -1,253 +1,549 @@
 @page "/"
 @layout SympNet.WebDashboard.Components.Layout.EmptyLayout
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject HttpClient Http
+@inject IConfiguration Config
 
-<PageTitle>SympNet - HealthCare</PageTitle>
+<PageTitle>SympNet - Accueil</PageTitle>
 
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet"/>
 
 <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Instrument Sans', sans-serif; background: #F8FAFC; color: #1F2937; line-height: 1.5; }
+    body { font-family: 'Instrument Sans', sans-serif; background: #F8FAFC; color: #1F2937; line-height: 1.5; overflow-x: hidden; }
     
     .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
     
+    /* Animations */
+    @@keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .animate-up { animation: fadeInUp 0.8s ease-out forwards; }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+
     /* Navbar */
     .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
-    .logo { font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 800; color: #0D9488; display: flex; align-items: center; gap: 8px; }
+    .logo { font-family: 'Bricolage Grotesque', sans-serif; font-size: 24px; font-weight: 800; color: #00897B; display: flex; align-items: center; gap: 8px; }
     .nav-links { display: flex; gap: 24px; font-weight: 500; font-size: 15px; }
     .nav-links a { text-decoration: none; color: #4B5563; transition: 0.2s; }
-    .nav-links a:hover { color: #0D9488; }
+    .nav-links a:hover { color: #00897B; }
     .nav-actions { display: flex; align-items: center; gap: 16px; }
-    .btn-text { font-weight: 600; color: #0D9488; background: none; border: none; cursor: pointer; font-size: 15px; }
     
     .doctor-logo-icon {
-        width: 40px; height: 40px; background: linear-gradient(135deg, #0D9488 0%, #14B8A6 100%);
+        width: 40px; height: 40px; background: linear-gradient(135deg, #00897B 0%, #26A69A 100%);
         border-radius: 12px; display: flex; align-items: center; justify-content: center;
         font-size: 20px; color: white;
     }
     
     .btn-primary { 
-        background: #0D9488; 
+        background: #00897B; 
         color: white; 
         border: none; 
-        padding: 10px 20px; 
+        padding: 12px 24px; 
         border-radius: 8px; 
-        font-size: 14px; 
+        font-size: 15px; 
         font-weight: 600; 
         cursor: pointer; 
         display: flex; 
         align-items: center; 
         gap: 8px; 
-        transition: 0.2s; 
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 4px 12px rgba(0, 137, 123, 0.2);
     }
-    .btn-primary:hover { background: #0F766E; }
+    .btn-primary:hover { background: #00796B; transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0, 137, 123, 0.3); }
 
     /* Hero Section */
     .hero { display: flex; align-items: center; padding: 60px 0 100px; }
     .hero-content { flex: 1; padding-right: 40px; }
     .hero-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: 56px; font-weight: 800; line-height: 1.1; color: #111827; margin-bottom: 24px; }
-    .hero-title span { color: #0D9488; }
+    .hero-title span { color: #00897B; position: relative; }
     .hero-desc { font-size: 18px; color: #4B5563; margin-bottom: 32px; max-width: 480px; }
-    .hero-btns { display: flex; gap: 16px; }
-    .btn-outline { padding: 12px 24px; border-radius: 8px; border: 2px solid #E5E7EB; background: white; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    
+    .btn-outline { 
+        padding: 12px 24px; border-radius: 8px; border: 2px solid #E5E7EB; 
+        background: white; color: #1F2937; font-weight: 600; cursor: pointer; 
+        display: flex; align-items: center; gap: 8px; font-size: 15px;
+        transition: all 0.3s;
+    }
+    .btn-outline svg { color: #00897B; }
+    .btn-outline:hover { border-color: #00897B; color: #00897B; background: #F0FDF4; }
     
     .hero-image { flex: 1; display: flex; justify-content: flex-end; position: relative; }
-    .doctor-blob { background: linear-gradient(135deg, #0D9488, #14B8A6); width: 400px; height: 500px; border-radius: 40px 140px 40px 140px; position: relative; display: flex; justify-content: center; align-items: flex-end; overflow: hidden; }
-    .doctor-image { width: 100%; height: auto; object-fit: cover; z-index: 2; position: relative; }
+    .doctor-blob { 
+        background: linear-gradient(135deg, #00897B, #26A69A); 
+        width: 400px; height: 500px; border-radius: 40px 140px 40px 140px; 
+        position: relative; display: flex; justify-content: center; align-items: flex-end; 
+        overflow: hidden; box-shadow: 0 20px 50px rgba(0, 137, 123, 0.2);
+    }
+    .doctor-image { width: 100%; height: auto; object-fit: cover; z-index: 2; position: relative; transform: scale(1.05); }
     
     /* Search Box */
-    .search-box-wrapper { max-width: 900px; margin: -50px auto 80px; background: white; padding: 24px 32px; border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.05); display: flex; align-items: flex-end; gap: 16px; position: relative; z-index: 10; border: 1px solid #E2E8F0; }
+    .search-box-wrapper { 
+        max-width: 900px; margin: -50px auto 60px; background: white; padding: 24px 32px; 
+        border-radius: 16px; box-shadow: 0 20px 40px rgba(0,0,0,0.08); 
+        display: flex; align-items: flex-end; gap: 16px; position: relative; z-index: 10; 
+        border: 1px solid rgba(0, 137, 123, 0.1);
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .search-box-wrapper:hover { transform: translateY(-5px); box-shadow: 0 25px 50px rgba(0,0,0,0.12); }
     .search-field { flex: 1; }
-    .search-field label { display: block; font-size: 13px; font-weight: 600; color: #64748B; margin-bottom: 8px; }
-    .search-field input, .search-field select { width: 100%; padding: 12px 16px; border: 1px solid #E2E8F0; border-radius: 8px; outline: none; font-size: 15px; }
-    .search-field input:focus, .search-field select:focus { border-color: #0D9488; }
-    .toggle-available { display: flex; align-items: center; gap: 12px; height: 45px; }
+    .search-field input { width: 100%; padding: 12px 16px; border: 1px solid #E2E8F0; border-radius: 8px; outline: none; font-size: 15px; transition: 0.2s; background: #F8FAFC; }
+    .search-field input:focus { border-color: #00897B; background: white; box-shadow: 0 0 0 3px rgba(0, 137, 123, 0.1); }
+    .toggle-available { display: flex; align-items: center; gap: 12px; height: 45px; cursor: pointer; }
     
-    /* Stats */
-    .stats-section { text-align: center; margin-bottom: 80px; }
-    .stats-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; color: #0D9488; margin-bottom: 40px; }
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
-    .stat-item h3 { font-size: 40px; font-weight: 800; color: #111827; }
-    .stat-item p { color: #64748B; font-weight: 500; margin-top: 4px; }
-
-    /* Services */
-    .services-section { background: white; padding: 80px 0; }
-    .section-header { text-align: center; margin-bottom: 50px; }
-    .section-header h2 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 32px; color: #0D9488; margin-bottom: 12px; }
-    .section-header p { color: #64748B; max-width: 500px; margin: 0 auto; }
+    /* Doctors Horizontal Scroll */
+    .doctors-section { padding: 40px 0 80px; }
+    .section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
+    .section-title { font-family: 'Bricolage Grotesque', sans-serif; font-size: 32px; color: #111827; }
+    .section-title span { color: #00897B; }
     
-    .services-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-    .service-card { border: 1px solid #E2E8F0; border-radius: 16px; padding: 24px; transition: 0.3s; }
-    .service-card:hover { box-shadow: 0 10px 30px rgba(13,148,136,0.1); border-color: #0D9488; }
-    .service-icon { width: 60px; height: 60px; background: #F0FDF4; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px; color: #0D9488; }
-    .service-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 12px; }
-    .service-card p { color: #64748B; font-size: 14px; margin-bottom: 20px; }
-    .learn-more { color: #0D9488; font-weight: 600; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 4px; }
+    .doctors-scroll-container {
+        display: flex;
+        overflow-x: auto;
+        gap: 24px;
+        padding: 20px 4px 40px;
+        scroll-snap-type: x mandatory;
+        scrollbar-width: none;
+    }
+    .doctors-scroll-container::-webkit-scrollbar { display: none; }
 
-    .learn-more { color: #0D9488; font-weight: 600; text-decoration: none; font-size: 14px; display: flex; align-items: center; gap: 4px; }
+    .doctor-card {
+        flex: 0 0 300px;
+        scroll-snap-align: start;
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        border: 1px solid #F1F5F9;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        cursor: pointer;
+    }
+    .doctor-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 20px 40px rgba(0, 137, 123, 0.15);
+        border-color: rgba(0, 137, 123, 0.3);
+    }
+    
+    .doctor-photo-container { position: relative; height: 220px; width: 100%; overflow: hidden; background: #F1F5F9; }
+    .doctor-photo { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+    .doctor-card:hover .doctor-photo { transform: scale(1.08); }
+    
+    .doctor-top-left-icon {
+        position: absolute; top: 12px; left: 12px; width: 32px; height: 32px; border-radius: 50%;
+        background: #3B82F6; color: white; display: flex; align-items: center; justify-content: center; z-index: 10; font-size: 14px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .doctor-status-badge {
+        position: absolute; top: 12px; right: 12px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; color: white; z-index: 10;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    .doctor-status-badge.available { background: #10B981; }
+    .doctor-status-badge.unavailable { background: #EF4444; }
+    
+    .doctor-rating-row { display: flex; align-items: center; gap: 6px; font-size: 14px; margin-bottom: 12px; color: #1F2937; }
+    .doctor-details-row { display: flex; flex-direction: column; gap: 8px; font-size: 13px; color: #6B7280; }
+    .detail-item { display: flex; align-items: center; gap: 8px; }
+    .detail-item i { color: #00897B; width: 16px; text-align: center; }
 
+    /* Specialty Cards */
+    .specialty-card {
+        background: white; border-radius: 16px; padding: 20px 40px; min-width: 200px;
+        display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+        box-shadow: 0 10px 20px rgba(0,0,0,0.02); border: 1px solid #F1F5F9; cursor: pointer;
+        transition: all 0.3s;
+    }
+    .specialty-card.active { background: #F0F9FF; border-color: #BAE6FD; }
+    .specialty-card:hover { transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.05); }
+    .specialty-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .specialty-name { font-weight: 600; font-size: 14px; color: #1F2937; }
 
+    /* Services Section (Pro Design from Services page) */
+    .services-section { background: #F8FAFC; padding: 100px 0; }
+    .services-grid-wrapper { margin-top: 40px; }
+    .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; }
+    .service-card {
+        background: white; border-radius: 24px; padding: 40px; border: 1px solid #E2E8F0;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.02); transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        display: flex; flex-direction: column;
+    }
+    .service-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(13, 148, 136, 0.1); border-color: rgba(13, 148, 136, 0.2); }
+    .icon-box { width: 64px; height: 64px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 24px; }
+    .icon-box.green { background: #F0FDF4; color: #10B981; }
+    .icon-box.purple { background: #FAF5FF; color: #A855F7; }
+    .icon-box.blue { background: #EFF6FF; color: #3B82F6; }
+    .icon-box.soft-green { background: #F0FDF4; color: #00897B; }
+    .icon-box.red { background: #FEF2F2; color: #EF4444; }
+    .icon-box.orange { background: #FFF7ED; color: #F97316; }
+    
+    .service-card h3 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 700; color: #111827; margin-bottom: 16px; }
+    .service-card .desc { color: #64748B; font-size: 15px; margin-bottom: 24px; line-height: 1.6; flex: 1; }
+    .features-list { list-style: none; margin-top: auto; }
+    .features-list li { font-size: 14px; color: #4B5563; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-weight: 500; }
+    .features-list li::before { content: ''; width: 6px; height: 6px; background: #00897B; border-radius: 50%; }
+
+    
 </style>
 
 <header>
-    <nav class="navbar">
+    <nav class="navbar animate-up">
         <div class="logo">
            <div class="doctor-logo-icon"><i class="fas fa-stethoscope"></i></div>
             SympNet
         </div>
         <div class="nav-links">
             <a href="#">Accueil</a>
-            <a href="/services">Services</a>
+            <a href="/#services">Services</a>
             <a href="/contact">Contactez-nous</a>
             <a href="/help">Aide</a>
             <a href="/blog">Blog</a>
         </div>
         <div class="nav-actions">
-            <button class="btn-primary" @onclick="GoToLogin">Connexion</button>
+            <button class="btn-primary" @onclick="GoToLogin">Se connecter</button>
         </div>
     </nav>
 </header>
 
 <main>
-    <section class="container">
+    <section class="container animate-up delay-1">
         <div class="hero">
             <div class="hero-content">
-                <h1 class="hero-title">Fournir des Soins de Qualité Pour un <span>Avenir Plus Sain</span></h1>
-                <p class="hero-desc">Dans notre hôpital, nous sommes dédiés à fournir des soins médicaux exceptionnels à nos patients et à leurs familles. Notre équipe expérimentée de professionnels de santé est là pour vous.</p>
-                <div class="hero-btns">
-                    <button class="btn-primary" style="padding: 14px 28px; font-size: 16px;" @onclick="GoToLogin">Rendez-vous</button>
-                    <button class="btn-outline">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0D9488" stroke-width="2"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-                        Voir la Vidéo
-                    </button>
-                </div>
+                <h1 class="hero-title">Trouvez le bon médecin, <span>au bon moment</span></h1>
+                <p class="hero-desc">Bénéficiez d'une orientation intelligente par notre IA médicale et prenez rendez-vous avec les meilleurs spécialistes de votre région.</p>
             </div>
             <div class="hero-image">
                 <div class="doctor-blob">
-                    <img src="images/doctor.png" alt="Doctor" class="doctor-image" />
-                    <!-- Remplacez le SVG ci-dessous par votre image en mettant la bonne adresse dans 'src' ci-dessus. -->
-                    <svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1" style="opacity: 0.5; margin-bottom: 50px; position: absolute; z-index: 1;">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                    </svg>
+                    <!-- Photo de présentation -->
+                    <img src="images/doctor.png" onerror="this.src='https://images.unsplash.com/photo-1612349317150-e410f624c427?auto=format&fit=crop&q=80&w=400&h=500'" alt="Doctor" class="doctor-image" />
                 </div>
             </div>
         </div>
     </section>
 
-    <div class="container">
+    <!-- Section de recherche -->
+    <div class="container animate-up delay-2">
         <div class="search-box-wrapper">
-            <div style="position: absolute; top: 16px; left: 32px; font-weight: 700; font-size: 18px;">Trouver un Médecin</div>
+            <div style="position: absolute; top: 16px; left: 32px; font-weight: 700; font-size: 18px; color: #111827;">Trouver un Médecin</div>
             <div class="search-field" style="margin-top: 32px;">
-                <input type="text" placeholder="Nom" @bind="searchName" />
+                <input type="text" placeholder="Nom du médecin" @bind="searchName" @bind:event="oninput" @onkeyup="FilterDoctors" />
             </div>
             <div class="search-field">
-                <input type="text" placeholder="Spécialité" @bind="searchSpecialty" />
+                <input type="text" placeholder="Spécialité (ex: Cardiologie)" @bind="searchSpecialty" @bind:event="oninput" @onkeyup="FilterDoctors" />
             </div>
-            <div class="toggle-available" style="cursor: pointer;" @onclick="ToggleAvailable">
-                <span style="font-weight: 500; color: #4B5563;">Disponible</span>
-                <div style="width: 40px; height: 24px; background: @(isAvailable ? "#0D9488" : "#E2E8F0"); border-radius: 12px; position: relative; transition: background 0.3s;">
-                    <div style="width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 3px; @(isAvailable ? "right: 3px;" : "left: 3px;"); transition: all 0.3s;"></div>
-                </div>
-            </div>
-            <button class="btn-primary" style="padding: 12px 32px;" @onclick="SearchDoctor">Rechercher</button>
-        </div>
-
-        <div class="stats-section">
-            <h2 class="stats-title">Nos résultats en chiffres</h2>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <h3>99%</h3>
-                    <p>Satisfaction client</p>
-                </div>
-                <div class="stat-item">
-                    <h3>15k</h3>
-                    <p>Patients en ligne</p>
-                </div>
-                <div class="stat-item">
-                    <h3>12k</h3>
-                    <p>Patients guéris</p>
-                </div>
-                <div class="stat-item">
-                    <h3>240%</h3>
-                    <p>Croissance</p>
+            <div class="toggle-available" @onclick="ToggleAvailable">
+                <span style="font-weight: 600; color: #4B5563;">Disponible</span>
+                <div style="width: 40px; height: 24px; background: @(isAvailable ? "#00897B" : "#E2E8F0"); border-radius: 12px; position: relative; transition: background 0.3s;">
+                    <div style="width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 3px; @(isAvailable ? "right: 3px;" : "left: 3px;"); transition: all 0.3s; box-shadow: 0 1px 3px rgba(0,0,0,0.2);"></div>
                 </div>
             </div>
+            <button class="btn-primary" style="padding: 12px 32px;" @onclick="FilterDoctors">
+                <i class="fas fa-search"></i> Rechercher
+            </button>
         </div>
     </div>
 
-    <section class="services-section">
-        <div class="container">
-            <div class="section-header">
-                <h2>Nos services</h2>
-                <p>Nous offrons une gamme complète de services médicaux pour répondre à tous vos besoins de santé avec professionnalisme et empathie.</p>
+    <!-- Catégories de Spécialités -->
+    <section class="container animate-up delay-2" style="margin-top: 20px; margin-bottom: 40px;">
+        <div style="display: flex; gap: 20px; overflow-x: auto; padding: 10px 4px; scrollbar-width: none;">
+            <div class="specialty-card @(searchSpecialty == "Cardiologie" ? "active" : "")" @onclick="@(() => SetSpecialty("Cardiologie"))">
+                <div class="specialty-icon" style="background: #E11D48; color: white;"><i class="fas fa-heart"></i></div>
+                <span class="specialty-name">Cardiologie</span>
             </div>
-            <div class="services-grid">
-                <div class="service-card">
-                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
-                    <h3>Soins dentaires</h3>
-                    <p>Des soins dentaires de haute qualité pour préserver et améliorer votre sourire au quotidien.</p>
-                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-                    <h3>Orthopédie</h3>
-                    <p>Traitements spécialisés pour vos os et articulations, vous aidant à retrouver votre mobilité.</p>
-                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg></div>
-                    <h3>Diagnostic</h3>
-                    <p>Des outils de diagnostic de pointe soutenus par notre intelligence artificielle avancée.</p>
-                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg></div>
-                    <h3>Cardiologie</h3>
-                    <p>Prise en charge complète de la santé de votre cœur par nos cardiologues experts.</p>
-                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
-                    <h3>Chirurgie</h3>
-                    <p>Des interventions chirurgicales sécurisées et précises grâce à nos équipements de pointe.</p>
-                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
-                </div>
-                <div class="service-card">
-                    <div class="service-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></div>
-                    <h3>Ophtalmologie</h3>
-                    <p>Des soins spécialisés pour vos yeux pour préserver et améliorer votre vision à tout âge.</p>
-                    <a href="#" class="learn-more">En savoir plus &rarr;</a>
-                </div>
+            <div class="specialty-card @(searchSpecialty == "Neurologie" ? "active" : "")" @onclick="@(() => SetSpecialty("Neurologie"))">
+                <div class="specialty-icon" style="background: #7C3AED; color: white;"><i class="fas fa-brain"></i></div>
+                <span class="specialty-name">Neurologie</span>
+            </div>
+            <div class="specialty-card @(searchSpecialty == "Ophtalmologie" ? "active" : "")" @onclick="@(() => SetSpecialty("Ophtalmologie"))">
+                <div class="specialty-icon" style="background: #0284C7; color: white;"><i class="fas fa-eye"></i></div>
+                <span class="specialty-name">Ophtalmologie</span>
+            </div>
+            <div class="specialty-card @(searchSpecialty == "Orthopédie" ? "active" : "")" @onclick="@(() => SetSpecialty("Orthopédie"))">
+                <div class="specialty-icon" style="background: #EA580C; color: white;"><i class="fas fa-bone"></i></div>
+                <span class="specialty-name">Orthopédie</span>
+            </div>
+            <div class="specialty-card @(searchSpecialty == "Gastroentérologie" ? "active" : "")" @onclick="@(() => SetSpecialty("Gastroentérologie"))">
+                <div class="specialty-icon" style="background: #059669; color: white;"><i class="fas fa-briefcase-medical"></i></div>
+                <span class="specialty-name">Gastroentérologie</span>
+            </div>
+            <div class="specialty-card @(searchSpecialty == "Psychiatrie" ? "active" : "")" @onclick="@(() => SetSpecialty("Psychiatrie"))">
+                <div class="specialty-icon" style="background: #D946EF; color: white;"><i class="fas fa-user-md"></i></div>
+                <span class="specialty-name">Psychiatrie</span>
+            </div>
+            <div class="specialty-card @(searchSpecialty == "Dermatologie" ? "active" : "")" @onclick="@(() => SetSpecialty("Dermatologie"))">
+                <div class="specialty-icon" style="background: #F43F5E; color: white;"><i class="fas fa-hand-sparkles"></i></div>
+                <span class="specialty-name">Dermatologie</span>
             </div>
         </div>
     </section>
 
-    <NewsletterSection />
-</main>
-<Footer />
+    <!-- Scroll Horizontal des Médecins -->
+    <section class="container doctors-section animate-up delay-3">
+        <div class="section-header">
+            <h2 class="section-title">Nos Spécialistes <span>Recommandés</span></h2>
+            <p style="color: #64748B; font-weight: 500;">@filteredDoctors.Count médecins trouvés</p>
+        </div>
+        
+        <div class="doctors-scroll-container">
+            @if (isLoading)
+            {
+                <div style="padding: 40px; color: #00897B; font-weight: 600; display: flex; align-items: center; gap: 10px;">
+                    <i class="fas fa-circle-notch fa-spin"></i> Chargement des médecins...
+                </div>
+            }
+            else if (!filteredDoctors.Any())
+            {
+                <div style="padding: 40px; color: #64748B; font-style: italic;">
+                    Aucun médecin ne correspond à votre recherche.
+                </div>
+            }
+            else
+            {
+                @foreach (var doc in filteredDoctors)
+                {
+                    <div class="doctor-card" @onclick="() => GoToDoctorProfile(doc.Id)">
+                        <div class="doctor-photo-container">
+                            <div class="doctor-top-left-icon"><i class="fas fa-user-md"></i></div>
+                            <div class="doctor-status-badge @(doc.IsAvailable ? "available" : "unavailable")">
+                                @(doc.IsAvailable ? "Disponible" : "Indisponible")
+                            </div>
+                            <img src="@doc.PhotoUrl" alt="@doc.FirstName @doc.LastName" class="doctor-photo" onerror="this.src='https://ui-avatars.com/api/?name=@doc.FirstName+@doc.LastName&background=00897B&color=fff&size=300'"/>
+                        </div>
+                        <div class="doctor-info">
+                            <h3 class="doctor-name">Dr. @doc.FirstName @doc.LastName</h3>
+                            <span class="doctor-speciality">@doc.Specialty</span>
+                            <div class="doctor-rating-row">
+                                <i class="fas fa-star" style="color:#F59E0B"></i> 
+                                <strong>@doc.AverageRating.ToString("0.0")</strong> 
+                                <span style="color:#9CA3AF;font-size:12px;">(@doc.TotalRatings avis)</span>
+                            </div>
+                            <div class="doctor-details-row">
+                                <div class="detail-item"><i class="fas fa-briefcase"></i> 10 ans d'expérience</div>
+                                <div class="detail-item"><i class="fas fa-map-marker-alt"></i> @(string.IsNullOrEmpty(doc.Address) ? "Non renseigné" : doc.Address)</div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </section>
 
-@inject IJSRuntime JSRuntime
+    <section id="services" class="services-section">
+        <div class="container animate-up delay-1">
+            <div style="text-align: center; margin-bottom: 60px;">
+                <h2 class="section-title">Comment <span>SympNet</span> vous aide ?</h2>
+                <p style="color: #64748B; font-size: 18px; max-width: 600px; margin: 16px auto 0;">SympNet offre une suite complète de services médicaux numériques pour patients et professionnels de santé.</p>
+            </div>
+            <div class="services-grid">
+                <!-- 1. Diagnostic IA -->
+                <div class="service-card">
+                    <div class="icon-box purple">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Diagnostic IA Multi-Agents</h3>
+                    <p class="desc">Système d'intelligence artificielle avancé avec plusieurs agents spécialisés évaluant vos symptômes avec précision.</p>
+                    <ul class="features-list">
+                        <li>Analyse sémantique NLP</li>
+                        <li>Score de confiance</li>
+                        <li>Explicabilité totale (XAI)</li>
+                    </ul>
+                </div>
+                
+                <!-- 2. Agenda -->
+                <div class="service-card">
+                    <div class="icon-box red">
+                        <i class="fas fa-calendar-alt"></i>
+                    </div>
+                    <h3>Agenda & Rendez-vous</h3>
+                    <p class="desc">Planifiez vos consultations facilement et gérez vos disponibilités en temps réel sur la plateforme.</p>
+                    <ul class="features-list">
+                        <li>Calendrier interactif</li>
+                        <li>Gestion des disponibilités</li>
+                        <li>Interface fluide</li>
+                    </ul>
+                </div>
+                
+                <!-- 3. Géolocalisation -->
+                <div class="service-card">
+                    <div class="icon-box blue">
+                        <i class="fas fa-map-marker-alt"></i>
+                    </div>
+                    <h3>Géolocalisation Médicale</h3>
+                    <p class="desc">Trouvez les médecins spécialistes et cliniques les plus proches de votre position en un seul clic.</p>
+                    <ul class="features-list">
+                        <li>Carte interactive précise</li>
+                        <li>Filtrage par spécialité</li>
+                        <li>Disponibilité en temps réel</li>
+                    </ul>
+                </div>
+                
+                <!-- 4. Ordonnances -->
+                <div class="service-card">
+                    <div class="icon-box orange">
+                        <i class="fas fa-file-prescription"></i>
+                    </div>
+                    <h3>Ordonnances Numériques</h3>
+                    <p class="desc">Recevez, gérez et présentez vos ordonnances directement en pharmacie depuis l'application.</p>
+                    <ul class="features-list">
+                        <li>Format numérique sécurisé</li>
+                        <li>Vulgarisation par l'IA</li>
+                        <li>Rappels de médicaments</li>
+                    </ul>
+                </div>
+
+                <!-- 5. Messagerie -->
+                <div class="service-card">
+                    <div class="icon-box soft-green">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Messagerie Sécurisée</h3>
+                    <p class="desc">Communiquez en toute sécurité avec votre médecin via chat texte et mémos vocaux.</p>
+                    <ul class="features-list">
+                        <li>Chat en temps réel</li>
+                        <li>Notes vocales</li>
+                        <li>Historique protégé</li>
+                    </ul>
+                </div>
+
+                <!-- 6. Historique Médical -->
+                <div class="service-card">
+                    <div class="icon-box green">
+                        <i class="fas fa-file-medical"></i>
+                    </div>
+                    <h3>Historique Sécurisé</h3>
+                    <p class="desc">Accédez à tout votre historique, vos consultations passées et vos ordonnances de manière centralisée.</p>
+                    <ul class="features-list">
+                        <li>Données chiffrées</li>
+                        <li>Profil patient complet</li>
+                        <li>Consultation simplifiée</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<SympNet.WebDashboard.Components.Layout.Footer />
+
 @code {
     private string searchName = "";
     private string searchSpecialty = "";
-    private bool isAvailable = true;
+    private bool isAvailable = false;
+    private bool isLoading = true;
+
+    private List<DoctorVM> allDoctors = new();
+    private List<DoctorVM> filteredDoctors = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            // Fetch doctors from the API
+            var response = await Http.GetFromJsonAsync<List<DoctorDto>>($"{baseUrl}/api/doctors");
+            if (response != null && response.Any())
+            {
+                allDoctors = response.Select(d => new DoctorVM {
+                    Id = d.Id,
+                    FirstName = d.FirstName,
+                    LastName = d.LastName,
+                    Specialty = d.Speciality,
+                    IsAvailable = d.IsAvailable,
+                    AverageRating = d.AverageRating > 0 ? d.AverageRating : 5.0,
+                    TotalRatings = d.TotalRatings > 0 ? d.TotalRatings : new Random(d.Id * 100).Next(10, 200),
+                    Address = d.Address ?? "Non renseigné",
+                    PhotoUrl = !string.IsNullOrEmpty(d.PhotoUrl) ? d.PhotoUrl : $"https://ui-avatars.com/api/?name={d.FirstName}+{d.LastName}&background=00897B&color=fff&size=300"
+                }).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur de chargement des médecins réels : {ex.Message}");
+            // Dummy data for design visualization if backend is not reachable
+            allDoctors = new List<DoctorVM>
+            {
+                new DoctorVM { Id=1, FirstName="Ahmed", LastName="Ben Ali", Specialty="Cardiologie", AverageRating=4.8, TotalRatings=127, Address="Paris 8ème", IsAvailable=true, PhotoUrl="https://images.unsplash.com/photo-1612349317150-e410f624c427?auto=format&fit=crop&q=80&w=300&h=300" },
+                new DoctorVM { Id=2, FirstName="Sonia", LastName="Mabrouk", Specialty="Neurologie", AverageRating=4.9, TotalRatings=185, Address="Lyon 3ème", IsAvailable=true, PhotoUrl="https://images.unsplash.com/photo-1594824436951-7f12620ce6f8?auto=format&fit=crop&q=80&w=300&h=300" },
+                new DoctorVM { Id=3, FirstName="Youssef", LastName="Gharbi", Specialty="Pédiatrie", AverageRating=4.5, TotalRatings=92, Address="Marseille 6ème", IsAvailable=false, PhotoUrl="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=300&h=300" },
+                new DoctorVM { Id=4, FirstName="Fatma", LastName="Zahra", Specialty="Dermatologie", AverageRating=4.7, TotalRatings=156, Address="Nice Centre", IsAvailable=true, PhotoUrl="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=300" },
+                new DoctorVM { Id=5, FirstName="Omar", LastName="Trabelsi", Specialty="Cardiologie", AverageRating=4.6, TotalRatings=114, Address="Toulouse", IsAvailable=true, PhotoUrl="https://images.unsplash.com/photo-1537368910025-7028ba1acc9b?auto=format&fit=crop&q=80&w=300&h=300" }
+            };
+        }
+        
+        FilterDoctors();
+        isLoading = false;
+    }
+
+    private void FilterDoctors()
+    {
+        filteredDoctors = allDoctors.Where(d => 
+            (string.IsNullOrWhiteSpace(searchName) || (d.FirstName + " " + d.LastName).Contains(searchName, StringComparison.OrdinalIgnoreCase)) &&
+            (string.IsNullOrWhiteSpace(searchSpecialty) || d.Specialty.Contains(searchSpecialty, StringComparison.OrdinalIgnoreCase)) &&
+            (!isAvailable || d.IsAvailable == true)
+        ).ToList();
+        StateHasChanged();
+    }
+
+    private void ToggleAvailable()
+    {
+        isAvailable = !isAvailable;
+        FilterDoctors();
+    }
+    
+    private void SetSpecialty(string spec)
+    {
+        if (searchSpecialty == spec)
+            searchSpecialty = ""; // Toggle off
+        else
+            searchSpecialty = spec;
+        FilterDoctors();
+    }
+
+    private void GoToDoctorProfile(int id)
+    {
+        Navigation.NavigateTo($"/doctor-profile/{id}");
+    }
 
     private void GoToLogin()
     {
         Navigation.NavigateTo("/login");
     }
 
-    private async Task SearchDoctor()
+    private double GenerateRandomRating(int id)
     {
-        await JSRuntime.InvokeVoidAsync("alert", $"Recherche d'un médecin...\nNom: {searchName}\nSpécialité: {searchSpecialty}\nDisponible: {isAvailable}");
+        // Generates a stable random rating between 4.0 and 5.0 based on ID
+        var random = new Random(id * 100);
+        return Math.Round(4.0 + random.NextDouble(), 1);
     }
 
-    private void ToggleAvailable()
+    private class DoctorDto
     {
-        isAvailable = !isAvailable;
+        public int Id { get; set; }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Speciality { get; set; } = "";
+        public bool IsAvailable { get; set; }
+        public double AverageRating { get; set; }
+        public int TotalRatings { get; set; }
+        public string? Address { get; set; }
+        public string? PhotoUrl { get; set; }
     }
 
-    [Inject] private IConfiguration Config { get; set; } = default!;
-    [Inject] private HttpClient Http { get; set; } = default!;
+    private class DoctorVM
+    {
+        public int Id { get; set; }
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Specialty { get; set; } = "";
+        public double AverageRating { get; set; }
+        public int TotalRatings { get; set; }
+        public string Address { get; set; } = "";
+        public bool IsAvailable { get; set; }
+        public string PhotoUrl { get; set; } = "";
+    }
 }

@@ -1,4 +1,5 @@
 @using System.Net.Http.Json
+@implements IDisposable
 @inject HttpClient Http
 @inject IJSRuntime JS
 
@@ -355,6 +356,7 @@
     private bool isTyping = false;
     private bool isRecording = false;
     private List<ChatMessage> messages = new();
+    private DotNetObjectReference<ChatbotBubble>? objRef;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -362,18 +364,23 @@
         {
             try 
             { 
-                var dotNetObjRef = DotNetObjectReference.Create(this);
-                await JS.InvokeVoidAsync("initAudioRecorder", dotNetObjRef); 
+                objRef = DotNetObjectReference.Create(this);
+                await JS.InvokeVoidAsync("initAudioRecorder", objRef); 
             } 
             catch { }
         }
+    }
+
+    public void Dispose()
+    {
+        objRef?.Dispose();
     }
 
     [JSInvokable]
     public void UpdateUserInput(string text)
     {
         userInput = initialTextBeforeRecording + (string.IsNullOrEmpty(initialTextBeforeRecording) ? "" : " ") + text;
-        StateHasChanged();
+        InvokeAsync(StateHasChanged);
     }
 
     private string initialTextBeforeRecording = "";
@@ -389,8 +396,8 @@
         {
             initialTextBeforeRecording = userInput;
             await JS.InvokeVoidAsync("resetTranscribedText");
-            var dotNetObjRef = DotNetObjectReference.Create(this);
-            await JS.InvokeVoidAsync("startRecording", dotNetObjRef);
+            if (objRef == null) objRef = DotNetObjectReference.Create(this);
+            await JS.InvokeVoidAsync("startRecording", objRef);
             isRecording = true;
         }
         StateHasChanged();

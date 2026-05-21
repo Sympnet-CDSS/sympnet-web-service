@@ -542,6 +542,9 @@
 </style>
 
 @code {
+    [CascadingParameter]
+    public SympNet.WebDashboard.Components.Layout.DoctorLayout Layout { get; set; } = default!;
+
     [Parameter]
     public int? Id { get; set; }
 
@@ -724,7 +727,7 @@
     {
         if (ordonnance.PatientId == 0 || string.IsNullOrWhiteSpace(ordonnance.Diagnosis) || !medications.Any())
         {
-            await JS.InvokeVoidAsync("alert", "Veuillez remplir tous les champs obligatoires et ajouter au moins un médicament.");
+            Layout.ShowToast("Attention", "Veuillez remplir tous les champs obligatoires et ajouter au moins un médicament.", "warning");
             return;
         }
 
@@ -752,7 +755,7 @@
 
             if (response.IsSuccessStatusCode)
             {
-                await JS.InvokeVoidAsync("alert", "Ordonnance enregistrée avec succès !");
+                Layout.ShowToast("Succès", "Ordonnance enregistrée avec succès !", "success");
                 Navigation.NavigateTo("/doctor/dashboard"); // Ou /doctor/prescriptions
             }
         }

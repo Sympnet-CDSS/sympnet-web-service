@@ -1,0 +1,214 @@
+@page "/admin/report"
+@layout EmptyLayout
+@inject IJSRuntime JS
+@inject HttpClient Http
+@inject IConfiguration Config
+@inject NavigationManager Nav
+
+<PageTitle>Rapport Mensuel - SympNet</PageTitle>
+
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
+<style>
+    body { background: #f3f4f6; margin: 0; padding: 0; font-family: 'Instrument Sans', sans-serif; }
+    .print-container {
+        max-width: 21cm; /* A4 width */
+        min-height: 29.7cm; /* A4 height */
+        margin: 20px auto;
+        background: white;
+        padding: 40px 50px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border-radius: 8px;
+    }
+    
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 2px solid #0D9488;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+    .brand-title { color: #0D9488; font-size: 28px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 10px; }
+    .report-meta { text-align: right; color: #4b5563; font-size: 14px; }
+    .report-meta h2 { margin: 0 0 5px 0; font-size: 20px; color: #111827; }
+    
+    .section-title { font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; }
+    
+    .stats-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    .stat-box {
+        flex: 1;
+        background: #f9fafb;
+        padding: 20px;
+        border-radius: 8px;
+        border: 1px solid #e5e7eb;
+        text-align: center;
+    }
+    .stat-box .val { font-size: 32px; font-weight: 800; color: #0D9488; margin-bottom: 5px; }
+    .stat-box .lbl { font-size: 13px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
+    
+    .data-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+    .data-table th, .data-table td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 14px; }
+    .data-table th { background: #f9fafb; color: #374151; font-weight: 600; }
+    .data-table tr:nth-child(even) { background: #fcfcfc; }
+    
+    .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+    
+    @@media print {
+        body { background: white; }
+        .print-container { margin: 0; padding: 0; box-shadow: none; border-radius: 0; max-width: 100%; }
+        .no-print { display: none; }
+    }
+    
+    .btn-print {
+        position: fixed;
+        bottom: 30px; right: 30px;
+        background: #0D9488; color: white;
+        border: none; padding: 15px 25px;
+        border-radius: 50px; font-size: 16px; font-weight: 600;
+        cursor: pointer; box-shadow: 0 4px 15px rgba(13,148,136,0.4);
+    }
+</style>
+
+<div class="print-container">
+    @if (isLoading)
+    {
+        <div style="text-align: center; padding: 50px; color: #6b7280;">Génération du rapport en cours...</div>
+    }
+    else
+    {
+        <div class="report-header">
+            <div class="brand-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M22 12h-4l-3 9-4-18-3 9H2"/></svg>
+                SympNet
+            </div>
+            <div class="report-meta">
+                <h2>Rapport d'Activité</h2>
+                <div>Date: @DateTime.Now.ToString("dd MMMM yyyy")</div>
+                <div>Généré par: @adminEmail</div>
+            </div>
+        </div>
+        
+        <h3 class="section-title">Vue d'ensemble des Utilisateurs</h3>
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="val">@totalUsers</div>
+                <div class="lbl">Utilisateurs Totaux</div>
+            </div>
+            <div class="stat-box">
+                <div class="val">@totalDoctors</div>
+                <div class="lbl">Médecins</div>
+            </div>
+            <div class="stat-box">
+                <div class="val">@totalPatients</div>
+                <div class="lbl">Patients</div>
+            </div>
+        </div>
+        
+        <h3 class="section-title">Statut des Comptes</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Catégorie</th>
+                    <th>Nombre</th>
+                    <th>Pourcentage</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Comptes Actifs</td>
+                    <td>@activeUsers</td>
+                    <td>@(totalUsers > 0 ? (activeUsers * 100 / totalUsers) : 0)%</td>
+                </tr>
+                <tr>
+                    <td>Comptes Inactifs</td>
+                    <td>@inactiveUsers</td>
+                    <td>@(totalUsers > 0 ? (inactiveUsers * 100 / totalUsers) : 0)%</td>
+                </tr>
+                <tr>
+                    <td>Comptes Administrateurs</td>
+                    <td>@totalAdmins</td>
+                    <td>@(totalUsers > 0 ? (totalAdmins * 100 / totalUsers) : 0)%</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            Document confidentiel généré par le système SympNet.<br/>
+            © @DateTime.Now.Year SympNet Platform. Tous droits réservés.
+        </div>
+    }
+</div>
+
+<button class="btn-print no-print" @onclick="PrintPdf">🖨️ Imprimer / Sauvegarder en PDF</button>
+
+@code {
+    private bool isLoading = true;
+    private string adminEmail = "Admin";
+    
+    private int totalUsers = 0;
+    private int totalDoctors = 0;
+    private int totalPatients = 0;
+    private int totalAdmins = 0;
+    private int activeUsers = 0;
+    private int inactiveUsers = 0;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                var role = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_role");
+                if (role != "Admin") { Nav.NavigateTo("/login"); return; }
+                
+                adminEmail = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_email");
+                var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+                Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+                
+                var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+                var stats = await Http.GetFromJsonAsync<ApiStatsResponse>($"{baseUrl}/api/admin/stats");
+                if (stats != null)
+                {
+                    totalUsers = stats.totalUsers;
+                    totalDoctors = stats.totalDoctors;
+                    totalPatients = stats.totalPatients;
+                    totalAdmins = stats.totalAdmins;
+                    activeUsers = stats.activeUsers;
+                    inactiveUsers = stats.inactiveUsers;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Erreur report: {ex.Message}");
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged();
+                await Task.Delay(500);
+                await JS.InvokeVoidAsync("window.print");
+            }
+        }
+    }
+    
+    private async Task PrintPdf()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    public class ApiStatsResponse
+    {
+        public int totalUsers { get; set; }
+        public int totalDoctors { get; set; }
+        public int totalPatients { get; set; }
+        public int totalAdmins { get; set; }
+        public int activeUsers { get; set; }
+        public int inactiveUsers { get; set; }
+    }
+}

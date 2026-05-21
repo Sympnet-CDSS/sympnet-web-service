@@ -6,12 +6,17 @@
 @inject NavigationManager Navigation
 
 <div class="manage-blogs-page">
-    <div class="page-header">
-        <div class="header-info">
-            <h1>Mes Articles</h1>
-            <p>Gérez et publiez vos articles sur le blog SympNet</p>
+    <div class="welcome-banner" style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="banner-text">
+            <h2>Gestion du contenu</h2>
+            <h1 style="color:white; margin:0; display:flex; align-items:center; gap:12px;">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+                </svg>
+                Mes Articles
+            </h1>
         </div>
-        <button class="btn-create" @onclick='() => Navigation.NavigateTo("/doctor/create-blog")'>
+        <button class="btn-create" @onclick='() => Navigation.NavigateTo("/doctor/create-blog")' style="position:relative; z-index:2; background:white; color:#0D9488; padding:12px 24px; border-radius:8px; font-weight:600; border:none; cursor:pointer;">
             <i class="fas fa-plus"></i> Nouvel Article
         </button>
     </div>
@@ -134,8 +139,22 @@
 
 <style>
     .manage-blogs-page { animation: fadeIn 0.5s ease-out; }
-    .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
-    .header-info h1 { font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; color: #111827; }
+    .welcome-banner { 
+        background: linear-gradient(135deg, #0D9488, #14B8A6); 
+        border-radius: 20px; 
+        padding: 32px 40px; 
+        color: white; 
+        margin-bottom: 32px;
+        position: relative;
+        overflow: hidden;
+    }
+    .welcome-banner::before {
+        content: ''; position: absolute; top: -50%; right: -10%; width: 300px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 50%;
+    }
+    .welcome-banner::after {
+        content: ''; position: absolute; bottom: -30%; left: -5%; width: 200px; height: 200px; background: rgba(255,255,255,0.08); border-radius: 50%;
+    }
+    .banner-text h2 { font-size: 16px; font-weight: 500; margin: 0 0 6px 0; opacity: 0.9; color: white; }
     .btn-create { background: #0D9488; color: white; border: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; cursor: pointer; display: flex; gap: 8px; }
     .stats-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 32px; }
     .stat-card { background: white; padding: 24px; border-radius: 20px; border: 1px solid rgba(13, 148, 136, 0.1); display: flex; align-items: center; gap: 20px; }
@@ -156,8 +175,9 @@
     .status-badge { padding: 4px 10px; border-radius: 6px; font-size: 12px; }
     .status-badge.published { background: #F0FDF4; color: #10B981; }
     .status-badge.draft { background: #FFF7ED; color: #F97316; }
-    .action-btn { background: #F9FAFB; border: none; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; color: #6B7280; }
+    .action-btn { background: #F9FAFB; border: none; width: 34px; height: 34px; border-radius: 8px; cursor: pointer; color: #6B7280; display: inline-flex; align-items: center; justify-content: center; }
     .action-btn.delete:hover { color: #EF4444; background: #FEF2F2; }
+    .actions-cell { display: flex; gap: 8px; align-items: center; }
 
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); z-index: 1000; display: flex; align-items: center; justify-content: center; }
     .modal-card { background: white; border-radius: 24px; padding: 32px; width: 100%; max-width: 450px; text-align: center; }

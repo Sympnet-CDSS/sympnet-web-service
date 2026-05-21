@@ -22,10 +22,23 @@ public class DoctorDto
     public bool IsVerified { get; set; }
     public bool IsAvailable { get; set; }
     public bool IsActive { get; set; }
-    public DateTime CreatedAt { get; set; }
     public string? PhotoUrl { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
+public class DoctorProfileDto : DoctorDto
+{
+    public List<DoctorRatingDto> Ratings { get; set; } = new();
+}
+
+public class DoctorRatingDto
+{
+    public int Id { get; set; }
+    public int Score { get; set; }
+    public string? Comment { get; set; }
+    public string PatientName { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
 
 public class CreateDoctorDto
 {

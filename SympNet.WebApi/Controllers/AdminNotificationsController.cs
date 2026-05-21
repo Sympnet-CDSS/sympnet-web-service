@@ -140,6 +140,19 @@ public class AdminNotificationsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPatch("read-all")]
+    public async Task<IActionResult> MarkAllAsRead()
+    {
+        var userId = GetCurrentUserId();
+        var notifications = await _context.Notifications
+            .Where(n => n.UserId == userId && !n.IsRead)
+            .ToListAsync();
+
+        notifications.ForEach(n => n.IsRead = true);
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> Delete(int id)
     {

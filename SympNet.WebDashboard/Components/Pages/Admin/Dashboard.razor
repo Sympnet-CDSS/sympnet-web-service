@@ -117,97 +117,117 @@
         100% { transform: translateX(100%); }
     }
     
-    /* Users Table */
+    /* Cards from Image */
     .users-card { 
         background: white; 
-        border-radius: 28px; 
-        border: 1px solid rgba(13,148,136,0.08); 
+        border-radius: 20px; 
         overflow: hidden; 
-        box-shadow: 0 4px 20px rgba(0,0,0,0.02);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.04);
         display: flex;
         flex-direction: column;
+        border: 1px solid rgba(0,0,0,0.02);
     }
     .users-header { 
-        padding: 24px 28px; 
-        border-bottom: 1px solid #F1F5F9; 
+        padding: 24px; 
         display: flex; 
         justify-content: space-between; 
         align-items: center; 
-        background: #FAFAFA;
     }
+    .header-notif { background: #00B18B; color: white; }
+    .header-users { background: #6366F1; color: white; }
+    
     .users-header h3 { 
-        font-size: 17px; 
+        font-size: 18px; 
         font-weight: 800; 
         margin: 0; 
         display: flex; 
         align-items: center; 
         gap: 12px; 
-        color: #0F172A;
+        color: white;
     }
-    .users-header h3 svg { color: #0D9488; }
+    .users-header h3 i { 
+        font-size: 20px;
+        width: 36px; height: 36px;
+        display: flex; align-items: center; justify-content: center;
+        border: 1.5px solid rgba(255,255,255,0.4);
+        border-radius: 10px;
+    }
     .users-header a { 
-        color: #0D9488; 
+        color: white; 
         text-decoration: none; 
-        font-size: 13px; 
-        font-weight: 700; 
+        font-size: 14px; 
+        font-weight: 600; 
         cursor: pointer; 
         display: flex; 
         align-items: center; 
-        gap: 6px;
-        padding: 6px 12px;
-        border-radius: 10px;
+        gap: 4px;
         transition: 0.2s;
+        opacity: 0.9;
     }
-    .users-header a:hover { background: rgba(13,148,136,0.08); transform: translateX(2px); }
+    .users-header a:hover { opacity: 1; transform: translateX(2px); }
     
     .user-list { padding: 0; }
-    .user-item { 
-        padding: 18px 28px; 
-        border-bottom: 1px solid #F8FAFC; 
+    .user-items { 
+        padding: 20px 24px; 
+        border-bottom: 1px solid #F1F5F9; 
         display: flex; 
         align-items: center; 
         justify-content: space-between; 
         transition: all 0.2s; 
         cursor: pointer;
     }
-    .user-item:last-child { border-bottom: none; }
-    .user-item:hover { background: #F8FBFA; padding-left: 32px; }
+    .s:last-child { border-bottom: none; }
+    .s:hover { background: #FAFAFA; }
     
-    .user-info { display: flex; align-items: center; gap: 16px; flex: 1; }
+    .user-infos { display: flex; align-items: center; gap: 16px; flex: 1; }
     .user-avatar { 
-        width: 48px; 
-        height: 48px; 
-        border-radius: 14px; 
-        background: linear-gradient(135deg, #0D9488, #14B8A6); 
+        width: 42px; 
+        height: 42px; 
+        border-radius: 50%; 
+        background: #A855F7; 
         display: flex; 
         align-items: center; 
         justify-content: center; 
         color: white; 
         font-weight: 800; 
-        font-size: 16px;
-        box-shadow: 0 4px 10px rgba(13,148,136,0.15);
+        font-size: 18px;
+        position: relative;
     }
     .user-avatar.notif {
-        background: #F0FDFA;
-        color: #0D9488;
-        box-shadow: none;
+        background: #E6F8F7;
+        color: #00B18B;
         border: 1px solid #CCFBF1;
+        font-size: 16px;
+    }
+    /* Dots */
+    .dot-status {
+        position: absolute;
+        bottom: 0; right: 0;
+        width: 12px; height: 12px;
+        background: #10B981;
+        border: 2px solid white;
+        border-radius: 50%;
+    }
+    .dot-right {
+        width: 8px; height: 8px;
+        background: #10B981;
+        border-radius: 50%;
     }
     
-    .user-details h4 { font-size: 15px; font-weight: 800; margin: 0; color: #1E293B; }
-    .user-details p { font-size: 13px; color: #64748B; margin: 3px 0 0; line-height: 1.4; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .user-details h4 { font-size: 15px; font-weight: 700; margin: 0 0 4px 0; color: #1E293B; }
+    .user-details p { font-size: 13px; color: #64748B; margin: 0; max-width: 250px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-time { font-size: 12px; color: #94A3B8; display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+    .user-time i { font-size: 10px; }
     
     .status-badges { display: flex; align-items: center; gap: 8px; }
-    .user-status { padding: 5px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+    .user-status { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; border: 1px solid transparent; }
     .status-active { background: #ECFDF5; color: #10B981; }
     .status-inactive { background: #FEF2F2; color: #EF4444; }
-    .status-new { background: #FFFBEB; color: #D97706; }
-    .status-read { background: #F8FAFC; color: #94A3B8; }
     
-    .user-role { padding: 5px 12px; border-radius: 10px; font-size: 12px; font-weight: 700; border: 1px solid transparent; }
-    .role-doctor { background: #F0FDF4; color: #16A34A; border-color: #DCFCE7; }
-    .role-patient { background: #F0F9FF; color: #0284C7; border-color: #E0F2FE; }
-    .role-admin { background: #F5F3FF; color: #7C3AED; border-color: #EDE9FE; }
+    .user-role { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .role-doctor { background: #E6F8F7; color: #00B18B; }
+    .role-patient { background: #FEF2F2; color: #EF4444; }
+    .role-admin { background: #F3E8FF; color: #A855F7; }
     
     /* Spinner */
     .loading-container { display: flex; justify-content: center; align-items: center; min-height: 400px; flex-direction: column; gap: 20px; }
@@ -221,6 +241,57 @@
     /* Empty state */
     .empty-state { text-align: center; padding: 60px 20px; background: white; border-radius: 20px; }
     .empty-state svg { width: 64px; height: 64px; color: #D1D5DB; margin-bottom: 16px; }
+
+    /* Page Header (Green Banner) */
+    .page-header {
+        background: linear-gradient(135deg, #0D9488, #14B8A6);
+        border-radius: 28px;
+        padding: 32px 40px;
+        color: white;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+        position: relative;
+        overflow: hidden;
+    }
+    .page-header::before {
+        content: ''; position: absolute; top: -50%; right: -20%; width: 300px; height: 300px;
+        background: rgba(255,255,255,0.1); border-radius: 50%; pointer-events: none;
+    }
+    .page-title {
+        font-family: 'Bricolage Grotesque', sans-serif;
+        font-size: 28px;
+        font-weight: 800;
+        margin: 0 0 8px 0;
+        position: relative; z-index: 1;
+    }
+    .page-subtitle {
+        color: rgba(255,255,255,0.9);
+        font-size: 15px;
+        margin: 0;
+        position: relative; z-index: 1;
+    }
+    .btn-report {
+        background: white;
+        border: none;
+        color: #0D9488;
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        position: relative; z-index: 1;
+    }
+    .btn-report:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
     
     @@media (max-width: 1024px) {
         .stats-grid { grid-template-columns: repeat(2, 1fr); }
@@ -249,8 +320,17 @@
     }
     else
     {
-        <!-- Welcome Banner -->
-        <DashboardHeader UserName="@adminName" UserEmail="@adminEmail" IsAdmin="true" />
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">Tableau de Bord Global</h1>
+                <p class="page-subtitle">Aperçu en temps réel des activités et de la plateforme SympNet.</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-report" @onclick="GenerateReport">
+                    <i class="fas fa-file-download"></i> Rapport Mensuel
+                </button>
+            </div>
+        </div>
 
         <!-- Statistics Cards -->
         <div class="stats-grid">
@@ -373,17 +453,13 @@
         <div class="row-grid">
             <!-- Recent Notifications -->
             <div class="users-card">
-            <div class="users-header">
+            <div class="users-header header-notif">
                 <h3>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-                    </svg>
+                    <i class="far fa-bell"></i>
                     Notifications récentes
                 </h3>
                 <a @onclick='() => Navigation.NavigateTo("/admin/notifications")'>
-                    Explorer
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    Explorer <i class="fas fa-chevron-right" style="font-size: 10px; margin-left: 2px;"></i>
                 </a>
             </div>
             <div class="user-list">
@@ -391,22 +467,22 @@
                 {
                     @foreach (var notif in recentNotifications)
                     {
-                        <div class="user-item" @onclick="() => ViewNotif(notif)">
-                            <div class="user-info">
+                        <div class="s" @onclick="() => ViewNotif(notif)">
+                            <div class="user-infos">
                                 <div class="user-avatar notif">
-                                    <i class="fas fa-bell"></i>
+                                    <i class="far fa-envelope"></i>
                                 </div>
                                 <div class="user-details">
-                                    <h4>@notif.Title</h4>
-                                    <p>@notif.Message</p>
+                                    <h4>Nouveau message de contact</h4>
+                                    <p>Nouveau message de @notif.Title sur le sujet : @notif.Message</p>
+                                    <div class="user-time">
+                                        <i class="far fa-clock"></i> @notif.CreatedAt.ToString("HH:mm") 
+                                        <span style="margin-left: 4px;">Archivée</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
-                                <span class="user-status @(notif.IsRead ? "status-read" : "status-new")">
-                                    @if (!notif.IsRead) { <span style="width: 6px; height: 6px; background: #D97706; border-radius: 50%;"></span> }
-                                    @(notif.IsRead ? "Archives" : "Nouveau")
-                                </span>
-                                <span style="font-size: 11px; font-weight: 600; color: #94A3B8;">@notif.CreatedAt.ToString("HH:mm")</span>
+                            <div>
+                                <div class="dot-right"></div>
                             </div>
                         </div>
                     }
@@ -423,17 +499,13 @@
 
             <!-- Recent Users -->
             <div class="users-card" style="margin-bottom: 0;">
-            <div class="users-header">
+            <div class="users-header header-users">
                 <h3>
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                        <circle cx="12" cy="7" r="4"/>
-                    </svg>
+                    <i class="far fa-user"></i>
                     Derniers utilisateurs
                 </h3>
                 <a @onclick="GoToDoctors">
-                    Gérer
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                    Gérer <i class="fas fa-chevron-right" style="font-size: 10px; margin-left: 2px;"></i>
                 </a>
             </div>
             <div class="user-list">
@@ -441,9 +513,12 @@
                 {
                     @foreach (var user in recentUsers)
                     {
-                        <div class="user-item">
-                            <div class="user-info">
-                                <div class="user-avatar @(user.Role.ToLower())">@user.Initial</div>
+                        <div class="s">
+                            <div class="user-infos">
+                                <div class="user-avatar" style="background: @(user.Role == "Doctor" ? "#00B18B" : (user.Role == "Patient" ? "#A855F7" : "#EC4899"))">
+                                    @user.Initial
+                                    <div class="dot-status" style="background: @(user.IsActive ? "#10B981" : "#EF4444")"></div>
+                                </div>
                                 <div class="user-details">
                                     <h4>@user.Name</h4>
                                     <p>@user.Email</p>
@@ -454,7 +529,6 @@
                                     @(user.Role == "Doctor" ? "Médecin" : (user.Role == "Patient" ? "Patient" : "Admin"))
                                 </span>
                                 <span class="user-status @(user.IsActive ? "status-active" : "status-inactive")">
-                                    <span style="width: 6px; height: 6px; background: currentColor; border-radius: 50%;"></span>
                                     @(user.IsActive ? "En ligne" : "Hors ligne")
                                 </span>
                             </div>
@@ -689,6 +763,12 @@
     private void GoToDoctors() => Navigation.NavigateTo("/admin/doctors");
     private void GoToPatients() => Navigation.NavigateTo("/admin/patients");
     private void GoToProfile() => Navigation.NavigateTo("/admin/profile");
+    
+    private void GenerateReport()
+    {
+        // On navigue vers la page de rapport
+        Navigation.NavigateTo("/admin/report");
+    }
 
     // DTOs
     public class ApiStatsResponse

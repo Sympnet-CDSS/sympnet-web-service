@@ -1062,31 +1062,24 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\Yasmine\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\lenovo\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
+      "projectUniqueName": "C:\\Users\\lenovo\\Desktop\\fin\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
       "projectName": "SympNet.WebDashboard",
-      "projectPath": "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
-      "packagesPath": "C:\\Users\\Yasmine\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\Yasmine\\Documents\\Symp\\sympnet-web-service\\SympNet.WebDashboard\\obj\\",
+      "projectPath": "C:\\Users\\lenovo\\Desktop\\fin\\sympnet-web-service\\SympNet.WebDashboard\\SympNet.WebDashboard.csproj",
+      "packagesPath": "C:\\Users\\lenovo\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\lenovo\\Desktop\\fin\\sympnet-web-service\\SympNet.WebDashboard\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\Yasmine\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\lenovo\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {
@@ -1096,9 +1089,6 @@
         }
       },
       "warningProperties": {
-        "noWarn": [
-          "NU1510"
-        ],
         "warnAsError": [
           "NU1605"
         ]
@@ -1107,8 +1097,7 @@
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      },
-      "SdkAnalysisLevel": "10.0.200"
+      }
     },
     "frameworks": {
       "net8.0": {
@@ -1142,7 +1131,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.202/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.418/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

@@ -1,0 +1,311 @@
+@page "/doctor/patient-report/{Id:int}"
+@layout SympNet.WebDashboard.Components.Layout.EmptyLayout
+@inject HttpClient Http
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+@inject IConfiguration Config
+
+<PageTitle>Dossier Médical - SympNet</PageTitle>
+
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+<style>
+    body { background: #f3f4f6; margin: 0; padding: 0; font-family: 'Instrument Sans', sans-serif; }
+    .print-container {
+        max-width: 21cm;
+        min-height: 29.7cm;
+        margin: 40px auto;
+        background: white;
+        padding: 40px 50px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border-radius: 12px;
+    }
+    
+    .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        border-bottom: 2px solid #0D9488;
+        padding-bottom: 20px;
+        margin-bottom: 30px;
+    }
+    .brand-title { color: #0D9488; font-size: 28px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 10px; }
+    .report-meta { text-align: right; color: #4b5563; font-size: 14px; }
+    .report-meta h2 { margin: 0 0 5px 0; font-size: 22px; color: #111827; }
+    
+    .section-title { font-size: 18px; font-weight: 700; color: #0D9488; margin-bottom: 15px; margin-top: 30px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; display: flex; align-items: center; gap: 10px; }
+    
+    .patient-header { display: flex; gap: 20px; align-items: center; background: #F0FDF4; padding: 20px; border-radius: 12px; border: 1px solid #10B981; margin-bottom: 20px; }
+    .patient-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .patient-avatar-placeholder { width: 80px; height: 80px; border-radius: 50%; background: #10B981; color: white; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: 700; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+    .patient-name { font-size: 24px; font-weight: 800; color: #111827; margin: 0 0 5px 0; }
+    .patient-basic-info { color: #4B5563; font-size: 15px; display: flex; gap: 15px; }
+    
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+    .info-card { background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .info-card label { display: block; font-size: 12px; color: #6b7280; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .info-card .value { font-size: 15px; color: #111827; font-weight: 500; }
+    .info-card input, .info-card textarea { width: 100%; border: 1px solid #d1d5db; border-radius: 4px; padding: 6px; font-family: inherit; font-size: 14px; }
+    
+    .consultation-item { border-left: 4px solid #0D9488; background: #fcfcfc; padding: 15px 20px; margin-bottom: 15px; border-radius: 0 8px 8px 0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .consultation-item h4 { margin: 0 0 10px 0; color: #111827; font-size: 16px; display: flex; justify-content: space-between; }
+    .consultation-date { color: #6b7280; font-size: 13px; font-weight: 400; }
+    .consultation-content { margin-top: 10px; }
+    .consultation-content strong { color: #374151; font-size: 13px; display: block; margin-top: 8px; }
+    .consultation-content p { margin: 2px 0 0 0; color: #4b5563; font-size: 14px; }
+    
+    .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 20px; }
+    
+    .btn-print, .btn-edit, .btn-back {
+        position: fixed;
+        border: none; padding: 12px 20px;
+        border-radius: 50px; font-size: 15px; font-weight: 600;
+        cursor: pointer; display: flex; align-items: center; gap: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15); z-index: 100;
+    }
+    .btn-print { bottom: 30px; right: 30px; background: #0D9488; color: white; }
+    .btn-edit { bottom: 30px; right: 280px; background: #3B82F6; color: white; }
+    .btn-save { background: #10B981; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+    .btn-back { top: 30px; left: 30px; background: white; color: #111827; }
+    
+    @@media print {
+        body { background: white; }
+        .print-container { margin: 0; padding: 0; box-shadow: none; border-radius: 0; max-width: 100%; }
+        .no-print { display: none !important; }
+        .patient-header { background: white; border-color: #e5e7eb; }
+        .info-card { break-inside: avoid; }
+        .consultation-item { break-inside: avoid; border: 1px solid #e5e7eb; border-left: 4px solid #0D9488; }
+    }
+</style>
+
+@if (isLoading)
+{
+    <div style="text-align: center; padding: 100px; color: #6b7280; font-family: sans-serif;">Chargement du dossier médical...</div>
+}
+else if (patient == null)
+{
+    <div style="text-align: center; padding: 100px; color: #ef4444; font-family: sans-serif;">Dossier introuvable.</div>
+}
+else
+{
+    <button class="btn-back no-print" @onclick="GoBack"><i class="fas fa-arrow-left"></i> Retour</button>
+    <button class="btn-edit no-print" @onclick="ToggleEditMode">
+        <i class="@(isEditMode ? "fas fa-times" : "fas fa-edit")"></i> @(isEditMode ? "Annuler Modification" : "Modifier le Dossier")
+    </button>
+    <button class="btn-print no-print" @onclick="PrintPdf"><i class="fas fa-print"></i> Imprimer / PDF</button>
+
+    <div class="print-container">
+        <div class="report-header">
+            <div class="brand-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="32" height="32"><path d="M22 12h-4l-3 9-4-18-3 9H2"/></svg>
+                SympNet
+            </div>
+            <div class="report-meta">
+                <h2>DOSSIER MÉDICAL</h2>
+                <div>Réf: PAT-@patient.Id.ToString("D5")</div>
+                <div>Imprimé le: @DateTime.Now.ToString("dd MMMM yyyy HH:mm")</div>
+            </div>
+        </div>
+        
+        <div class="patient-header">
+            @if (!string.IsNullOrEmpty(patient.PhotoUrl))
+            {
+                <img src="@(patient.PhotoUrl.StartsWith("data:image") ? patient.PhotoUrl : $"data:image/jpeg;base64,{patient.PhotoUrl}")" class="patient-avatar" />
+            }
+            else
+            {
+                <div class="patient-avatar-placeholder">@(patient.FirstName?.FirstOrDefault() ?? 'P')@(patient.LastName?.FirstOrDefault() ?? 'T')</div>
+            }
+            <div>
+                <h3 class="patient-name">@patient.FirstName @patient.LastName</h3>
+                <div class="patient-basic-info">
+                    <span><i class="fas fa-birthday-cake"></i> @patient.DateOfBirth.ToString("dd/MM/yyyy") (@(DateTime.Now.Year - patient.DateOfBirth.Year) ans)</span>
+                    <span><i class="fas fa-venus-mars"></i> @(patient.Gender == "M" ? "Homme" : "Femme")</span>
+                    <span><i class="fas fa-phone"></i> @(string.IsNullOrEmpty(patient.PhoneNumber) ? "Non renseigné" : patient.PhoneNumber)</span>
+                </div>
+            </div>
+        </div>
+        
+        @if (isEditMode)
+        {
+            <div style="background:#EFF6FF; padding:15px; border-radius:8px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center;" class="no-print">
+                <span style="color:#1D4ED8; font-weight:600;"><i class="fas fa-info-circle"></i> Mode édition activé. N'oubliez pas d'enregistrer vos modifications.</span>
+                <button class="btn-save" @onclick="SaveChanges"><i class="fas fa-save"></i> Enregistrer</button>
+            </div>
+        }
+
+        <h3 class="section-title"><i class="fas fa-notes-medical"></i> Informations Cliniques</h3>
+        <div class="info-grid">
+            <div class="info-card">
+                <label>Groupe Sanguin</label>
+                @if (isEditMode) { <input @bind="editPatient.BloodType" /> }
+                else { <div class="value">@(string.IsNullOrEmpty(patient.BloodType) ? "Non renseigné" : patient.BloodType)</div> }
+            </div>
+            <div class="info-card">
+                <label>Allergies</label>
+                @if (isEditMode) { <input @bind="editAllergies" placeholder="Séparées par des virgules" /> }
+                else { <div class="value">@(string.IsNullOrEmpty(patient.Allergies) ? "Aucune allergie connue" : patient.Allergies)</div> }
+            </div>
+            <div class="info-card">
+                <label>Maladies Chroniques</label>
+                @if (isEditMode) { <input @bind="editChronic" placeholder="Séparées par des virgules" /> }
+                else { <div class="value">@(string.IsNullOrEmpty(patient.ChronicDiseases) ? "Aucune" : patient.ChronicDiseases)</div> }
+            </div>
+            <div class="info-card">
+                <label>Traitements Actuels</label>
+                @if (isEditMode) { <input @bind="editMedications" placeholder="Séparés par des virgules" /> }
+                else { <div class="value">@(string.IsNullOrEmpty(patient.CurrentMedications) ? "Aucun traitement en cours" : patient.CurrentMedications)</div> }
+            </div>
+        </div>
+        
+        <div class="info-card" style="margin-bottom: 30px;">
+            <label>Antécédents Médicaux / Chirurgicaux</label>
+            @if (isEditMode) { <textarea @bind="editPatient.MedicalHistory" rows="3"></textarea> }
+            else { <div class="value" style="white-space: pre-line;">@(string.IsNullOrEmpty(patient.MedicalHistory) ? "Aucun antécédent majeur signalé." : patient.MedicalHistory)</div> }
+        </div>
+
+        <h3 class="section-title"><i class="fas fa-history"></i> Historique des Consultations</h3>
+        @if (patient.Consultations != null && patient.Consultations.Any())
+        {
+            @foreach (var c in patient.Consultations.OrderByDescending(x => x.CreatedAt))
+            {
+                <div class="consultation-item">
+                    <h4>
+                        @(!string.IsNullOrEmpty(c.Diagnosis) ? c.Diagnosis : "Consultation sans diagnostic")
+                        <span class="consultation-date">@c.CreatedAt.ToString("dd MMMM yyyy HH:mm")</span>
+                    </h4>
+                    <div class="consultation-content">
+                        @if (!string.IsNullOrEmpty(c.Symptoms))
+                        {
+                            <strong>Motif / Symptômes :</strong>
+                            <p>@c.Symptoms</p>
+                        }
+                        @if (!string.IsNullOrEmpty(c.Recommendations))
+                        {
+                            <strong>Recommandations médicales :</strong>
+                            <p>@((MarkupString)c.Recommendations.Replace("\n", "<br/>"))</p>
+                        }
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <div style="text-align: center; padding: 20px; color: #9ca3af; font-style: italic;">Aucune consultation enregistrée pour ce patient.</div>
+        }
+        
+        <div class="footer">
+            Document médical strictement confidentiel.<br/>
+            Généré informatiquement par le système SympNet, ne nécessite pas de signature.
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    private SympNet.WebDashboard.Components.Pages.Doctor.Patients.PatientDetailDto? patient;
+    private UpdatePatientDto editPatient = new();
+    private bool isLoading = true;
+    private bool isEditMode = false;
+    
+    private string editAllergies = "";
+    private string editChronic = "";
+    private string editMedications = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            patient = await Http.GetFromJsonAsync<SympNet.WebDashboard.Components.Pages.Doctor.Patients.PatientDetailDto>($"{baseUrl}/api/doctorpatients/{Id}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading patient report: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+    
+    private void GoBack()
+    {
+        Nav.NavigateTo("/doctor/patients");
+    }
+
+    private async Task PrintPdf()
+    {
+        await JS.InvokeVoidAsync("window.print");
+    }
+
+    private void ToggleEditMode()
+    {
+        if (!isEditMode && patient != null)
+        {
+            editPatient = new UpdatePatientDto
+            {
+                BloodType = patient.BloodType,
+                MedicalHistory = patient.MedicalHistory,
+            };
+            editAllergies = patient.Allergies ?? "";
+            editChronic = patient.ChronicDiseases ?? "";
+            editMedications = patient.CurrentMedications ?? "";
+        }
+        isEditMode = !isEditMode;
+    }
+
+    private async Task SaveChanges()
+    {
+        try
+        {
+            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
+            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
+            
+            var updatePayload = new
+            {
+                BloodType = editPatient.BloodType,
+                MedicalHistory = editPatient.MedicalHistory,
+                Allergies = editAllergies,
+                ChronicDiseases = editChronic,
+                CurrentMedications = editMedications
+            };
+            
+            await Http.PutAsJsonAsync($"{baseUrl}/api/patients/{Id}/medical-background", updatePayload);
+            
+            isEditMode = false;
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error saving patient: {ex.Message}");
+        }
+    }
+
+    public class UpdatePatientDto
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? Gender { get; set; }
+        public string? Address { get; set; }
+        public string? BloodType { get; set; }
+        public string? MedicalHistory { get; set; }
+        public string? Allergies { get; set; }
+        public string? ChronicDiseases { get; set; }
+        public string? CurrentMedications { get; set; }
+        public string? PhotoUrl { get; set; }
+    }
+}
