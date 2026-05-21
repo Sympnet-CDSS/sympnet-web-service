@@ -38,7 +38,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
 
-        //  permet à SignalR de lire le token depuis la query string
         options.Events = new JwtBearerEvents
         {
             OnMessageReceived = context =>
@@ -48,7 +47,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 
                 if (path.StartsWithSegments("/hubs"))
                 {
-                    Console.WriteLine($"[SignalR-Auth] Connection attempt to {path}. Token found in query: {!string.IsNullOrEmpty(accessToken)}");
+                    var hasHeader = context.Request.Headers.ContainsKey("Authorization");
+                    Console.WriteLine($"[SignalR-Auth] Connection attempt to {path}. Token in query: {!string.IsNullOrEmpty(accessToken)}, Token in header: {hasHeader}");
                     if (!string.IsNullOrEmpty(accessToken))
                     {
                         context.Token = accessToken;

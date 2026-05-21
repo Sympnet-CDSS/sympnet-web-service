@@ -151,7 +151,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var p in filteredPatients)
+                    @foreach (var p in filteredPatients.Take(displayCount))
                     {
                         string initBg = p.IsActive ? "#ECFDF5" : "#FEF2F2";
                         string initCol = p.IsActive ? "#10B981" : "#EF4444";
@@ -198,6 +198,12 @@
                     }
                 </tbody>
             </table>
+            @if (filteredPatients.Count > displayCount)
+            {
+                <div style="text-align: center; padding: 20px; border-top: 1px solid #F1F5F9;">
+                    <button class="filter-btn" style="margin: 0 auto;" @onclick="LoadMore">Voir plus de patients</button>
+                </div>
+            }
         </div>
     }
 </div>
@@ -240,6 +246,8 @@
     private bool isLoading = true;
     private string toastMessage = "";
     private string toastType = "success";
+    private int displayCount = 5;
+    private void LoadMore() => displayCount += 5;
 
     // ConfirmModal state
     private bool confirmModalVisible = false;

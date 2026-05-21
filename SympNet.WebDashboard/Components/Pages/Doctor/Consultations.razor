@@ -80,7 +80,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var c in filteredConsultations)
+                    @foreach (var c in filteredConsultations.Take(displayCount))
                     {
                         <tr>
                             <td>
@@ -113,6 +113,12 @@
                     }
                 </tbody>
             </table>
+            @if (filteredConsultations.Count > displayCount)
+            {
+                <div style="text-align: center; padding: 20px; border-top: 1px solid #F1F5F9;">
+                    <button class="filter-btn" style="margin: 0 auto;" @onclick="LoadMore">Voir plus de consultations</button>
+                </div>
+            }
         }
     </div>
 </div>
@@ -281,6 +287,8 @@
     private bool isLoading = true;
     private string successMessage = "";
     private string errorMessage = "";
+    private int displayCount = 5;
+    private void LoadMore() => displayCount += 5;
     
     private bool showDeleteConfirm = false;
     private int consultationToDeleteId = 0;

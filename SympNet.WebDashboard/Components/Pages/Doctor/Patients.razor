@@ -188,7 +188,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var p in filteredPatients)
+                    @foreach (var p in filteredPatients.Take(displayCount))
                     {
                         var random = new Random(p.Id);
                         int aiScore = random.Next(75, 98);
@@ -247,138 +247,25 @@
                     }
                 </tbody>
             </table>
+            @if (filteredPatients.Count > displayCount)
+            {
+                <div style="text-align: center; padding: 20px; border-top: 1px solid #F1F5F9;">
+                    <button class="filter-btn" style="margin: 0 auto;" @onclick="LoadMore">Voir plus de patients</button>
+                </div>
+            }
         </div>
     }
 </div>
 
-@if (selectedPatient != null)
-{
-    <div class="modal-overlay" @onclick="CloseModal">
-        <div class="modal-content" @onclick:stopPropagation>
-            <div class="modal-header">
-                <h3>
-                    @if (!string.IsNullOrEmpty(selectedPatient.PhotoUrl))
-                    {
-                        <img src="@(selectedPatient.PhotoUrl.StartsWith("data:image") ? selectedPatient.PhotoUrl : $"data:image/jpeg;base64,{selectedPatient.PhotoUrl}")" style="width:32px;height:32px;border-radius:50%;object-fit:cover;margin-right:8px;" />
-                    }
-                    else
-                    {
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
-                    }
-                    @selectedPatient.FirstName @selectedPatient.LastName
-                </h3>
-                <button style="background:none;border:none;font-size:24px;cursor:pointer;" @onclick="CloseModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                @if (isEditMode)
-                {
-                    <div class="form-group">
-                        <label>Allergies (séparées par des virgules)</label>
-                        <input type="text" class="form-control" @bind="editingPatient.Allergies" />
-                    </div>
-                    <div class="form-group">
-                        <label>Antécédents médicaux</label>
-                        <textarea class="form-control" rows="2" @bind="editingPatient.MedicalHistory"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Maladies Chroniques (séparées par des virgules)</label>
-                        <input type="text" class="form-control" @bind="editingPatient.ChronicDiseases" />
-                    </div>
-                    <div class="form-group">
-                        <label>Médicaments Actuels (séparés par des virgules)</label>
-                        <input type="text" class="form-control" @bind="editingPatient.CurrentMedications" />
-                    </div>
-                }
-                else
-                {
-                    <div class="info-row"><div class="info-label">Email</div><div class="info-value">@selectedPatient.Email</div></div>
-                    <div class="info-row"><div class="info-label">Téléphone</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.PhoneNumber) ? "Non renseigné" : selectedPatient.PhoneNumber)</div></div>
-                    <div class="info-row"><div class="info-label">Date naissance</div><div class="info-value">@selectedPatient.DateOfBirth.ToString("dd/MM/yyyy")</div></div>
-                    <div class="info-row"><div class="info-label">Âge</div><div class="info-value">@(DateTime.Now.Year - selectedPatient.DateOfBirth.Year) ans</div></div>
-                    <div class="info-row"><div class="info-label">Genre</div><div class="info-value">@(selectedPatient.Gender == "M" ? "Homme" : "Femme")</div></div>
-                    <div class="info-row"><div class="info-label">Groupe sanguin</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.BloodType) ? "Non renseigné" : selectedPatient.BloodType)</div></div>
-                    <div class="info-row"><div class="info-label">Allergies</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.Allergies) ? "Aucune" : selectedPatient.Allergies)</div></div>
-                    <div class="info-row"><div class="info-label">Antécédents</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.MedicalHistory) ? "Aucun" : selectedPatient.MedicalHistory)</div></div>
-                    <div class="info-row"><div class="info-label">Maladies Chroniques</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.ChronicDiseases) ? "Aucune" : selectedPatient.ChronicDiseases)</div></div>
-                    <div class="info-row"><div class="info-label">Médicaments</div><div class="info-value">@(string.IsNullOrEmpty(selectedPatient.CurrentMedications) ? "Aucun" : selectedPatient.CurrentMedications)</div></div>
-                }
-                
-                @if (selectedPatient.Consultations != null && selectedPatient.Consultations.Any())
-                {
-                    <div style="margin-top: 20px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                            <div style="font-weight: 700; color: #0D9488; display: flex; align-items: center; gap: 8px;">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                Historique des consultations (@selectedPatient.Consultations.Count)
-                            </div>
-                            <button class="action-btn" @onclick="() => GoToNewConsultation(selectedPatient.Id)">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                                Créer nouvelle consultation
-                            </button>
-                        </div>
-                        @foreach (var consultation in selectedPatient.Consultations)
-                        {
-                            <div class="consultation-item">
-                                <div><strong>@(!string.IsNullOrEmpty(consultation.Diagnosis) ? consultation.Diagnosis : "Diagnostic en cours")</strong> - @consultation.CreatedAt.ToString("dd/MM/yyyy HH:mm")</div>
-                                @if (!string.IsNullOrEmpty(consultation.Symptoms))
-                                {
-                                    <div style="font-size: 13px; margin-top: 8px; font-weight: 600; color: #374151;">Symptômes:</div>
-                                    <div style="font-size: 13px; margin-top: 2px; color: #6B7280; font-style: italic;">"@consultation.Symptoms"</div>
-                                }
-                                @if (!string.IsNullOrEmpty(consultation.Recommendations))
-                                {
-                                    <div style="font-size: 13px; margin-top: 8px; font-weight: 600; color: #374151;">Recommandations:</div>
-                                    <div style="font-size: 13px; margin-top: 2px; color: #6B7280;">@((MarkupString)consultation.Recommendations.Replace("\n", "<br>"))</div>
-                                }
-                            </div>
-                        }
-                    </div>
-                }
-                else
-                {
-                    <div style="margin-top: 20px; padding: 16px; background: #F9FAFB; border-radius: 12px; text-align: center; color: #6B7280;">
-                        Aucune consultation pour ce patient
-                        <div style="margin-top: 12px;">
-                            <button class="action-btn" @onclick="() => GoToNewConsultation(selectedPatient.Id)">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-                                Créer la première consultation
-                            </button>
-                        </div>
-                    </div>
-                }
-            </div>
-            <div class="modal-footer">
-                @if (isEditMode)
-                {
-                    <button class="action-btn" @onclick="SavePatientChanges" disabled="@isSaving">
-                        <i class="fas fa-save"></i> Enregistrer les modifications
-                    </button>
-                    <button class="btn-close" @onclick="() => isEditMode = false">Annuler</button>
-                }
-                else
-                {
-                    <button class="action-btn" style="background:#4B5563;" @onclick="EnableEditMode">
-                        <i class="fas fa-edit"></i> Modifier le dossier
-                    </button>
-                    <button class="action-btn" style="background:#10B981;" @onclick="PrintReport">
-                        <i class="fas fa-print"></i> Rapport Complet
-                    </button>
-                    <button class="btn-close" @onclick="CloseModal">Fermer</button>
-                }
-            </div>
-        </div>
-    </div>
-}
-
 @code {
     private List<PatientDto> patients = new();
     private PatientDetailDto? selectedPatient = null;
-    private PatientDto editingPatient = new();
     private string searchTerm = "";
     private bool isLoading = true;
-    private bool isEditMode = false;
-    private bool isSaving = false;
     private string? errorMessage = null;
+
+    private int displayCount = 5;
+    private void LoadMore() => displayCount += 5;
 
     private bool sortAscending = false;
 
@@ -448,94 +335,15 @@
         } 
     }
     
-    private async Task ShowPatientDetails(int id) 
+    private void ShowPatientDetails(int id) 
     { 
-        try 
-        { 
-            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token"); 
-            if (string.IsNullOrEmpty(token)) return;
-            
-            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token); 
-            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057"; 
-            selectedPatient = await Http.GetFromJsonAsync<PatientDetailDto>($"{baseUrl}/api/doctorpatients/{id}"); 
-            StateHasChanged(); 
-        } 
-        catch (Exception ex) 
-        { 
-            Console.WriteLine($"Erreur chargement détails: {ex.Message}");
-        } 
+        Navigation.NavigateTo($"/doctor/patient-report/{id}");
     }
     
     private void CloseModal() 
     { 
         selectedPatient = null; 
-        isEditMode = false;
         StateHasChanged(); 
-    }
-
-    private void EnableEditMode()
-    {
-        if (selectedPatient != null)
-        {
-            editingPatient = new PatientDto
-            {
-                Id = selectedPatient.Id,
-                FirstName = selectedPatient.FirstName,
-                LastName = selectedPatient.LastName,
-                Allergies = selectedPatient.Allergies,
-                MedicalHistory = selectedPatient.MedicalHistory,
-                ChronicDiseases = selectedPatient.ChronicDiseases,
-                CurrentMedications = selectedPatient.CurrentMedications
-            };
-            isEditMode = true;
-        }
-    }
-
-    private async Task SavePatientChanges()
-    {
-        if (selectedPatient == null) return;
-        isSaving = true;
-        
-        try
-        {
-            var token = await JS.InvokeAsync<string>("localStorage.getItem", "sympnet_token");
-            Http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            var baseUrl = Config["ApiSettings:BaseUrl"] ?? "http://localhost:5057";
-
-            // On crée un objet anonyme pour le PUT
-            var updateData = new {
-                MedicalHistory = editingPatient.MedicalHistory,
-                Allergies = editingPatient.Allergies,
-                ChronicDiseases = editingPatient.ChronicDiseases,
-                CurrentMedications = editingPatient.CurrentMedications
-            };
-
-            var response = await Http.PutAsJsonAsync($"{baseUrl}/api/patients/{selectedPatient.Id}/medical-background", updateData);
-            if (response.IsSuccessStatusCode)
-            {
-                // Mettre à jour l'affichage local
-                selectedPatient.MedicalHistory = editingPatient.MedicalHistory;
-                selectedPatient.Allergies = editingPatient.Allergies;
-                selectedPatient.ChronicDiseases = editingPatient.ChronicDiseases;
-                selectedPatient.CurrentMedications = editingPatient.CurrentMedications;
-                
-                isEditMode = false;
-                await JS.InvokeVoidAsync("alert", "Dossier médical mis à jour avec succès !");
-            }
-            else
-            {
-                await JS.InvokeVoidAsync("alert", "Erreur lors de la sauvegarde.");
-            }
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("alert", $"Erreur: {ex.Message}");
-        }
-        finally
-        {
-            isSaving = false;
-            StateHasChanged();
-        }
     }
 
     private void GoToNewConsultation(int patientId)
