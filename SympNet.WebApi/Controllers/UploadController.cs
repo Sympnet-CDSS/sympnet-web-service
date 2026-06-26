@@ -50,7 +50,6 @@ public class UploadController : ControllerBase
             var fileBytes = memoryStream.ToArray();
             var base64String = Convert.ToBase64String(fileBytes);
             
-            // Format de type de contenu pour être consistant et directement affichable
             var photoUrl = $"data:{file.ContentType};base64,{base64String}";
             
             user.PhotoUrl = photoUrl;

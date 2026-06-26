@@ -33,7 +33,7 @@ namespace SympNet.WebApi.Controllers
             Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)
                      ?? User.FindFirstValue("sub")
                      ?? throw new UnauthorizedAccessException());
-        // GET: api/chat/conversations
+       
         [HttpGet("conversations")]
         public async Task<IActionResult> GetConversations()
         {
@@ -71,7 +71,7 @@ namespace SympNet.WebApi.Controllers
             return Ok(result);
         }
 
-        // POST: api/chat/conversations
+        
         [HttpPost("conversations")]
         public async Task<IActionResult> CreateConversation([FromBody] CreateConversationDto dto)
         {
@@ -92,7 +92,7 @@ namespace SympNet.WebApi.Controllers
             return CreatedAtAction(nameof(GetMessages), new { id = dto.PatientId == CurrentUserId ? dto.DoctorId : dto.PatientId }, conv);
         }
 
-        // GET: api/chat/conversations/{id}/messages
+       
         [HttpGet("conversations/{id}/messages")]
         public async Task<IActionResult> GetMessages(Guid id, int page = 1, int pageSize = 30)
         {
@@ -126,7 +126,7 @@ namespace SympNet.WebApi.Controllers
             return Ok(messages);
         }
 
-        // POST: api/chat/messages
+       
         [HttpPost("messages")]
         public async Task<IActionResult> SendMessage([FromBody] SendMessageDto dto)
         {
@@ -170,15 +170,15 @@ namespace SympNet.WebApi.Controllers
             
             var senderName = senderUser?.FullName ?? "Utilisateur";
 
-            // ✅ UNSEUL BROADCAST : au groupe de la conversation
+            
             await _hub.Clients.Group($"consultation_{conversation.Id}")
                 .SendAsync("ReceiveMessage", senderId.ToString(), senderName, message.SenderRole, message.Content, false, message.SentAt.ToString("o"));
             
-            // ✅ Notifier spécifiquement l'autre utilisateur via son groupe personnel au cas où il n'est pas dans le salon
+           
             await _hub.Clients.User(dto.ReceiverId.ToString())
                 .SendAsync("ReceiveMessage", senderId.ToString(), senderName, message.SenderRole, message.Content, false, message.SentAt.ToString("o"));
 
-            // ✅ Real-time notifications for the dashboard (Match Dashboard.razor format)
+            //  notifications
             var notifData = new
             {
                 id = 0,
@@ -206,7 +206,7 @@ namespace SympNet.WebApi.Controllers
             });
         }
 
-        // GET: api/chat/unread-count
+       
         [HttpGet("unread-count")]
         public async Task<IActionResult> GetUnreadCount()
         {
@@ -222,7 +222,6 @@ namespace SympNet.WebApi.Controllers
             return Ok(new { unreadCount });
         }
 
-        // POST: api/chat/conversations/{id}/read
         [HttpPost("conversations/{id}/read")]
         public async Task<IActionResult> MarkConversationAsRead(Guid id)
         {

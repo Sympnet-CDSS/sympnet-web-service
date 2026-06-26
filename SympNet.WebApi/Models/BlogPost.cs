@@ -19,7 +19,7 @@ public class BlogPost
     public string ImageUrl { get; set; } = "";
     
     [MaxLength(50)]
-    public string Category { get; set; } = "Général"; // e.g., IA, Santé, Tech, Conseil
+    public string Category { get; set; } = "Général"; 
     
     public Guid AuthorId { get; set; }
     public string AuthorName { get; set; } = "";
@@ -27,7 +27,7 @@ public class BlogPost
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     
-    public int ReadingTime { get; set; } = 5; // in minutes
+    public int ReadingTime { get; set; } = 5; 
     
     public bool IsPublished { get; set; } = true;
     

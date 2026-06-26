@@ -22,7 +22,7 @@ public class BlogPostsController : ControllerBase
         _config = config;
     }
 
-    // GET: api/blogposts
+    // GET
     [HttpGet]
     public async Task<ActionResult<IEnumerable<BlogPost>>> GetBlogPosts([FromQuery] string? category = null)
     {
@@ -36,7 +36,7 @@ public class BlogPostsController : ControllerBase
         return await query.OrderByDescending(b => b.CreatedAt).ToListAsync();
     }
 
-    // GET: api/blogposts/featured
+    // GET
     [HttpGet("featured")]
     public async Task<ActionResult<BlogPost>> GetFeaturedPost()
     {
@@ -50,7 +50,7 @@ public class BlogPostsController : ControllerBase
         return post;
     }
 
-    // GET: api/blogposts/doctor
+    // GET
     [HttpGet("doctor")]
     [Authorize(Roles = "Doctor")]
     public async Task<ActionResult<IEnumerable<BlogPost>>> GetDoctorBlogPosts()
@@ -65,7 +65,7 @@ public class BlogPostsController : ControllerBase
             .ToListAsync();
     }
 
-    // GET: api/blogposts/5
+    // GET
     [HttpGet("{id}")]
     public async Task<ActionResult<BlogPost>> GetBlogPost(int id)
     {
@@ -79,14 +79,14 @@ public class BlogPostsController : ControllerBase
         return blogPost;
     }
 
-    // POST: api/blogposts/5/increment-view
+    // POST
     [HttpPost("{id}/increment-view")]
     public async Task<IActionResult> IncrementView(int id)
     {
         var blogPost = await _db.BlogPosts.FindAsync(id);
         if (blogPost == null) return NotFound();
 
-        // Check if user is Admin or Doctor to avoid self-counting
+        // Check if user is Admin or Doctor 
         var role = User.FindFirst(ClaimTypes.Role)?.Value;
         if (role == "Admin" || role == "Doctor")
         {
@@ -98,7 +98,7 @@ public class BlogPostsController : ControllerBase
         return Ok(new { views = blogPost.Views });
     }
 
-    // POST: api/blogposts
+    // POST
     [HttpPost]
     [Authorize(Roles = "Doctor")]
     public async Task<ActionResult<BlogPost>> PostBlogPost(BlogPost blogPost)
@@ -143,7 +143,7 @@ public class BlogPostsController : ControllerBase
         return CreatedAtAction("GetBlogPost", new { id = blogPost.Id }, blogPost);
     }
 
-    // PUT: api/blogposts/5
+    // PUT
     [HttpPut("{id}")]
     [Authorize(Roles = "Doctor")]
     public async Task<IActionResult> PutBlogPost(int id, BlogPost blogPost)
@@ -190,7 +190,7 @@ public class BlogPostsController : ControllerBase
         return NoContent();
     }
 
-    // DELETE: api/blogposts/5
+    // DELETE
     [HttpDelete("{id}")]
     [Authorize(Roles = "Doctor")]
     public async Task<IActionResult> DeleteBlogPost(int id)

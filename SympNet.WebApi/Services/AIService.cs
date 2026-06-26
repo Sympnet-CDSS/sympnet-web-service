@@ -112,7 +112,7 @@ public class AIService : IAIService
             response.EnsureSuccessStatusCode();
             var result = await response.Content.ReadFromJsonAsync<JsonElement>();
             
-            // MS1 returns NearbyDoctorsResponse with nearby_doctors array
+            
             if (result.TryGetProperty("nearby_doctors", out var doctorsArray))
             {
                 return JsonSerializer.Deserialize<List<DoctorSuggestion>>(doctorsArray.GetRawText(), new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new List<DoctorSuggestion>();
@@ -183,7 +183,7 @@ public class AIDiagnosticRequest
 
 public class AIDiagnosticResponse
 {
-    // MS1 returns DiagnosticPipelineResponse
+    //  returns DiagnosticPipelineResponse
     public object? symptom_analysis { get; set; }
     public object? hypotheses { get; set; }
     public object? validation { get; set; }
@@ -238,8 +238,8 @@ public class OrdonnanceAlert
 
 public class AlertItem
 {
-    public string Type { get; set; } = ""; // allergy, interaction, contraindication
-    public string Severity { get; set; } = ""; // high, medium, low
+    public string Type { get; set; } = ""; 
+    public string Severity { get; set; } = ""; 
     public string Message { get; set; } = "";
     public List<string> InvolvedMedications { get; set; } = new();
 }

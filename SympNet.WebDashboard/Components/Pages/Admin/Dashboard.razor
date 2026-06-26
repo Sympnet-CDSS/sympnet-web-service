@@ -176,8 +176,8 @@
         transition: all 0.2s; 
         cursor: pointer;
     }
-    .s:last-child { border-bottom: none; }
-    .s:hover { background: #FAFAFA; }
+    .user-items:last-child { border-bottom: none; }
+    .user-items:hover { background: #FAFAFA; }
     
     .user-infos { display: flex; align-items: center; gap: 16px; flex: 1; }
     .user-avatar { 
@@ -467,7 +467,7 @@
                 {
                     @foreach (var notif in recentNotifications)
                     {
-                        <div class="s" @onclick="() => ViewNotif(notif)">
+                        <div class="user-items" @onclick="() => ViewNotif(notif)">
                             <div class="user-infos">
                                 <div class="user-avatar notif">
                                     <i class="far fa-envelope"></i>
@@ -513,7 +513,7 @@
                 {
                     @foreach (var user in recentUsers)
                     {
-                        <div class="s">
+                        <div class="user-items">
                             <div class="user-infos">
                                 <div class="user-avatar" style="background: @(user.Role == "Doctor" ? "#00B18B" : (user.Role == "Patient" ? "#A855F7" : "#EC4899"))">
                                     @user.Initial
@@ -636,7 +636,7 @@
                     inactiveUsers = response.inactiveUsers
                 };
                 
-                // Simuler des taux de croissance (à remplacer par des données réelles)
+                // Simuler des taux de croissance 
                 var random = new Random();
                 doctorGrowth = random.Next(5, 15);
                 patientGrowth = random.Next(8, 20);

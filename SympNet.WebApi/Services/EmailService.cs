@@ -12,7 +12,7 @@ public class EmailService
         _config = config;
     }
 
-    // ── WEB : Credentials médecin ─────────────────────────────────────────
+    //  Credentials médecin 
     public async Task SendDoctorCredentialsAsync(string toEmail, string firstName, string tempPassword)
     {
         var frontendUrl = _config["App:FrontendUrl"] ?? "http://localhost:5002";
@@ -50,7 +50,7 @@ public class EmailService
         await SendEmailAsync(toEmail, "Vos identifiants SympNet — Compte Médecin", body);
     }
 
-    // ── WEB : Reset password par lien ─────────────────────────────────────
+    // Reset password par lien 
     public async Task SendPasswordResetEmailAsync(string toEmail, string firstName, string resetLink)
     {
         var body = $@"
@@ -85,7 +85,7 @@ public class EmailService
         await SendEmailAsync(toEmail, "Réinitialisation de votre mot de passe SympNet", body);
     }
 
-    // ── ANDROID + WEB : Vérification email par code ───────────────────────
+    //   Vérification email par code 
     public async Task SendVerificationCodeAsync(string toEmail, string code)
     {
         var body = $@"
@@ -109,7 +109,7 @@ public class EmailService
         await SendEmailAsync(toEmail, "Votre code de vérification SympNet", body);
     }
 
-    // ── ANDROID : Reset password par code ────────────────────────────────
+    //   Reset password par code 
     public async Task SendPasswordResetCodeAsync(string toEmail, string code)
     {
         var body = $@"
@@ -241,7 +241,7 @@ public class EmailService
         await SendEmailAsync(toEmail, "Bienvenue à la newsletter SympNet !", body);
     }
 
-    // ── Méthode commune d'envoi ───────────────────────────────────────────
+    //  Méthode commune d'envoi 
     private async Task SendEmailAsync(string to, string subject, string htmlBody)
     {
         var smtpHost = _config["Email:SmtpHost"] ?? "smtp.gmail.com";

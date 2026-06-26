@@ -28,7 +28,6 @@ public class ProfileController : ControllerBase
         return Guid.Parse(userIdClaim);
     }
 
-    // GET: api/profile
     [HttpGet]
     public async Task<IActionResult> GetProfile()
     {
@@ -48,7 +47,6 @@ public class ProfileController : ControllerBase
         });
     }
 
-    // PUT: api/profile/email
     [HttpPut("email")]
     public async Task<IActionResult> UpdateEmail([FromBody] UpdateEmailDto dto)
     {
@@ -68,7 +66,6 @@ public class ProfileController : ControllerBase
         return Ok(new { message = "Email mis à jour avec succès" });
     }
 
-    // PUT: api/profile/password
     [HttpPut("password")]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto dto)
     {
@@ -92,7 +89,6 @@ public class ProfileController : ControllerBase
         return Ok(new { message = "Mot de passe mis à jour avec succès" });
     }
 
-    // PUT: api/profile/photo
     [HttpPut("photo")]
 public async Task<IActionResult> UpdatePhoto([FromBody] UpdatePhotoDto dto)
 {

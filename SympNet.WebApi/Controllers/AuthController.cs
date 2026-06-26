@@ -24,7 +24,7 @@ public class AuthController : ControllerBase
         _email = email;
     }
 
-    // ── EXISTANT : Register web (sans vérification email) ─────────────────
+    //Register 
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterDto dto)
     {
@@ -37,18 +37,34 @@ public class AuthController : ControllerBase
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
             Role = dto.Role,
             FullName = dto.FullName,
-            IsEmailVerified = true // web = pas de vérification
+            IsEmailVerified = true 
         };
 
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
+
+        if (user.Role == "Patient")
+        {
+            var patient = new Patient
+            {
+                UserId = user.Id,
+                FirstName = !string.IsNullOrEmpty(dto.FullName) ? dto.FullName.Split(' ')[0] : "Patient",
+                LastName = !string.IsNullOrEmpty(dto.FullName) && dto.FullName.Contains(' ') ? dto.FullName.Substring(dto.FullName.IndexOf(' ') + 1) : "",
+                PhoneNumber = "",
+                DateOfBirth = DateTime.SpecifyKind(new DateTime(2000, 1, 1), DateTimeKind.Utc),
+                Gender = "Non renseigné",
+                ConsultationCount = 0
+            };
+            _db.Patients.Add(patient);
+            await _db.SaveChangesAsync();
+        }
 
         var token = _jwt.GenerateToken(user);
         return Ok(new AuthResponseDto(token, user.Email, user.Role, user.Id, user.FullName));
     }
     
     
-    // ── EXISTANT : Login web ───────────────────────────────────────────────
+    //  Login 
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginDto dto)
     {
@@ -69,7 +85,6 @@ public class AuthController : ControllerBase
         return Ok(new AuthResponseDto(token, user.Email, user.Role, user.Id, user.FullName));
     }
 
-    // ── EXISTANT : Me ──────────────────────────────────────────────────────
     [HttpGet("me")]
     [Authorize]
     public async Task<IActionResult> Me()
@@ -83,7 +98,7 @@ public class AuthController : ControllerBase
         return Ok(new { user.Id, user.Email, user.Role, user.IsActive, user.FullName });
     }
 
-    // ── ANDROID : Register avec vérification email ────────────────────────
+    // Register avec vérification email
     [HttpPost("register-mobile")]
     public async Task<IActionResult> RegisterMobile([FromBody] RegisterDto dto)
     {
@@ -107,12 +122,28 @@ public class AuthController : ControllerBase
         _db.Users.Add(user);
         await _db.SaveChangesAsync();
 
+        if (user.Role == "Patient")
+        {
+            var patient = new Patient
+            {
+                UserId = user.Id,
+                FirstName = !string.IsNullOrEmpty(dto.FullName) ? dto.FullName.Split(' ')[0] : "Patient",
+                LastName = !string.IsNullOrEmpty(dto.FullName) && dto.FullName.Contains(' ') ? dto.FullName.Substring(dto.FullName.IndexOf(' ') + 1) : "",
+                PhoneNumber = "",
+                DateOfBirth = DateTime.SpecifyKind(new DateTime(2000, 1, 1), DateTimeKind.Utc),
+                Gender = "Non renseigné",
+                ConsultationCount = 0
+            };
+            _db.Patients.Add(patient);
+            await _db.SaveChangesAsync();
+        }
+
         await _email.SendVerificationCodeAsync(dto.Email, code);
 
         return Ok(new { message = "Code de vérification envoyé à " + dto.Email });
     }
 
-    // ── ANDROID : Vérification code email ─────────────────────────────────
+    //  Vérification code email 
     [HttpPost("verify-code")]
     public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeDto dto)
     {
@@ -133,7 +164,7 @@ public class AuthController : ControllerBase
         return Ok(new AuthResponseDto(token, user.Email, user.Role, user.Id, user.FullName));
     }
 
-    // ── ANDROID : Forgot password par code ───────────────────────────────
+    //  Forgot password par code 
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
@@ -151,7 +182,7 @@ public class AuthController : ControllerBase
         return Ok(new { message = "Code envoyé à " + dto.Email });
     }
 
-    // ── ANDROID : Vérifier code reset ─────────────────────────────────────
+    //  Vérifier code reset
     [HttpPost("verify-reset-code")]
     public async Task<IActionResult> VerifyResetCode([FromBody] VerifyCodeDto dto)
     {
@@ -165,7 +196,7 @@ public class AuthController : ControllerBase
         return Ok(new { message = "Code valide." });
     }
 
-    // ── ANDROID : Reset password par code ────────────────────────────────
+    //  Reset password par code 
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
@@ -182,7 +213,7 @@ public class AuthController : ControllerBase
     }
 }
 
-// ── DTOs ──────────────────────────────────────────────────────────────────────
+// DTOs
 
 public class RegisterDto
 {

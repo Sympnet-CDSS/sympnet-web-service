@@ -79,7 +79,6 @@ public class OrdonnancesController : ControllerBase
         _context.Ordonnances.Add(ordonnance);
         await _context.SaveChangesAsync();
 
-        // ── NOTIFIER LE PATIENT ──
         try
         {
             var patient = await _context.Patients.FirstOrDefaultAsync(p => p.Id == dto.PatientId);
@@ -350,12 +349,12 @@ public class OrdonnancesController : ControllerBase
                             });
                         }
 
-                        // Ajout du bloc des signatures (Électronique ou Physique selon le format)
+                        // Ajout du bloc des signatures 
                         column.Item().PaddingTop(50).Row(r =>
                         {
                             if (isDigital)
                             {
-                                // Mentions de certification numérique (pour le patient)
+                                // Mentions de certification numérique 
                                 r.RelativeItem().Column(c =>
                                 {
                                     c.Item().Text("Ordonnance certifiée électroniquement via SympNet").FontSize(10).FontColor(Colors.Grey.Darken2).Italic().SemiBold();
@@ -366,7 +365,7 @@ public class OrdonnancesController : ControllerBase
                             }
                             else
                             {
-                                // Espace de cachet physique (pour le médecin)
+                                // Espace de cachet physique 
                                 r.RelativeItem().AlignRight().Column(c =>
                                 {
                                     c.Item().AlignRight().Text("Signature et Cachet du Médecin").SemiBold().FontSize(10);

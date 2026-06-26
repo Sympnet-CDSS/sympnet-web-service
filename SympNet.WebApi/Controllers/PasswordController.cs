@@ -24,22 +24,22 @@ public PasswordController(AppDbContext db, EmailService emailService, IConfigura
     _config = config;
 }
 
-    // POST: api/password/forgot
+  
     [HttpPost("forgot")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto)
     {
         var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
         
-        // Pour des raisons de sécurité, on ne révèle pas si l'email existe
+        //on ne révèle pas si l'email existe
         if (user == null)
         {
             return Ok(new { message = "Si cet email existe, vous recevrez un lien de réinitialisation." });
         }
 
-        // Générer un token unique
+        // Générer un token 
         var token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         
-        // Stocker le token et sa date d'expiration (1 heure)
+        // Stocker le token et sa date d'expiration 
         user.ResetToken = token;
         user.ResetTokenExpiry = DateTime.UtcNow.AddHours(1);
         
@@ -63,7 +63,6 @@ public PasswordController(AppDbContext db, EmailService emailService, IConfigura
         return Ok(new { message = "Si cet email existe, vous recevrez un lien de réinitialisation." });
     }
 
-    // POST: api/password/reset
     [HttpPost("reset")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto)
     {
