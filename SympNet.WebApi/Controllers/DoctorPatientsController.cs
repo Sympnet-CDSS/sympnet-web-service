@@ -26,7 +26,6 @@ public class DoctorPatientsController : ControllerBase
         return Guid.Parse(userIdClaim);
     }
 
-    // GET: api/doctorpatients
     [HttpGet]
     public async Task<IActionResult> GetMyPatients()
     {
@@ -34,7 +33,7 @@ public class DoctorPatientsController : ControllerBase
         
         try 
         {
-            // Récupérer tous les patients enregistrés dans le système
+            // Récupérer tous les patients
             var patients = await _db.Patients
                 .Include(p => p.User)
                 .Where(p => p.User.Role == "Patient")
@@ -50,7 +49,6 @@ public class DoctorPatientsController : ControllerBase
                     p.BloodType,
                     p.Allergies,
                     p.MedicalHistory,
-                    // Si la migration a échoué, on évite de planter en retournant vide ou le MedicalHistory
                     ChronicDiseases = p.MedicalHistory, 
                     CurrentMedications = "",
                     ConsultationCount = _db.Consultations.Count(c => c.PatientEmail == p.User.Email && c.DoctorId == doctorId),
@@ -64,7 +62,6 @@ public class DoctorPatientsController : ControllerBase
         }
         catch (Exception)
         {
-            // Fallback : Version simplifiée sans les nouvelles colonnes si la DB n'est pas à jour
             var patients = await _db.Patients
                 .Include(p => p.User)
                 .Where(p => p.User.Role == "Patient")
@@ -92,7 +89,6 @@ public class DoctorPatientsController : ControllerBase
         }
     }
 
-    // GET: api/doctorpatients/{id}
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPatientDetails(int id)
     {
@@ -142,7 +138,6 @@ public class DoctorPatientsController : ControllerBase
         }
         catch (Exception)
         {
-            // Fallback en cas d'erreur de base de données
              var patient = await _db.Patients
                 .Include(p => p.User)
                 .Where(p => p.Id == id)

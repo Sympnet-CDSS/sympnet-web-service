@@ -31,7 +31,6 @@ public class BlockedSlotsController : ControllerBase
         return doctor.Id;
     }
 
-    // GET: api/blockedslots
     [HttpGet]
     public async Task<IActionResult> GetBlockedSlots([FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
@@ -58,13 +57,12 @@ public class BlockedSlotsController : ControllerBase
         return Ok(blockedSlots);
     }
 
-    // POST: api/blockedslots
     [HttpPost]
     public async Task<IActionResult> CreateBlockedSlot([FromBody] CreateBlockedSlotDto dto)
     {
         var doctorId = GetCurrentDoctorId();
         
-        // Vérifier qu'il n'y a pas de rendez-vous sur ce créneau
+        // Vérifier qu'il n'y a pas de rendez-vous 
         var conflictingAppointments = await _db.Appointments
             .Where(a => a.DoctorId == doctorId && 
                        a.DateTime >= dto.StartDateTime && 
@@ -92,7 +90,7 @@ public class BlockedSlotsController : ControllerBase
         return Ok(new { message = "Créneau bloqué avec succès", id = blockedSlot.Id });
     }
 
-    // DELETE: api/blockedslots/{id}
+    // DELETE
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteBlockedSlot(int id)
     {

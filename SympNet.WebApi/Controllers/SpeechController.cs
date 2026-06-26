@@ -20,8 +20,6 @@ public class SpeechController : ControllerBase
             // Décoder le base64
             byte[] audioBytes = Convert.FromBase64String(request.Audio);
             
-            // Pour l'instant, simulons une transcription
-            // Vous pourrez plus tard intégrer OpenAI Whisper ou Azure Speech
             var result = await SimulateTranscription(audioBytes);
             
             return Ok(result);
@@ -34,9 +32,8 @@ public class SpeechController : ControllerBase
 
     private async Task<TranscriptionResult> SimulateTranscription(byte[] audioBytes)
     {
-        await Task.Delay(800); // Simuler le temps de traitement
+        await Task.Delay(800); 
         
-        // Simuler différentes réponses basées sur la longueur du fichier
         var mockTexts = new[]
         {
             "Bonjour docteur, j'ai une douleur à la poitrine depuis hier.",

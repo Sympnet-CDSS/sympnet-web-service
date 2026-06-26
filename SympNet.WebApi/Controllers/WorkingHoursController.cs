@@ -31,13 +31,11 @@ public class WorkingHoursController : ControllerBase
         return doctor.Id;
     }
 
-    // GET: api/workinghours
     [HttpGet]
     public async Task<IActionResult> GetWorkingHours()
     {
         var doctorId = GetCurrentDoctorId();
 
-        // FIX: matérialise d'abord en mémoire, PUIS applique GetDayName (méthode C# non traduisible en SQL)
         var raw = await _db.Set<WorkingHours>()
             .Where(w => w.DoctorId == doctorId)
             .OrderBy(w => w.DayOfWeek)
@@ -73,9 +71,8 @@ public class WorkingHoursController : ControllerBase
         return Ok(workingHours);
     }
 
-    // GET: api/workinghours/doctor/{doctorId}
     [HttpGet("doctor/{doctorId}")]
-    [AllowAnonymous] // Ou [Authorize] si vous voulez restreindre aux patients connectés
+    [AllowAnonymous] 
     public async Task<IActionResult> GetDoctorWorkingHours(int doctorId)
     {
         var raw = await _db.Set<WorkingHours>()
@@ -113,7 +110,6 @@ public class WorkingHoursController : ControllerBase
         return Ok(workingHours);
     }
 
-    // POST: api/workinghours
     [HttpPost]
     public async Task<IActionResult> CreateWorkingHours([FromBody] CreateWorkingHoursDto dto)
     {
@@ -124,7 +120,6 @@ public class WorkingHoursController : ControllerBase
 
         if (existing != null)
         {
-            // Mettre à jour plutôt que rejeter
             existing.StartTime = TimeOnly.Parse(dto.StartTime);
             existing.EndTime = TimeOnly.Parse(dto.EndTime);
             existing.SlotDuration = dto.SlotDuration;
@@ -151,7 +146,6 @@ public class WorkingHoursController : ControllerBase
         return Ok(new { message = "Horaires ajoutés avec succès" });
     }
 
-    // PUT: api/workinghours/{id}
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateWorkingHours(int id, [FromBody] UpdateWorkingHoursDto dto)
     {
@@ -177,7 +171,6 @@ public class WorkingHoursController : ControllerBase
         return Ok(new { message = "Horaires mis à jour" });
     }
 
-    // DELETE: api/workinghours/{id}
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteWorkingHours(int id)
     {
@@ -194,7 +187,6 @@ public class WorkingHoursController : ControllerBase
         return Ok(new { message = "Horaires supprimés" });
     }
 
-    // FIX: static + paramètre int (pas DayOfWeek) pour correspondre aux deux appels
     private static string GetDayName(int dayOfWeek)
     {
         return dayOfWeek switch

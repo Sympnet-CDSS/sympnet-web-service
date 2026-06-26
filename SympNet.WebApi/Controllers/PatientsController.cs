@@ -19,7 +19,6 @@ public class PatientsController : ControllerBase
         _db = db;
     }
 
-    // GET: api/patients
     [HttpGet]
     [Authorize(Roles = "Admin,Doctor")]
     public async Task<IActionResult> GetAllPatients()
@@ -75,7 +74,6 @@ public class PatientsController : ControllerBase
         }
     }
 
-    // GET: api/patients/{id}
     [HttpGet("{id}")]
     public async Task<IActionResult> GetPatient(string id)
     {
@@ -86,7 +84,6 @@ public class PatientsController : ControllerBase
                 .Include(p => p.User)
                 .FirstOrDefaultAsync(p => p.UserId == userGuid);
 
-            // Defensive Fallback: Auto-create if user exists but patient does not
             if (patient == null)
             {
                 var user = await _db.Users.FindAsync(userGuid);
@@ -143,7 +140,6 @@ public class PatientsController : ControllerBase
         });
     }
 
-    // PUT: api/patients/{id}
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdatePatient(string id, [FromBody] UpdatePatientDto dto)
     {
@@ -217,7 +213,6 @@ public class PatientsController : ControllerBase
         return Ok(new { message = "Profil patient mis à jour avec succès" });
     }
 
-    // POST: api/patients
     [HttpPost]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> CreatePatient([FromBody] CreatePatientDto dto)
@@ -257,7 +252,6 @@ public class PatientsController : ControllerBase
         return Ok(new { message = "Patient créé avec succès", patientId = patient.Id });
     }
 
-    // PUT: api/patients/{id}/activate
     [HttpPut("{id}/activate")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> ActivatePatient(int id)
@@ -272,7 +266,6 @@ public class PatientsController : ControllerBase
         return Ok(new { message = "Patient activé" });
     }
 
-    // PUT: api/patients/{id}/deactivate
     [HttpPut("{id}/deactivate")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeactivatePatient(int id)
@@ -285,5 +278,26 @@ public class PatientsController : ControllerBase
         await _db.SaveChangesAsync();
 
         return Ok(new { message = "Patient désactivé" });
+    }
+
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeletePatient(int id)
+    {
+        var patient = await _db.Patients.Include(p => p.User).FirstOrDefaultAsync(p => p.Id == id);
+        if (patient == null)
+            return NotFound(new { message = "Patient non trouvé" });
+
+        var user = patient.User;
+        _db.Patients.Remove(patient);
+        
+        if (user != null)
+        {
+            _db.Users.Remove(user);
+        }
+
+        await _db.SaveChangesAsync();
+
+        return Ok(new { message = "Patient supprimé avec succès" });
     }
 }

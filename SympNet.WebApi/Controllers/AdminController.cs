@@ -18,7 +18,7 @@ public class AdminController : ControllerBase
         _db = db;
     }
 
-    // US-01: GET tous les utilisateurs
+    //tous les utilisateurs
     [HttpGet("users")]
     public async Task<IActionResult> GetAllUsers()
     {
@@ -40,7 +40,7 @@ public class AdminController : ControllerBase
         return Ok(users);
     }
 
-    // US-01: GET un utilisateur par ID
+    //un utilisateur par ID
     [HttpGet("users/{id}")]
     public async Task<IActionResult> GetUser(Guid id)
     {
@@ -60,7 +60,7 @@ public class AdminController : ControllerBase
         });
     }
 
-    // US-01: POST créer un utilisateur (médecin ou patient)
+    //  créer un utilisateur 
     [HttpPost("users")]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserDto dto)
     {
@@ -95,7 +95,7 @@ public class AdminController : ControllerBase
         });
     }
 
-    // US-01: PUT modifier un utilisateur
+    //  modifier un utilisateur
     [HttpPut("users/{id}")]
     public async Task<IActionResult> UpdateUser(Guid id, [FromBody] UpdateUserDto dto)
     {
@@ -132,7 +132,7 @@ public class AdminController : ControllerBase
         });
     }
 
-    // US-01: DELETE supprimer un utilisateur
+    //supprimer un utilisateur
     [HttpDelete("users/{id}")]
     public async Task<IActionResult> DeleteUser(Guid id)
     {
@@ -154,7 +154,7 @@ public class AdminController : ControllerBase
         return Ok(new { message = "Utilisateur supprimé avec succès" });
     }
 
-    // US-03: Activer/Désactiver un utilisateur
+    // Activer/Désactiver un utilisateur
     [HttpPatch("users/{id}/toggle-active")]
     public async Task<IActionResult> ToggleActive(Guid id)
     {
@@ -182,7 +182,7 @@ public class AdminController : ControllerBase
         });
     }
 
-    // US-02: Statistiques globales
+    //  Statistiques globales
     [HttpGet("stats")]
     public async Task<IActionResult> GetStats()
     {
@@ -195,7 +195,7 @@ public class AdminController : ControllerBase
         var activeUsers = await baseQuery.CountAsync(u => u.IsActive && u.Role != "Admin");
         var inactiveUsers = totalUsers - activeUsers;
 
-        // Stats par mois (pour le graphique)
+        // Stats par mois 
         var last6Months = Enumerable.Range(0, 6)
             .Select(i => DateTime.UtcNow.AddMonths(-i).Date)
             .Select(date => new

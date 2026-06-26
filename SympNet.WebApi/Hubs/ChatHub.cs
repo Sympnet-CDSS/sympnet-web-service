@@ -127,17 +127,13 @@ public class ChatHub : Hub
         _db.ChatMessages.Add(chatMsg);
         conv.LastMessageAt = DateTime.UtcNow;
 
-        // ✅ receiverId = l'autre participant
         receiverId = senderId == conv.DoctorId ? conv.PatientId : conv.DoctorId;
 
-        // ✅ CORRECTION — isDoctor était inversé
-        // senderId == conv.DoctorId → l'expéditeur est le docteur
-        // donc le receiver est le patient → notification patient
         bool senderIsDoctor = senderId == conv.DoctorId;
 
         if (senderIsDoctor)
         {
-            // ✅ Docteur envoie → notifier le patient
+            // Docteur envoie notifier le patient
             _db.PatientNotifications.Add(new SympNet.WebApi.Models.PatientNotification
             {
                 PatientUserId = receiverId,
@@ -150,7 +146,7 @@ public class ChatHub : Hub
         }
         else
         {
-            // ✅ Patient envoie → notifier le docteur
+            // Patient envoie notifier le docteur
             _db.DoctorNotifications.Add(new SympNet.WebApi.Models.DoctorNotification
             {
                 DoctorUserId = receiverId,
@@ -163,7 +159,7 @@ public class ChatHub : Hub
 
         _db.SaveChanges();
 
-        // ✅ Notifier le tableau de bord (format attendu par Dashboard.razor)
+        // Notifier le tableau de bord
         var notifData = new
         {
             id            = 0,
@@ -178,16 +174,11 @@ public class ChatHub : Hub
         await _notificationHub.Clients.Group($"user_{receiverId}").SendAsync("ReceiveNotification", notifData);
         await _notificationHub.Clients.Group($"doctor_user_{receiverId}").SendAsync("ReceiveNotification", notifData);
 
-        // ✅ Broadcast UNIQUE au groupe de la conversation
-        // Le client doit s'assurer de rejoindre "consultation_{conv.Id}"
         await Clients.Group($"consultation_{conv.Id}").SendAsync("ReceiveMessage", senderIdStr, senderName, senderRole, message, isVoice, DateTime.UtcNow.ToString("o"));
-        
-        // ✅ Optionnel: notifier spécifiquement le destinataire s'il n'est pas dans le salon
         await Clients.User(receiverId.ToString()).SendAsync("ReceiveMessage", senderIdStr, senderName, senderRole, message, isVoice, DateTime.UtcNow.ToString("o"));
     }
     else
     {
-        // Cas d'un consultationId qui n'est pas un GUID (ex: salon nommé manuellement)
         await Clients.Group($"consultation_{consultationId}").SendAsync("ReceiveMessage", senderIdStr, senderName, senderRole, message, isVoice, DateTime.UtcNow.ToString("o"));
     }
 }

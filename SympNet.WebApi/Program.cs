@@ -18,7 +18,7 @@ builder.Services.AddSignalR();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<Microsoft.AspNetCore.SignalR.IUserIdProvider, NameUserIdProvider>();
 
-// ... (configuration continue)
+
 
 
 builder.Services.AddDbContext<AppDbContext>(options =>
@@ -64,11 +64,12 @@ builder.Services.AddScoped<EmailService>();
 builder.Services.AddSignalR();
 builder.Services.AddHttpContextAccessor();
 
-//  Enregistrement du service IA (MS1)
+//  Enregistrement du service IA 
 builder.Services.AddHttpClient<IAIService, AIService>(client =>
 {
-    var aiUrl = builder.Configuration["AIService:Url"] ?? "http://localhost:8000";
+    var aiUrl = builder.Configuration["AIService:Url"] ?? "http://localhost:8001";
     client.BaseAddress = new Uri(aiUrl);
+    client.Timeout = TimeSpan.FromMinutes(3);
 });
 
 // AllowCredentials() requis par SignalR
@@ -76,10 +77,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("SignalRPolicy", policy =>
         policy
-            .SetIsOriginAllowed(_ => true) // ✅ Autoriser toutes les origines en développement
+            .SetIsOriginAllowed(_ => true) // autoriser toutes les origines en développement
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials()); //  pour WebSocket
+            .AllowCredentials()); //   WebSocket
 });
 
 var app = builder.Build();
@@ -262,6 +263,34 @@ app.MapHub<ChatHub>("/hubs/chat");
 //  hub de notifications
 app.MapHub<NotificationHub>("/hubs/notifications");
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<SympNet.WebApi.Data.AppDbContext>();
+    try
+    {
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"Duration\" integer NOT NULL DEFAULT 30;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"PatientNotifications\" ADD COLUMN IF NOT EXISTS \"AppointmentId\" integer NOT NULL DEFAULT 0;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"DoctorNotifications\" ADD COLUMN IF NOT EXISTS \"AppointmentId\" integer NOT NULL DEFAULT 0;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"IsUrgent\" boolean NOT NULL DEFAULT false;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"Reason\" text;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"Type\" text DEFAULT 'Consultation';");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"UpdatedAt\" timestamp with time zone;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"Appointments\" ADD COLUMN IF NOT EXISTS \"ReminderSentAt\" timestamp with time zone;");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"PatientNotifications\" ADD COLUMN IF NOT EXISTS \"Status\" text DEFAULT '';");
+        db.Database.ExecuteSqlRaw("ALTER TABLE \"DoctorNotifications\" ADD COLUMN IF NOT EXISTS \"IsUrgent\" boolean NOT NULL DEFAULT false;");
+        
+        try {
+            db.Database.ExecuteSqlRaw("ALTER TABLE \"WorkingHours\" ALTER COLUMN \"DoctorId\" TYPE integer USING 0;");
+        } catch {
+            db.Database.ExecuteSqlRaw("ALTER TABLE \"WorkingHours\" DROP COLUMN IF EXISTS \"DoctorId\";");
+            db.Database.ExecuteSqlRaw("ALTER TABLE \"WorkingHours\" ADD COLUMN IF NOT EXISTS \"DoctorId\" integer NOT NULL DEFAULT 0;");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"DB Patch Warning: {ex.Message}");
+    }
+}
 
 app.Run();
 

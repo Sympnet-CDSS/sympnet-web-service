@@ -1,4 +1,3 @@
-// Controllers/NotificationsController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -30,7 +29,7 @@ public class NotificationsController : ControllerBase
     }
 
 
-    // PATCH api/notifications/{id}/read — marquer une notif comme lue
+    //  marquer une notif comme lue
     [HttpPatch("{id}/read")]
     public async Task<IActionResult> MarkAsRead(int id)
     {
@@ -45,7 +44,7 @@ public class NotificationsController : ControllerBase
         return Ok();
     }
 
-    // PATCH api/notifications/read-all — tout marquer comme lu
+    //  tout marquer comme lu
     [HttpPatch("read-all")]
     public async Task<IActionResult> MarkAllAsRead()
     {
@@ -59,7 +58,7 @@ public class NotificationsController : ControllerBase
         return Ok();
     }
 
-    // DELETE api/notifications — supprimer toutes les notifs
+    //supprimer toutes les notifs
     [HttpDelete]
     public async Task<IActionResult> ClearAll()
     {

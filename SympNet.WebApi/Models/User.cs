@@ -35,7 +35,6 @@ public class User
     public string? ResetToken { get; set; }
     public DateTime? ResetTokenExpiry { get; set; }
 
-    // ── Ajouts pour Android ───────────────────────────────────────────────
     public bool IsEmailVerified { get; set; } = false;
     public string? VerificationCode { get; set; }
     public DateTime? VerificationCodeExpiry { get; set; }

@@ -1,4 +1,3 @@
-// Controllers/AppointmentsController.cs
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -17,16 +16,16 @@ public class AppointmentsController : ControllerBase
 {
     private readonly AppDbContext                 _db;
     private readonly IHubContext<NotificationHub> _hub;
-    private readonly IHubContext<ChatHub>         _chatHub; // ✅ ajouté
+    private readonly IHubContext<ChatHub>         _chatHub; 
 
     public AppointmentsController(
         AppDbContext db,
         IHubContext<NotificationHub> hub,
-        IHubContext<ChatHub> chatHub) // ✅ ajouté
+        IHubContext<ChatHub> chatHub) 
     {
         _db      = db;
         _hub     = hub;
-        _chatHub = chatHub; // ✅ ajouté
+        _chatHub = chatHub; 
     }
 
     private Guid GetCurrentUserId()
@@ -36,7 +35,7 @@ public class AppointmentsController : ControllerBase
         return Guid.Parse(claim);
     }
 
-    // ── GET api/appointments ──────────────────────────────────────────────────
+    // appointments 
     [HttpGet]
     [Authorize(Roles = "Patient,Doctor")]
     public async Task<IActionResult> GetMyAppointments()
@@ -66,7 +65,6 @@ public class AppointmentsController : ControllerBase
         return Ok(appointments);
     }
 
-    // ── GET api/appointments/{id} ─────────────────────────────────────────────
     [HttpGet("{id}")]
     [Authorize]
     public async Task<IActionResult> GetAppointmentById(int id)
@@ -118,7 +116,6 @@ public class AppointmentsController : ControllerBase
         });
     }
 
-    // ── GET api/appointments/doctor/{doctorId} ────────────────────────────────
     [HttpGet("doctor/{doctorId}")]
     [Authorize(Roles = "Doctor")]
     public async Task<IActionResult> GetDoctorAppointments(int doctorId)
@@ -147,7 +144,6 @@ public class AppointmentsController : ControllerBase
         return Ok(appointments);
     }
 
-    // ── GET api/appointments/doctor/{doctorId}/booked-slots ─────────────────────
     [HttpGet("doctor/{doctorId}/booked-slots")]
     [Authorize]
     public async Task<IActionResult> GetBookedSlots(int doctorId)
@@ -160,8 +156,6 @@ public class AppointmentsController : ControllerBase
         return Ok(bookedSlots);
     }
 
-    // ── GET api/appointments/confirmed ───────────────────────────────────────
-    // ✅ Vérifie si un rendez-vous confirmé existe entre patient et docteur
     [HttpGet("confirmed")]
     [Authorize]
     public async Task<IActionResult> GetConfirmedAppointments(
@@ -177,7 +171,6 @@ public class AppointmentsController : ControllerBase
         return Ok(appointments);
     }
 
-    // ── POST api/appointments ─────────────────────────────────────────────────
     [HttpPost]
     [Authorize]
     public async Task<IActionResult> CreateAppointment([FromBody] CreateAppointmentDto dto)
@@ -216,7 +209,7 @@ public class AppointmentsController : ControllerBase
             _db.Appointments.Add(appointment);
             await _db.SaveChangesAsync();
 
-            // ✅ Créer conversation automatiquement quand docteur crée le RDV
+            //  Créer conversation automatiquement quand docteur crée le RDV
             await CreateConversationIfNotExists(appointment);
 
             return Ok(new { message = "Rendez-vous créé avec succès", appointmentId = appointment.Id });
@@ -257,7 +250,6 @@ public class AppointmentsController : ControllerBase
         }
     }
 
-    // ── PATCH api/appointments/{id}/status ───────────────────────────────────
     [HttpPatch("{id}/status")]
     [Authorize(Roles = "Doctor")]
     public async Task<IActionResult> UpdateAppointmentStatus(
@@ -267,7 +259,7 @@ public class AppointmentsController : ControllerBase
 
         var appointment = await _db.Appointments
             .Include(a => a.Patient)
-            .Include(a => a.Doctor) // ✅ ajouté pour accéder au nom du docteur
+            .Include(a => a.Doctor) // pour accéder au nom du docteur
             .FirstOrDefaultAsync(a => a.Id == id);
 
         if (appointment == null)
@@ -287,7 +279,7 @@ public class AppointmentsController : ControllerBase
 
         await _db.SaveChangesAsync();
 
-        // ✅ Créer la conversation automatiquement si le RDV est confirmé
+        //  Créer la conversation automatiquement si le RDV est confirmé
         if (dto.Status == "Confirmé")
         {
             await CreateConversationIfNotExists(appointment);
@@ -342,12 +334,12 @@ public class AppointmentsController : ControllerBase
         });
     }
 
-    // ── Méthode privée — crée conversation + message bienvenue ───────────────
+    // crée conversation + message bienvenue 
     private async Task CreateConversationIfNotExists(Appointment appointment)
     {
         try
         {
-            // Recharger avec Doctor et Patient si pas déjà chargés
+            // Recharger avec Doctor et Patient 
             if (appointment.Doctor == null || appointment.Patient == null)
             {
                 appointment = await _db.Appointments
@@ -363,7 +355,7 @@ public class AppointmentsController : ControllerBase
                     c.DoctorId  == doctorUserId &&
                     c.PatientId == appointment.PatientId);
 
-            if (existingConv != null) return; // déjà créée
+            if (existingConv != null) return; 
 
             var conversation = new Conversation
             {
@@ -373,7 +365,7 @@ public class AppointmentsController : ControllerBase
                 LastMessageAt = DateTime.UtcNow
             };
             _db.Conversations.Add(conversation);
-            await _db.SaveChangesAsync(); // ✅ SaveChanges avant d'utiliser conversation.Id
+            await _db.SaveChangesAsync(); 
 
             var doctorName = appointment.Doctor != null
                 ? $"Dr. {appointment.Doctor.FirstName} {appointment.Doctor.LastName}"
@@ -390,7 +382,7 @@ public class AppointmentsController : ControllerBase
             _db.ChatMessages.Add(welcomeMessage);
             await _db.SaveChangesAsync();
 
-            // ✅ Notifier le patient via SignalR
+            //  Notifier le patient 
             await _chatHub.Clients
                 .User(appointment.PatientId.ToString())
                 .SendAsync("ConversationCreated",

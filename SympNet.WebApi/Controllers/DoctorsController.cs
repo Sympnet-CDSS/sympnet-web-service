@@ -22,7 +22,6 @@ public class DoctorsController : ControllerBase
         _emailService = emailService;
     }
 
-    // GET: api/doctors
     [AllowAnonymous]
     [HttpGet]
     public async Task<IActionResult> GetAllDoctors()
@@ -59,7 +58,6 @@ public class DoctorsController : ControllerBase
         return Ok(doctors);
     }
 
-    // GET: api/doctors/{id}
     [AllowAnonymous]
     [HttpGet("{id}")]
     public async Task<IActionResult> GetDoctorById(int id)
@@ -112,7 +110,6 @@ public class DoctorsController : ControllerBase
         return Ok(result);
     }
 
-    // POST: api/doctors
     [HttpPost]
     public async Task<IActionResult> CreateDoctor([FromBody] CreateDoctorDto dto)
     {
@@ -167,7 +164,6 @@ public class DoctorsController : ControllerBase
         });
     }
 
-    // PUT: api/doctors/{id}/activate
     [HttpPut("{id}/activate")]
     public async Task<IActionResult> ActivateDoctor(int id)
     {
@@ -181,7 +177,6 @@ public class DoctorsController : ControllerBase
         return Ok(new { message = "Médecin activé" });
     }
 
-    // PUT: api/doctors/{id}/deactivate
     [HttpPut("{id}/deactivate")]
     public async Task<IActionResult> DeactivateDoctor(int id)
     {
@@ -195,7 +190,6 @@ public class DoctorsController : ControllerBase
         return Ok(new { message = "Médecin désactivé" });
     }
 
-    // DELETE: api/doctors/{id}
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteDoctor(int id)
     {
@@ -212,7 +206,6 @@ public class DoctorsController : ControllerBase
 
     public class AvailabilityDto { public bool IsAvailable { get; set; } }
 
-    // PUT: api/doctors/{id}/availability
     [AllowAnonymous]
     [HttpPut("{id}/availability")]
     public async Task<IActionResult> ToggleAvailability(int id, [FromBody] AvailabilityDto dto)

@@ -30,7 +30,6 @@ public class AgendaController : ControllerBase
         return doctor.Id;
     }
 
-    // FIX: helper pour forcer Kind=UTC sur tout DateTime reçu depuis le client
     private static DateTime ToUtc(DateTime dt)
     {
         return dt.Kind == DateTimeKind.Utc ? dt : DateTime.SpecifyKind(dt, DateTimeKind.Utc);
@@ -41,7 +40,6 @@ public class AgendaController : ControllerBase
     {
         var doctorId = GetCurrentDoctorId();
 
-        // FIX: convertir en UTC avant d'envoyer à PostgreSQL
         var startUtc = ToUtc(start);
         var endUtc = ToUtc(end);
 
@@ -115,7 +113,6 @@ public class AgendaController : ControllerBase
 
         try
         {
-            // FIX: convertir en UTC
             var dateUtc = ToUtc(date);
 
             var dayOfWeek = (int)dateUtc.DayOfWeek;
@@ -130,8 +127,6 @@ public class AgendaController : ControllerBase
             var startTime = workingHours.StartTime;
             var endTime = workingHours.EndTime;
             var slotDuration = workingHours.SlotDuration;
-
-            // FIX: forcer UTC sur les DateTime construits à partir de date.Date
             var currentSlot = DateTime.SpecifyKind(dateUtc.Date + startTime.ToTimeSpan(), DateTimeKind.Utc);
             var endDateTime = DateTime.SpecifyKind(dateUtc.Date + endTime.ToTimeSpan(), DateTimeKind.Utc);
 

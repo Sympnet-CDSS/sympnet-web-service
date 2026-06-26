@@ -1,4 +1,3 @@
-// Models/PatientNotification.cs
 namespace SympNet.WebApi.Models;
 
 public class PatientNotification
